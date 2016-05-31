@@ -1,0 +1,49 @@
+---
+title: "initial peakcomparisons"
+author: "Robert M Flight <rflight79@gmail.com>"
+date: "`r Sys.time()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{initial peakcomparisons}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup}
+library(ftmsComparePeaks)
+library(dplyr)
+```
+
+# Single Files
+
+```{r single_files}
+mz_file <- "/home/rmflight/Projects/work/CESB/ftms.QC/mzML_exported/92Cpos.mzML"
+xcal_file <- "/home/rmflight/Projects/work/CESB/ftms.QC/exported_peak_lists/92Cpos.xlsx"
+```
+
+## Peaks
+
+```{r get_peaks}
+mz_avg <- import_mzML(mz_file)
+mz_peaks <- pracma_findpeaks(mz_avg)
+
+xcal_peaks <- import_xcalibur(xcal_file)
+```
+
+## XCAL - MZ
+
+```{r xcal_mz}
+xcal_mz <- find_closest_peaks(mz_peaks, xcal_peaks, "mz", "xcal")
+
+filter(xcal_mz, mz_diff != 0, mz_diff <= 1e-3) %>% nrow()
+nrow(xcal_peaks)
+```
+
+## MZ - XCAL
+
+```{r mz_xcal}
+mz_xcal <- find_closest_peaks(xcal_peaks, mz_peaks, "xcal", "mz")
+filter(mz_xcal, mz_diff != 0, mz_diff <= 1e-3) %>% nrow()
+```
+
+
