@@ -47,3 +47,32 @@ filter(mz_xcal, mz_diff != 0, mz_diff <= 1e-3) %>% nrow()
 ```
 
 
+## Find Peaks that are not Closest Peaks
+
+We refine the closest peaks by finding those ones that don't have a closest match
+between the two comparisons.
+
+```{r refine_peaks}
+xcal_mz_not_min <- refine_closest_list(xcal_mz)
+mz_xcal_not_min <- refine_closest_list(mz_xcal)
+```
+
+## Match in Both
+
+```{r match_both}
+xcal_mz_keep <- filter(xcal_mz, !(s_peak %in% xcal_mz_not_min$not_min_s))
+mz_xcal_keep <- filter(mz_xcal, !(s_peak %in% mz_xcal_not_min$not_min_s))
+
+in_both <- unique(intersect(xcal_mz_keep$q_peak, mz_xcal_keep$s_peak))
+length(in_both)
+
+length(unique(xcal_mz_keep$s_peak))
+length(unique(mz_xcal_keep$s_peak))
+```
+
+## How Many Have Big Differences?
+
+```{r big_diffs}
+sum(filter(xcal_mz, mz_diff != 0) %>% select(., mz_diff) %>% unlist() <= 1e-3)
+```
+
