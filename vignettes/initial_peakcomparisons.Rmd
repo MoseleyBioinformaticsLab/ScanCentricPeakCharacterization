@@ -18,7 +18,7 @@ library(dplyr)
 
 ```{r single_files}
 mz_file <- "/home/rmflight/Projects/work/CESB/ftms.QC/mzML_exported/92Cpos.mzML"
-xcal_file <- "/home/rmflight/Projects/work/CESB/ftms.QC/exported_peak_lists/92Cpos.xlsx"
+xcal_file <- "/home/rmflight/Projects/work/CESB/ftms.QC/exported_noref/92Cpos.xlsx"
 ```
 
 ## Peaks
@@ -73,6 +73,18 @@ length(unique(mz_xcal_keep$s_peak))
 ## How Many Have Big Differences?
 
 ```{r big_diffs}
-sum(filter(xcal_mz, mz_diff != 0) %>% select(., mz_diff) %>% unlist() <= 1e-3)
+length(unique(xcal_mz_keep$s_peak))
+sum(filter(xcal_mz_keep, mz_diff != 0) %>% select(., mz_diff) %>% unlist() <= 1e-3)
 ```
+
+## View Them
+
+```{r check_peaks}
+head(mz_xcal_not_min$not_min_s)
+filter(mz_xcal, s_peak %in% seq(10, 13))
+xcal_plot <- plot_peaks(filter(mz_xcal, s_peak %in% seq(10, 13)), mz_avg, 1e-4)
+xcal_plot
+```
+
+
 
