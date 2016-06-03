@@ -12,6 +12,8 @@ vignette: >
 ```{r setup}
 library(ftmsComparePeaks)
 library(dplyr)
+library(ggplot2)
+library(cowplot)
 ```
 
 # Single Files
@@ -25,7 +27,7 @@ xcal_file <- "/home/rmflight/Projects/work/CESB/ftms.QC/exported_noref/92Cpos.xl
 
 ```{r get_peaks}
 mz_avg <- import_mzML(mz_file)
-mz_peaks <- pracma_findpeaks(mz_avg)
+mz_peaks <- find_peaks(mz_avg, m = 3)
 
 xcal_peaks <- import_xcalibur(xcal_file)
 ```
@@ -81,10 +83,56 @@ sum(filter(xcal_mz_keep, mz_diff != 0) %>% select(., mz_diff) %>% unlist() <= 1e
 
 ```{r check_peaks}
 head(mz_xcal_not_min$not_min_s)
-filter(mz_xcal, s_peak %in% seq(10, 13))
-xcal_plot <- plot_peaks(filter(mz_xcal, s_peak %in% seq(10, 13)), mz_avg, 1e-4)
+filter(mz_xcal, q_peak %in% 220)
+xcal_plot <- plot_peaks(filter(mz_xcal, q_peak %in% 220), mz_avg, 1e-4)
 xcal_plot
 ```
 
 
+OK, so lets see if we can get rid of some of these little shoulders.
+
+```{r delete_shoulders}
+small_avg <- filter(mz_avg, (mz >= 151.66) & (mz <= 151.672))
+small_xcal <- filter(xcal_peaks, (mz >= 151.66) & (mz <= 151.672))
+
+small_mz <- find_peaks(small_avg, m = 5)
+
+p <- ggplot(small_avg, aes(x = mz, y = intensity)) + geom_line()
+p <- p + geom_point(data = small_xcal, color = "red")
+p <- p + geom_point(data = small_mz, color = "blue")
+p
+```
+
+Awesome! Now lets try doing this on everything else.
+
+```{r mz_2}
+mz_peaks2 <- find_peaks(mz_avg, m = 5)
+
+xcal_mz2 <- find_closest_peaks(mz_peaks2, xcal_peaks, "mz", "xcal")
+
+filter(xcal_mz2, mz_diff != 0, mz_diff <= 1e-3) %>% nrow()
+nrow(xcal_peaks)
+
+mz_xcal2 <- find_closest_peaks(xcal_peaks, mz_peaks2, "xcal", "mz")
+filter(mz_xcal2, mz_diff != 0, mz_diff <= 1e-3) %>% nrow()
+
+xcal_mz_not_min2 <- refine_closest_list(xcal_mz2)
+mz_xcal_not_min2 <- refine_closest_list(mz_xcal2)
+```
+
+Now, how many of our `mz` peaks have only a single match?
+
+```{r mz_single}
+mz_xcal2_singles <- filter(mz_xcal2, !(s_peak %in% mz_xcal_not_min2$not_min_s))
+
+mz_xcal2_singles_diff <- filter(mz_xcal2_singles, which == "xcal", mz_diff <= 5e-4)
+nrow(mz_xcal2_singles_diff)
+```
+
+```{r plot_mismatch}
+q <- plot_peaks(filter(mz_xcal2, q_peak %in% 1171), mz_avg, 5e-5)
+q
+```
+
+What is underneath here?
 
