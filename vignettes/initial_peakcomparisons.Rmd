@@ -134,5 +134,87 @@ q <- plot_peaks(filter(mz_xcal2, q_peak %in% 1171), mz_avg, 5e-5)
 q
 ```
 
-What is underneath here?
+What is underneath here? Lets look at the underlying scan data.
+
+```{r get_scan_data}
+rawdata <- xcms::xcmsRaw(mz_file, profstep = 0)
+
+n_scan <- length(rawdata@scanindex)
+
+scan_limit <- c(173.44207, 173.44221)
+scan_values <- lapply(seq(1, n_scan), function(in_scan){
+  tmp_scan <- as.data.frame(xcms::getScan(rawdata, in_scan, scan_limit))
+  
+  if (nrow(tmp_scan) > 0) {
+    tmp_scan$scan <- in_scan
+  }
+  tmp_scan
+})
+
+scan_values <- do.call(rbind, scan_values)
+
+scan_values$scan <- factor(scan_values$scan)
+
+q + geom_line(data = scan_values, aes(color = scan))
+```
+
+## More Information
+
+What we are really interested in is:
+
+* Do we match (5e-4) the majority of XCalibur peaks?
+* What fraction of peaks do we match?
+* If we miss peaks, do the missed peaks make sense?
+* If we find extra peaks, do they make sense (see above plot for an example)?
+
+### Matching
+
+```{r deeper_examination}
+xcal_peaks <- xcal_peaks[order(xcal_peaks$intensity, decreasing = TRUE), ]
+mz_peaks2 <- mz_peaks2[order(mz_peaks2$intensity, decreasing = TRUE), ]
+
+xcal_mz_deeper <- find_closest_peaks(mz_peaks2, xcal_peaks, "mz", "xcal")
+
+xcal_found_peaks <- filter(xcal_mz_deeper, which == "mz", mz_diff <= 5e-4) %>% 
+  select(s_peak) %>% unlist(., use.names = FALSE)
+
+xcal_missed_peaks <- xcal_peaks[-xcal_found_peaks,]
+
+# how many peaks are we finding
+(length(xcal_found_peaks) / nrow(xcal_peaks)) * 100
+
+# how much of the peak intensity are we matching?
+(sum(missed_peaks$intensity) / sum(xcal_peaks$intensity)) * 100
+```
+
+### Missed
+
+```{r missed_peaks}
+# do the missed peaks make sense that we missed them? i.e. are they really missed?
+xcal_mz_deeper_missed <- filter(xcal_mz_deeper, !(s_peak %in% xcal_found_peaks))
+
+plot_peaks(filter(xcal_mz_deeper_missed, s_peak %in% 143), mz_avg, 5e-3)
+plot_peaks(filter(xcal_mz_deeper_missed, s_peak %in% 216), mz_avg, 1e-2)
+plot_peaks(filter(xcal_mz_deeper_missed, s_peak %in% 411), mz_avg, 1e-2)
+```
+
+Interesting, in all of these cases it appears that Thermo is actually taking
+the center of the peak. 
+
+```{r test_pracma_again}
+test_mz <- filter(mz_avg, (mz >= 1486) & (mz <= 1486.25))
+
+diff_plot <- ggplot(test_mz, aes(x = mz, y = intensity)) + geom_line() + 
+  geom_point(data = filter(xcal_peaks, (mz >= min(test_mz$mz)) & (mz <= max(test_mz$mz))), color = "red") +
+  geom_point(data = filter(mz_peaks2, (mz >= min(test_mz$mz)) & (mz <= max(test_mz$mz))), color = "blue")
+diff_plot
+
+
+p_points <- pracma_findpeaks(test_mz)
+tmp_locs <- pracma::findpeaks(test_mz$intensity)
+
+lapply(seq(1, nrow(tmp_locs)), function(x){
+  mean(test_mz$mz[seq(tmp_locs[x, 3], tmp_locs[x, 4])])
+})
+```
 
