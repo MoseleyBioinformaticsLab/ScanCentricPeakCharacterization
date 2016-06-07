@@ -269,9 +269,30 @@ Finally, is there any overlap in which scans gave which peak?
 intersect(indiv_loc$loc_2$scan, indiv_loc$loc_3$scan)
 ```
 
-Nope, nothing in overlap. Lets check if this is due to the peak finding we used.
+Nope, nothing in overlap. Lets actually look at the raw scan data.
 
-```{r }
+```{r raw_scan_data}
+rawdata <- xcms::xcmsRaw(mz_file, profstep = 0)
+one_range <- c(1486.116, 1486.13)
+scan_data <- lapply(seq(1, length(rawdata@scanindex)), function(in_scan){
+  tmp_scan <- tbl_df(as.data.frame(xcms::getScan(rawdata, in_scan, one_range)))
+  
+  if (nrow(tmp_scan) > 0){
+    tmp_scan$scan <- in_scan
+  } 
+  tmp_scan
+})
 
+all_scans <- do.call(rbind, scan_data)
+```
+
+```{r plot_scans}
+ggplot(filter(all_scans, scan <= 10), aes(x = mz, y = intensity, color = as.factor(scan))) + geom_line() + geom_point()
+
+ggplot(filter(all_scans, (scan > 10) & (scan <= 20)), aes(x = mz, y = intensity, color = as.factor(scan))) + geom_line() + geom_point()
+
+ggplot(filter(all_scans, (scan > 20) & (scan <= 30)), aes(x = mz, y = intensity, color = as.factor(scan))) + geom_line() + geom_point()
+
+ggplot(filter(all_scans, (scan > 30) & (scan <= 40)), aes(x = mz, y = intensity, color = as.factor(scan))) + geom_line() + geom_point()
 ```
 
