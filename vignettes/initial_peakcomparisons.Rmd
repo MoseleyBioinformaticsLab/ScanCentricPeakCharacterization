@@ -184,7 +184,7 @@ xcal_missed_peaks <- xcal_peaks[-xcal_found_peaks,]
 (length(xcal_found_peaks) / nrow(xcal_peaks)) * 100
 
 # how much of the peak intensity are we matching?
-(sum(missed_peaks$intensity) / sum(xcal_peaks$intensity)) * 100
+(sum(xcal_missed_peaks$intensity) / sum(xcal_peaks$intensity)) * 100
 ```
 
 ### Missed
@@ -208,13 +208,70 @@ diff_plot <- ggplot(test_mz, aes(x = mz, y = intensity)) + geom_line() +
   geom_point(data = filter(xcal_peaks, (mz >= min(test_mz$mz)) & (mz <= max(test_mz$mz))), color = "red") +
   geom_point(data = filter(mz_peaks2, (mz >= min(test_mz$mz)) & (mz <= max(test_mz$mz))), color = "blue")
 diff_plot
+```
 
 
-p_points <- pracma_findpeaks(test_mz)
-tmp_locs <- pracma::findpeaks(test_mz$intensity)
+Next thing to try, find peaks in each scan, and then average the location and 
+intensity of the peaks that are very close to each other. Try this on the test
+data first before extending to full data set.
 
-lapply(seq(1, nrow(tmp_locs)), function(x){
-  mean(test_mz$mz[seq(tmp_locs[x, 3], tmp_locs[x, 4])])
+### Find Peaks Then Average
+
+```{r get_scan_data}
+rawdata <- xcms::xcmsRaw(mz_file, profstep = 0)
+mz_range <- range(test_mz$mz)
+scan_data <- lapply(seq(1, length(rawdata@scanindex)), function(in_scan){
+  tmp_scan <- tbl_df(as.data.frame(xcms::getScan(rawdata, in_scan, mz_range)))
+  
+  if (nrow(tmp_scan) > 0){
+    tmp_peaks <- find_peaks(tmp_scan)
+    tmp_peaks$scan <- in_scan
+  } else {
+    tmp_peaks <- tmp_scan
+  }
+  tmp_peaks
 })
+
+all_peaks <- do.call(rbind, scan_data)
+```
+
+```{r plot_all_peaks}
+ggplot(all_peaks, aes(x = mz, y = intensity)) + geom_point()
+```
+
+```{r plot_one_peak}
+one_peak <- filter(all_peaks, (mz >= 1486.116) & (mz <= 1486.13))
+ggplot(one_peak, aes(x = mz, y = intensity)) + geom_point()
+```
+
+Based on this image, we can set the peaks from the scans into 4 separate groups.
+
+```{r cluster_mz}
+indiv_loc <- list(loc_1 = filter(one_peak, mz < 1486.119),
+                  loc_2 = filter(one_peak, (mz >= 1486.119) & (mz < 1486.121)),
+                  loc_3 = filter(one_peak, (mz >= 1486.121) & (mz < 1486.123)),
+                  loc_4 = filter(one_peak, (mz >= 1486.123)))
+
+indiv_loc$loc_2_3 <- rbind(indiv_loc$loc_2, indiv_loc$loc_3)
+
+loc_sd <- vapply(indiv_loc, function(x){sd(x$mz)}, numeric(1))
+loc_mn <- vapply(indiv_loc, function(x){mean(x$mz)}, numeric(1))
+summary_table <- cbind(loc_mn, loc_sd)
+knitr::kable(summary_table, format.args = list(digits = 9))
+
+loc_diff <- diff(loc_mn)
+print(loc_diff, digits = 5)
+```
+
+Finally, is there any overlap in which scans gave which peak?
+
+```{r overlap_scans}
+intersect(indiv_loc$loc_2$scan, indiv_loc$loc_3$scan)
+```
+
+Nope, nothing in overlap. Lets check if this is due to the peak finding we used.
+
+```{r }
+
 ```
 
