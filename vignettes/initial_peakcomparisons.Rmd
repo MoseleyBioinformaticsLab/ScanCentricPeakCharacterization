@@ -175,7 +175,7 @@ mz_peaks2 <- mz_peaks2[order(mz_peaks2$intensity, decreasing = TRUE), ]
 
 xcal_mz_deeper <- find_closest_peaks(mz_peaks2, xcal_peaks, "mz", "xcal")
 
-xcal_found_peaks <- filter(xcal_mz_deeper, which == "mz", mz_diff <= 5e-4) %>% 
+xcal_found_peaks <- filter(xcal_mz_deeper, which == "mz", mz_diff <= 5e-5) %>% 
   select(s_peak) %>% unlist(., use.names = FALSE)
 
 xcal_missed_peaks <- xcal_peaks[-xcal_found_peaks,]
