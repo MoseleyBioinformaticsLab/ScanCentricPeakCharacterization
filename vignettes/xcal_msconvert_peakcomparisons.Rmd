@@ -1,0 +1,103 @@
+---
+title: "Xcal MSconvert"
+author: "Robert M Flight <rflight79@gmail.com>"
+date: "`r Sys.time()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{initial peakcomparisons}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Run Parameters
+
+## XCalibur
+
+Select scans 3-39 (sample time of 0.3-7.02), display all peaks, and make sure
+that "reference / exception peaks" is **not** checked.
+
+## MSConvert
+
+From the directory containing the `raw` files:
+
+```
+"C:\Program Files\ProteoWizard\ProteoWizard 3.0.9205\msconvert.exe" 
+    *.RAW -o ../mzML_exported2 --filter "scanNumber [3,39]"
+```
+
+```{r setup}
+library(SIRM.FTMS.peakPickingMethods)
+library(dplyr)
+library(ggplot2)
+library(cowplot)
+```
+
+# Files
+
+```{r get_files}
+mz_loc <- "/home/rmflight/Projects/work/CESB/ftms.QC/mzML_exported"
+mz_files <- file.path(mz_loc, dir(mz_loc, pattern = "mzML"))
+
+xcal_loc <- "/home/rmflight/Projects/work/CESB/ftms.QC/exported_noref"
+xcal_files <- file.path(xcal_loc, dir(xcal_loc, pattern = "xlsx"))
+```
+
+# Peaks
+
+```{r get_peaks}
+mz_data <- lapply(mz_files, function(in_file){
+  tmp_data <- import_mzML(in_file)
+  tmp_peaks <- find_peaks(tmp_data, m = 5)
+})
+names(mz_data) <- mz_files
+
+xcal_data <- lapply(xcal_files, function(in_file){
+  tmp_xcal <- import_xcalibur(in_file)
+})
+names(xcal_data) <- xcal_files
+```
+
+# Matching
+
+What we are really interested in is:
+
+* Do we match the majority of XCalibur peaks (at different cutoffs)?
+
+
+```{r matching_examination}
+match_cutoffs <- c(5e-4, 1e-4, 5e-5, 1e-5)
+
+perc_xcal_matches <- lapply(seq(1, length(mz_files)), function(in_file){
+  xcal_mz_match <- find_closest_peaks(mz_data[[in_file]],
+                                      xcal_data[[in_file]],
+                                      "mz", "xcal")
+  n_match <- vapply(match_cutoffs, function(use_cutoff){
+    xcal_hasmatch <- filter(xcal_mz_match, which == "mz", mz_diff <= use_cutoff) %>% 
+      select(s_peak) %>% unlist(., use.names = FALSE)
+    length(xcal_hasmatch) / nrow(xcal_data[[in_file]]) * 100
+  }, numeric(1))
+  n_match
+})
+
+perc_xcal_matches
+```
+
+* How many of our peaks have matches to XCalibur?
+
+
+```{r match_mz}
+perc_mz_matches <- lapply(seq(1, length(mz_files)), function(in_file){
+  mz_xcal_match <- find_closest_peaks(xcal_data[[in_file]],
+                                      mz_data[[in_file]],
+                                      "xcal", "mz")
+  n_match <- vapply(match_cutoffs, function(use_cutoff){
+    mz_hasmatch <- filter(mz_xcal_match, which == "xcal", mz_diff <= use_cutoff) %>% 
+      select(s_peak) %>% unlist(., use.names = FALSE)
+    length(mz_hasmatch) / nrow(mz_data[[in_file]]) * 100
+  }, numeric(1))
+  n_match
+})
+
+perc_mz_matches
+```
+
