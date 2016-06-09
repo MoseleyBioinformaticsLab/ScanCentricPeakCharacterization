@@ -249,10 +249,10 @@ p_all_peaks
 Based on this image, we can set the peaks from the scans into 4 separate groups.
 
 ```{r cluster_mz}
-indiv_loc <- list(loc_1 = filter(one_peak, mz < 1486.119),
-                  loc_2 = filter(one_peak, (mz >= 1486.119) & (mz < 1486.121)),
-                  loc_3 = filter(one_peak, (mz >= 1486.121) & (mz < 1486.123)),
-                  loc_4 = filter(one_peak, (mz >= 1486.123)))
+indiv_loc <- list(loc_1 = filter(all_peaks, mz < 1486.119),
+                  loc_2 = filter(all_peaks, (mz >= 1486.119) & (mz < 1486.121)),
+                  loc_3 = filter(all_peaks, (mz >= 1486.121) & (mz < 1486.123)),
+                  loc_4 = filter(all_peaks, (mz >= 1486.123)))
 
 indiv_loc$loc_2_3 <- rbind(indiv_loc$loc_2, indiv_loc$loc_3)
 
