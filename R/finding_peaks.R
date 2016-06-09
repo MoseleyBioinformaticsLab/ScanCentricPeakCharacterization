@@ -18,6 +18,9 @@ pracma_findpeaks <- function(avg_spectra, ...){
 #' @param avg_spectra input spectrum
 #' @param m how many on each side need to be lower
 #'
+#' @details Was copied from a cross-validated post:
+#'   http://stats.stackexchange.com/questions/22974/how-to-find-local-peaks-valleys-in-a-series-of-data
+#'   by user stas-g
 #' @export
 #' @return tbl_df
 find_peaks <- function(avg_spectra, m = 3){
