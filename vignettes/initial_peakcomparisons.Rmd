@@ -10,7 +10,7 @@ vignette: >
 ---
 
 ```{r setup}
-library(ftmsComparePeaks)
+library(SIRM.FTMS.peakPickingMethods)
 library(dplyr)
 library(ggplot2)
 library(cowplot)
