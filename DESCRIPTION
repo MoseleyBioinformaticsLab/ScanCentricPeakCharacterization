@@ -1,4 +1,4 @@
-Package: ftmsComparePeaks
+Package: SIRM.FTMS.peakPickingMethods
 Title: Functionality for Detecting and Comparing Peaks
 Version: 0.0.1
 Authors@R: person(given = c("Robert", "M"), family = c("Flight"),
