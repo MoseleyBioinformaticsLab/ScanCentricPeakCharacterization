@@ -38,3 +38,44 @@ import_xcalibur <- function(xcal_file, sheet = 1){
   xcal_data <- filter_(xcal_data, "!is.na(mz)", "!is.na(intensity)")
   xcal_data
 }
+
+#' import mzML by scans
+#'
+#' given an mzML file, import all or a range of scans
+#'
+#' @param mz_file the mzML file
+#' @param scan_indices which scans to import by index
+#' @param scan_times which scans to import by time (in seconds)
+#'
+#' @details
+#'   Returns a list of \code{tbl_df}'s, with \code{mz} and \code{intensity}.
+#'
+#' @importFrom xcms xcmsRaw getScan
+#' @importFrom dplyr tbl_df
+#'
+#' @export
+#' @return list
+#'
+#' @examples \dontrun{
+#'   mz_file <- "example_file.mzML"
+#'   scan_data <- scan_mzML(mz_file) # imports all scans
+#'   scan_data <- scan_mzML(mz_file, scan_indices = seq(1, 5)) # scans 1-5
+#'   scan_data <- scan_mzML(mz_file, scan_times = c(24, 80)) # scans in this time range
+#' }
+scan_mzML <- function(mz_file, scan_indices = NULL, scan_times = NULL){
+  raw_data <- xcmsRaw(mz_file, profstep = 0)
+
+  raw_scan_time <- raw_data@scantime
+  raw_scan_index <- length(raw_scan_time)
+
+  if (!(is.null(scan_indices)) & !(is.null(scan_times))) {
+    stop("Only one of scan_indices or scan_times should be provided")
+  }
+
+  if (!(is.null(scan_indices)) & (max(scan_indices) > max(raw_scan_index))) {
+    scan_indices[scan_indices > (max(raw_scan_index))] <- max(raw_scan_index)
+    warning("Some scan indices were larger than the number of available scans")
+  }
+
+
+}
