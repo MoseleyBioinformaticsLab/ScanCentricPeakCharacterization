@@ -8,6 +8,7 @@ the data.
 
 ```
 git clone https://gitlab.cesb.uky.edu/rmflight/SIRM.FTMS.peakPickingMethods.git
+cd SIRM.FTMS.peakPickingMethods.git
 R
 devtools::install()
 ```
