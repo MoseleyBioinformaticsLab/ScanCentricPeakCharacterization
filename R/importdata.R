@@ -46,6 +46,7 @@ import_xcalibur <- function(xcal_file, sheet = 1){
 #' @param mz_file the mzML file
 #' @param scan_indices which scans to import by index
 #' @param scan_times which scans to import by time (in seconds)
+#' @param mz_range a range of m/z's to return the scans by
 #'
 #' @details
 #'   Returns a list of \code{tbl_df}'s, with \code{mz} and \code{intensity}.
@@ -62,20 +63,42 @@ import_xcalibur <- function(xcal_file, sheet = 1){
 #'   scan_data <- scan_mzML(mz_file, scan_indices = seq(1, 5)) # scans 1-5
 #'   scan_data <- scan_mzML(mz_file, scan_times = c(24, 80)) # scans in this time range
 #' }
-scan_mzML <- function(mz_file, scan_indices = NULL, scan_times = NULL){
+scan_mzML <- function(mz_file, scan_indices = NULL, scan_times = NULL,
+                      mz_range = numeric()){
   raw_data <- xcmsRaw(mz_file, profstep = 0)
 
   raw_scan_time <- raw_data@scantime
-  raw_scan_index <- length(raw_scan_time)
+  raw_scan_index <- seq(1, length(raw_scan_time))
 
   if (!(is.null(scan_indices)) & !(is.null(scan_times))) {
     stop("Only one of scan_indices or scan_times should be provided")
   }
 
-  if (!(is.null(scan_indices)) & (max(scan_indices) > max(raw_scan_index))) {
-    scan_indices[scan_indices > (max(raw_scan_index))] <- max(raw_scan_index)
-    warning("Some scan indices were larger than the number of available scans")
+  if (!is.null(scan_indices)) {
+    if ((max(scan_indices) > max(raw_scan_index))) {
+      scan_indices[scan_indices > (max(raw_scan_index))] <- max(raw_scan_index)
+      scan_indices <- unique(scan_indices)
+      warning("Some scan indices were larger than the number of available scans")
+    }
+  } else {
+    scan_indices <- raw_scan_index
   }
 
+  if (!(is.null(scan_times))) {
+    if (length(scan_times) == 2) {
+      scan_indices <- which((raw_scan_time >= scan_times[1]) &
+                              (raw_scan_time <= scan_times[2]))
+    } else {
+      stop("scan_times must be of length 2")
+    }
 
+  }
+
+  scan_data <- lapply(scan_indices, function(in_index){
+    tbl_df(as.data.frame(getScan(raw_data, in_index, mzrange = mz_range)))
+  })
+
+  scan_data$meta <- list(index = scan_indices,
+                         time = raw_scan_time[scan_indices])
+  scan_data
 }
