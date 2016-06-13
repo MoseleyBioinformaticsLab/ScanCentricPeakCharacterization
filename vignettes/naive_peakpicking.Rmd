@@ -1,0 +1,24 @@
+---
+title: "Naive Peak Picking"
+author: "Robert M Flight"
+date: "`r Sys.time()`"
+output: rmarkdown::pdf_document
+vignette: >
+  %\VignetteIndexEntry{Naive Peak Picking}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Data
+
+Replication study using BCAL breast cancer samples and various normal samples.
+
+This is using one of the most naive methods of peak picking, in that we take
+the mzML files that have already had their scans filtered by time.
+
+RAW files were converted using `msconvert` in `/home/rmflight/Music/big_data_notbackup/CESB/rawdata/replication_study`
+
+```
+msconvert *.RAW -o ../mzml_files --filter "scanTime [18,430]"
+```
+
