@@ -30,12 +30,13 @@ msconvert *.RAW -o output_dir --filter "scanNumber [3,39]"
 
 alternatively
 
-msconvert *.RAW -o output_dir --filter "scanTime [20-422]"
+msconvert *.RAW -o output_dir --filter "msLevel [1]" --filter "scanTime [18,430]" 
 ```
 
 This would directly convert our profile scan data, while converting only scans
 3 through 39 (which was commonly chosen at least for breast cancer data), or
-converting only scans in the time range of 20 seconds to 7 minutes.
+converting only scans in the time range of 20 seconds to 7 minutes, as well
+as only the MS1 scans.
 
 ## Averaging Scans
 
