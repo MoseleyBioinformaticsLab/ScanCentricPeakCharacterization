@@ -22,3 +22,44 @@ RAW files were converted using `msconvert` in `/home/rmflight/Music/big_data_not
 msconvert *.RAW -o ../mzml_files --filter "scanTime [18,430]"
 ```
 
+## Peak Method
+
+* Average the data across scans using `import_mzml`
+* Find peaks using `find_peaks`, which very simply looks for changes in the sign
+the vector with a certain number of points on each side.
+
+## Generate Data
+
+For each of the files, we read in and average the scans (by base `xcms` functionality)
+and then find the peaks, and then export the data.
+
+```{r file_locs}
+library(SIRM.FTMS.peakPickingMethods)
+
+in_files <- c(dir("/home/rmflight/Music/big_data_notbackup/CESB_rawdata/replication_study/cancer_positive_mode/mzml_files", full.names = TRUE),
+              dir("/home/rmflight/Music/big_data_notbackup/CESB_rawdata/replication_study/control_positive_mode/mzml_files", full.names = TRUE))
+
+save_loc <- "/home/rmflight/Music/big_data_notbackup/CESB_rawdata/replication_study/picked_peaks"
+time_dir <- make.names(paste0("out_peaks_", Sys.time()))
+
+out_loc <- file.path(save_loc, time_dir)
+dir.create(out_loc)
+```
+
+```{r read_pick}
+lapply(in_files, function(use_file){
+  tmp_data <- import_mzML(use_file)
+  tmp_peaks <- find_peaks(tmp_data, m = 5)
+  
+  out_id <- basename(use_file)
+  out_id <- substr(out_id, 1, nchar(out_id) - 5)
+  
+  out_file <- paste0(out_id, ".txt")
+  out_file <- file.path(out_loc, out_file)
+  write.table(tmp_peaks, file = out_file, sep = "\t", row.names = FALSE, col.names = TRUE)
+})
+
+out_loc
+```
+
+Run using commit: `r substr(git2r::branch_target(git2r::head(git2r::repository())), 1, 8)`
