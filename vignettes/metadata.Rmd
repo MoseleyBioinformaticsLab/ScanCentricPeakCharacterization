@@ -12,6 +12,108 @@ ns <- xml_ns(xml_doc)
 ```{r sample_id}
 mz_data <- xml_find_first(xml_doc, "/d1:indexedmzML/d1:mzML", ns)
 
+write_mz_json <- function(mzml_file){
+  # function for transforming attributes to a json string
+  xml_attrs_2_json <- function(node_attrs){
+    node_strs <- lapply(names(node_attrs), function(in_node){
+      paste0('"', in_node, '": ', '"', node_attrs[in_node], '"')
+    })
+    node_strs <- paste(node_strs, collapse = ",\n")
+    node_strs
+  }
+  
+  # start processing the document
+  mz_doc <- read_xml(mzml_file)
+  mz_ns <- xml_ns(mz_doc)
+  
+  mz_path <- c("indexedmzML", "mzML")
+  which_namespace <- which.min(which(grepl("psi", mz_ns)))
+  ns_pre <- names(mz_ns)[which_namespace]
+  
+  path_with_pre <- paste0("/", ns_pre, ":", mz_path)
+  path_collapsed <- paste(path_with_pre, collapse = "")
+  
+  mz_node <- xml_find_first(mz_doc, path_collapsed, mz_ns)
+  
+  # open the json object
+  json_string <- paste0('[\n{\n')
+  
+  # add the mzML node
+  json_string <- paste0(json_string, '"', xml_name(mz_node), '": {\n')
+  
+  # and it's attributes
+  json_string <- paste0(json_string, xml_attrs_2_json(xml_attrs(mz_node)), '\n},\n')
+  
+  # now start processing the children
+  mz_children <- xml_children(mz_node)
+  
+  in_nodes <- mz_children[1:6] # delete this line after debugging
+  
+  # function to turn the other nodes into json
+  json_other_nodes <- function(json_string, in_nodes, print_node_name = TRUE){
+    node_names <- xml_name(in_nodes)
+    
+    node_class <- class(in_nodes)
+    
+    if (node_class == "xml_nodeset") {
+      subset_type <- "deep"
+      node_length <- length(in_nodes)
+      length_match <- length(unique(node_names)) == node_length
+    } else if (node_class == "xml_node") {
+      subset_type <- "shallow"
+      length_match <- TRUE
+      node_length <- 1
+    }
+    
+    # if there is no repetition, we create an object
+    # otherwise we will start an array
+    # careful here, length of node is zero, subsetting node is bad
+    if (length_match) {
+      for (i_node in seq_len(node_length)) {
+        if (subset_type == "deep") {
+          use_node <- in_nodes[[i_node]]
+        } else if (subset_type == "shallow") {
+          use_node <- in_nodes
+        }
+        
+        if (print_node_name) {
+          print(xml_name(use_node))
+          json_string <- paste0(json_string, '{\n"', xml_name(use_node), '": ')
+        } else {
+          json_string <- paste0(json_string, '{\n')
+        }
+        
+        use_attrs <- xml_attrs(use_node)
+        if (length(use_attrs) > 0) {
+          json_string <- paste0(json_string, xml_attrs_2_json(use_attrs))
+        }
+        use_children <- xml_children(use_node)
+        if (length(use_children) > 0) {
+          json_string <- json_other_nodes(json_string, use_children)
+        } else {
+          json_string <- paste0(json_string, '},\n')
+        }
+      }
+    } else {
+      uniq_nodes <- unique(node_names)
+      n_name <- length(uniq_nodes)
+      if (n_name == 1) {
+        print(uniq_nodes)
+        json_string <- paste0(json_string, '\n"', uniq_nodes, '": [')
+        for (j_node in seq_along(in_nodes)) {
+          json_string <- json_other_nodes(json_string, in_nodes[[j_node]], FALSE)
+        }
+        json_string <- paste0(json_string, ']\n')
+      } else {
+        xml_name(in_nodes) <- make.names(node_names, unique = TRUE)
+        json_string <- json_other_nodes(json_string, in_nodes)
+      }
+    }
+    json_string
+  }
+  
+}
+
 sample_id <- xml_attr(mz_data, "id", ns)
 ```
 
