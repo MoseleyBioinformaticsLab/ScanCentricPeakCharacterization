@@ -4,18 +4,22 @@
 \alias{import_mzML}
 \title{import mzML data}
 \usage{
-import_mzML(mz_file, ...)
+import_mzML(mz_file, profstep = 0, includeMSn = TRUE)
 }
 \arguments{
 \item{mz_file}{the mzML file to import}
 
-\item{...}{other \code{xcms::getSpec} parameters}
+\item{profstep}{the profile step to use, should be 0 to make our lives easier}
+
+\item{includeMSn}{whether to include MSn data, should be TRUE to get \emph{all data}.}
+
+\item{...}{other xcmsRaw parameters}
 }
 \value{
-tbl_df
+xcmsRaw
 }
 \description{
-function to import mzML data and generate the mean spectrum. \code{mz_file}
-should be the \emph{full path} to the data.
+function to import mzML data in a way that provides what we need to work
+with it. \code{mz_file} should be the \emph{full path} to the data.
 }
 

@@ -1,24 +1,51 @@
 #' import mzML data
 #'
-#' function to import mzML data and generate the mean spectrum. \code{mz_file}
-#' should be the \emph{full path} to the data.
+#' function to import mzML data in a way that provides what we need to work
+#' with it. \code{mz_file} should be the \emph{full path} to the data.
 #'
 #' @param mz_file the mzML file to import
-#' @param ... other \code{xcms::getSpec} parameters
+#' @param profstep the profile step to use, should be 0 to make our lives easier
+#' @param includeMSn whether to include MSn data, should be TRUE to get \emph{all data}.
+#' @param ... other xcmsRaw parameters
 #'
-#' @importFrom xcms xcmsRaw getSpec
-#' @importFrom dplyr tbl_df
+#' @importFrom xcms xcmsRaw
 #'
 #' @export
-#' @return tbl_df
-import_mzML <- function(mz_file, ...){
-  mz_data <- xcmsRaw(mz_file, profstep = 0)
+#' @return xcmsRaw
+import_mzML <- function(mz_file, profstep = 0, includeMSn = TRUE){
+  mz_data <- xcmsRaw(mz_file, profstep = profstep, includeMSn = includeMSn, ...)
 
-  mz_avg <- getSpec(mz_data)
-  mz_avg <- tbl_df(as.data.frame(mz_avg))
-  names(mz_avg) <- c("mz", "intensity")
-  mz_avg <- filter_(mz_avg, "!is.na(mz)", "!is.na(intensity)")
-  mz_avg
+  mz_data
+}
+
+#' plot tic
+#'
+#' function to plot the total intensity chromatogram of the data, with information
+#' about which scans are which
+#'
+#' @param xcms_raw an \code{xcmsRaw} object (ideally from \code{import_mzML})
+#' @param color_ms should scans be colored by their \emph{ms} level and type?
+#'
+#' @import ggplot2
+#' @return ggplot
+plot_tic <- function(xcms_raw, color_ms = TRUE){
+  ms1_data <- data.frame(ms_level = 1, tic = xcms_raw@tic,
+                         scantime = xcms_raw@scantime,
+                         index = xcms_raw@scanindex,
+                         type = factor("normal", levels = c("normal", "precursor")))
+  msn_data <- data.frame(ms_level = xcms_raw@msnLevel,
+                         tic = xcms_raw@msnPrecursorIntensity,
+                         scantime = xcms_raw@msnRt,
+                         index = xcms_raw@msnScanindex,
+                         type = "normal")
+
+  msn_precursors <- unique(xcms_raw@msnPrecursorScan)
+  ms1_data$type[msn_precursors] <- "precursor"
+
+  all_data <- rbind(ms1_data, msn_data)
+
+  ggplot(all_data, aes(x = scantime, xend = scantime, y = 0, yend = (tic + 1), color = type)) + geom_segment() +
+    ylab("tic")
 }
 
 #' import Xcalibur data
