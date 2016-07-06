@@ -1,0 +1,134 @@
+#' get mzML metadata
+#'
+#' @param mzml_file the mzML file to get metadata from
+#'
+#' @import XML
+#' @export
+get_mzml_metadata <- function(mzml_file){
+  xml_doc <- xmlTreeParse(mzml_file, useInternalNodes = TRUE)
+  ns <- xmlNamespaceDefinitions(xmlRoot(xml_doc), recursive = TRUE, simplify = TRUE)
+  names(ns)[1] <- "d1"
+
+  mz_metanodes <- getNodeSet(xml_doc, "/d1:indexedmzML/d1:mzML", ns)
+
+  mz_meta <- list()
+  tmp_attr <- unclass(xmlAttrs(mz_metanodes[[1]]))
+
+  attr(tmp_attr, "namespaces") <- NULL
+  mz_meta[["mzML"]][[".attrs"]] <- tmp_attr
+
+  other_nodes_2_get <- c("cvList", "fileDescription",
+                         "referenceableParamGroupList",
+                         "softwareList",
+                         "instrumentConfigurationList",
+                         "dataProcessingList")
+
+  other_nodes <- xmlChildren(mz_metanodes[[1]])
+  other_list <- lapply(other_nodes, xmlToList)
+
+  mz_meta <- c(mz_meta, other_list[other_nodes_2_get])
+
+  mz_meta[["run"]][[".attrs"]] <- xmlAttrs(mz_metanodes[[1]][["run"]])
+
+  mz_meta <- .remove_attrs(mz_meta)
+
+  mz_meta_frame <- .to_data_frame(mz_meta)
+
+  mz_meta_frame$run$scanPolarity <- .get_scan_polarity(other_list$run$spectrumList)
+
+  mz_meta_frame$run$startTimeStamp <- gsub("T", " ", mz_meta_frame$run$startTimeStamp)
+
+  mz_meta_frame
+}
+
+#' export metadata to json
+#'
+#' export the list metadata to a json string
+#'
+#' @param meta_list a list of metadata
+#'
+#' @importFrom jsonlite toJSON
+#' @export
+meta_export_json <- function(meta_list){
+  toJSON(meta_list, pretty = TRUE, auto_unbox = TRUE)
+}
+
+#' transform to data frame
+#'
+#' @param in_list the list of xml nodes to work on
+#'
+.to_data_frame <- function(in_list){
+  if (class(in_list) == "list") {
+    out_list <- lapply(in_list, .to_data_frame)
+  } else if (class(in_list) == "character") {
+    if (!is.null(names(in_list))) {
+      out_list <- as.data.frame(t(as.matrix(in_list)))
+    } else {
+      out_list <- in_list
+    }
+
+  }
+  out_list
+}
+
+#' remove attributes
+#'
+#' removes a list entry called ".attrs" from a list, and makes them first level
+#' partners
+#'
+#' @param in_list the list to work on
+#'
+.remove_attrs <- function(in_list){
+  if (class(in_list) == "list") {
+    out_list <- in_list
+    list_names <- names(out_list)
+
+    if (".attrs" %in% list_names) {
+      tmp_attrs <- out_list[[".attrs"]]
+
+      name_attrs <- names(tmp_attrs)
+
+      if (sum(name_attrs %in% list_names) == 0) {
+        for (i_name in name_attrs) {
+          out_list[[i_name]] <- tmp_attrs[[i_name]]
+        }
+        out_list[[".attrs"]] <- NULL
+      }
+    } else {
+      out_list <- lapply(out_list, .remove_attrs)
+    }
+    # still need to check the rest of the pieces of the list!
+    out_list <- lapply(out_list, .remove_attrs)
+  } else {
+    out_list <- in_list
+  }
+  out_list
+}
+
+#' get_scan_mode
+#'
+#' takes a list from xmlToList for "run" and looks at whether all scans are positive, negative, or mixed
+#'
+#' @param spectrum_list the list of spectra
+#'
+.get_scan_polarity <- function(spectrum_list){
+  spectrum_list[[".attrs"]] <- NULL
+  scan_data <- lapply(spectrum_list, function(in_spectrum){
+    cv_loc <- which(names(in_spectrum) %in% "cvParam")
+    cv_data <- unlist(in_spectrum[cv_loc])
+    scan_polarity <- grep("scan", cv_data, value = TRUE)
+
+    scan_polarity
+  })
+
+  scan_polarity <- as.character(unique(scan_data))
+
+  if ((length(scan_polarity) == 1) && (grepl("positive", scan_polarity))) {
+    out_polarity <- "positive"
+  } else if ((length(scan_polarity) == 1) && (grepl("negative", scan_polarity))) {
+    out_polarity <- "negative"
+  } else {
+    out_polarity <- "mixed"
+  }
+  out_polarity
+}

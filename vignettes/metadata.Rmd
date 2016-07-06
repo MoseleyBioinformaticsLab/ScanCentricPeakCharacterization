@@ -35,16 +35,7 @@ write_mz_json <- function(mzml_file){
   
   mz_node <- xml_find_first(mz_doc, path_collapsed, mz_ns)
   
-  # open the json object
-  json_string <- paste0('[\n{\n')
-  
-  # add the mzML node
-  json_string <- paste0(json_string, '"', xml_name(mz_node), '": {\n')
-  
-  # and it's attributes
-  json_string <- paste0(json_string, xml_attrs_2_json(xml_attrs(mz_node)), '\n},\n')
-  
-  # now start processing the children
+    # now start processing the children
   mz_children <- xml_children(mz_node)
   
   in_nodes <- mz_children[1:6] # delete this line after debugging
