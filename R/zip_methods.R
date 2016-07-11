@@ -35,7 +35,7 @@ add_to_zip <- function(object, filename, zip_file){
   unlink(use_dir, recursive = TRUE)
 }
 
-#' create initial zip
+#' create initial zip from mzML
 #'
 #' given an mzML file, create the initial zip file containing the
 #' zipped \emph{mzML}, \emph{metadata.json}, and \emph{raw_metadata.json}.
