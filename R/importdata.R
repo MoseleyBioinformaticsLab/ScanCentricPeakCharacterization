@@ -13,7 +13,7 @@
 #' @export
 #' @return xcmsRaw
 import_mzML <- function(mz_file, profstep = 0, includeMSn = TRUE){
-  mz_data <- xcmsRaw(mz_file, profstep = profstep, includeMSn = includeMSn, ...)
+  mz_data <- xcmsRaw(mz_file, profstep = profstep, includeMSn = includeMSn)
 
   mz_data
 }
@@ -28,23 +28,29 @@ import_mzML <- function(mz_file, profstep = 0, includeMSn = TRUE){
 #'
 #' @import ggplot2
 #' @return ggplot
+#' @export
 plot_tic <- function(xcms_raw, color_ms = TRUE){
-  ms1_data <- data.frame(ms_level = 1, tic = xcms_raw@tic,
+  ms1_data <- data.frame(ms_level = paste0("ms", 1),
+                         tic = xcms_raw@tic,
                          scantime = xcms_raw@scantime,
                          index = xcms_raw@scanindex,
-                         type = factor("normal", levels = c("normal", "precursor")))
-  msn_data <- data.frame(ms_level = xcms_raw@msnLevel,
+                         type = "normal",
+                         stringsAsFactors = FALSE)
+  msn_data <- data.frame(ms_level = paste0("ms", xcms_raw@msnLevel),
                          tic = xcms_raw@msnPrecursorIntensity,
                          scantime = xcms_raw@msnRt,
                          index = xcms_raw@msnScanindex,
-                         type = "normal")
+                         type = "normal",
+                         stringsAsFactors = FALSE)
 
   msn_precursors <- unique(xcms_raw@msnPrecursorScan)
   ms1_data$type[msn_precursors] <- "precursor"
 
   all_data <- rbind(ms1_data, msn_data)
 
-  ggplot(all_data, aes(x = scantime, xend = scantime, y = 0, yend = (tic + 1), color = type)) + geom_segment() +
+  all_data$ms_type <- paste0(all_data$type, ".", all_data$ms_level)
+
+  ggplot(all_data, aes(x = scantime, xend = scantime, y = 0, yend = (tic + 1), color = ms_type)) + geom_segment() +
     ylab("tic")
 }
 
