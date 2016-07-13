@@ -43,11 +43,12 @@
 #'
 #' }
 #'
-raw_ms <- function(in_file, out_dir = dirname(in_file)){
-  RawMS$new(in_file, out_dir)
+raw_ms <- function(in_file, out_dir = dirname(in_file), find_peaks = NULL){
+  RawMS$new(in_file, out_dir, find_peaks = find_peaks)
 }
 
 #' @importFrom R6 R6Class
+#' @export
 RawMS <- R6::R6Class("RawMS",
    public = list(
    zip_file = NULL,
@@ -83,11 +84,10 @@ RawMS <- R6::R6Class("RawMS",
      self$rt_range <- range(ms_scan_info$time)
    },
 
-   find_peaks = NULL,
+   find_peaks = function(){},
    peaks = NULL,
-   peak_metadata = NULL,
 
-   initialize = function(in_file, out_dir = dirname(in_file)){
+   initialize = function(in_file, out_dir = dirname(in_file), find_peaks = NULL){
      zip_loc <- regexpr(".zip", in_file, ignore.case = TRUE)
      mzml_loc <- regexpr(".mzml", in_file, ignore.case = TRUE)
 
@@ -124,6 +124,10 @@ RawMS <- R6::R6Class("RawMS",
        msn_precursors <- unique(self$raw_data@msnPrecursorScan)
        self$scan_range <- ms1_index[-msn_precursors]
        self$rt_range <- range(self$raw_data@scantime[self$scan_range])
+     }
+
+     if (!is.null(find_peaks)) {
+       self$find_peaks <- find_peaks
      }
    }
   )
