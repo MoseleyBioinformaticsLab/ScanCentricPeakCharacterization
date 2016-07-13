@@ -3,7 +3,7 @@
 #' given a zip file, list the contents
 #'
 #' @param zip_file the zip file
-#'
+#' @export
 zip_list_contents <- function(zip_file){
   unzip(zip_file, list = TRUE)
 }
@@ -19,7 +19,7 @@ zip_list_contents <- function(zip_file){
 #'
 #' @details a directory created by \code{tempdir} is used to hold the file,
 #' which is then added to the zip file.
-#'
+#' @export
 add_to_zip <- function(object, filename, zip_file){
   stopifnot(file.exists(zip_file))
   use_dir <- tempdir()
@@ -44,6 +44,7 @@ add_to_zip <- function(object, filename, zip_file){
 #'
 #' @param mzml_file the mzML file to zip up
 #' @param out_dir the directory to save the zip file
+#' @export
 mzml_to_zip <- function(mzml_file, out_dir = dirname(mzml_file)){
   mzml_file <- path.expand(mzml_file)
   stopifnot(file.exists(mzml_file))
@@ -74,4 +75,37 @@ mzml_to_zip <- function(mzml_file, out_dir = dirname(mzml_file)){
         flags = "-j")
   )
   unlink(temp_dir)
+
+  if (file.exists(zip_file_out)) {
+    out_file <- zip_file_out
+  } else {
+    out_file <- NULL
+  }
+  out_file
+}
+
+#' check zip file
+#'
+#' checks that the zip file has the basic contents it should have, and that
+#' files listed in the metadata actually exist.
+#'
+#' @param zip_file the zip file to be checked
+#'
+#' @export
+#' @import assertthat
+#' @return character
+check_zip_file <- function(zip_file){
+  zip_contents <- zip_list_contents(zip_file)
+
+  assert_that("metadata.json" %in% zip_contents$Name)
+
+  zip_metadata <- jsonlite::fromJSON(unzip(zip_file, files = "metadata.json"))
+
+  assert_that(!is.null(zip_metadata$raw$mzML))
+  assert_that(zip_metadata$raw$mzML %in% zip_contents$Name)
+
+  assert_that(!is.null(zip_metadata$raw$metadata))
+  assert_that(zip_metadata$raw$metadata %in% zip_contents$Name)
+
+  zip_metadata
 }
