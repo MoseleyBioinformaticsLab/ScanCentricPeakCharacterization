@@ -4,7 +4,7 @@
 \alias{raw_ms}
 \title{Storing the raw mass spec data and operating on it}
 \usage{
-raw_ms(in_file, out_dir = dirname(in_file))
+raw_ms(in_file, out_dir = dirname(in_file), find_peaks = NULL)
 }
 \arguments{
 \item{in_file}{the zip or mzML file to use}
