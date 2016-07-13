@@ -44,7 +44,10 @@
 #' }
 #'
 raw_ms <- function(in_file, out_dir = dirname(in_file), find_peaks = NULL){
-  RawMS$new(in_file, out_dir, find_peaks = find_peaks)
+  if (!is.null(find_peaks)) {
+    RawMS$set("public", "find_peaks", find_peaks, overwrite = TRUE)
+  }
+  RawMS$new(in_file, out_dir)
 }
 
 #' @importFrom R6 R6Class
