@@ -135,3 +135,21 @@ RawMS <- R6::R6Class("RawMS",
    }
   )
 )
+
+peaks <- R6::R6Class("peaks",
+   public = list(
+     peak_data = NULL,
+     metadata = NULL,
+     initialize = function(peak_data, metadata) {
+       assertthat::assert_that(all(c("mz", "intensity") %in% colnames(peak_data)))
+
+       assertthat::assert_that(all(c("package", "version", "sha", "function_called","parameters") %in% names(metadata$picking_description)))
+
+       metadata$mz_range <- range(peak_data$mz)
+
+       self$peak_data <- peak_data
+       self$metadata <- metadata
+
+     }
+  )
+)
