@@ -52,7 +52,7 @@ mzml_to_zip <- function(mzml_file, out_dir = dirname(mzml_file)){
   raw_meta <- get_mzml_metadata(mzml_file)
 
   zip_meta <- list(raw =
-                     list(mzML = basename(mzml_file),
+                     list(data = basename(mzml_file),
                           metadata = "raw_metadata.json"))
   zip_meta_json <- meta_export_json(zip_meta)
 
@@ -101,8 +101,8 @@ check_zip_file <- function(zip_file){
 
   zip_metadata <- jsonlite::fromJSON(unzip(zip_file, files = "metadata.json"))
 
-  assert_that(!is.null(zip_metadata$raw$mzML))
-  assert_that(zip_metadata$raw$mzML %in% zip_contents$Name)
+  assert_that(!is.null(zip_metadata$raw$data))
+  assert_that(zip_metadata$raw$data %in% zip_contents$Name)
 
   assert_that(!is.null(zip_metadata$raw$metadata))
   assert_that(zip_metadata$raw$metadata %in% zip_contents$Name)
