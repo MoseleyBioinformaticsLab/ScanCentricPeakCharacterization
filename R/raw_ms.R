@@ -1,3 +1,39 @@
+#' Representing the zip file
+#'
+#' Reference class to represent the zip file container of data and meta-data.
+#'
+#' @export
+zip_ms_from_zip <- function(in_file){
+
+}
+
+zip_ms_from_mzml <- function(in_file, out_dir){
+  zip_file <- mzml_to_zip(in_file, out_dir)
+  if (!is.null(zip_file)) {
+    zip_ms_from_zip(zip_file)
+  }
+}
+
+#' @export
+ZipFile <- R6::R6Class("ZipFile"){
+  public = list(
+    zip_file = NULL,
+    metadata_file = NULL,
+    raw_ms = NULL,
+    peaks = NULL,
+
+    initialize = function(in_zip){
+      self$zip_file <- path.expand(in_zip)
+      zip_metadata <- check_zip_file(in_zip)
+      self$metadata_file <- "metadata.json"
+
+      self$raw_ms <- raw_ms(in_zip, zip_metadata)
+    }
+  )
+
+}
+
+
 #' Storing the raw mass spec data and operating on it
 #'
 #' This reference class represents a storage container for the raw mass-spec
