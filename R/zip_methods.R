@@ -51,9 +51,9 @@ mzml_to_zip <- function(mzml_file, out_dir = dirname(mzml_file)){
 
   raw_meta <- get_mzml_metadata(mzml_file)
 
-  zip_meta <- list(raw =
-                     list(data = basename(mzml_file),
-                          metadata = "raw_metadata.json"))
+  zip_meta <- list(id = raw_meta$mzML$id,
+                   raw = list(data = basename(mzml_file),
+                              metadata = "raw_metadata.json"))
   zip_meta_json <- meta_export_json(zip_meta)
 
   raw_meta_json <- meta_export_json(raw_meta)
