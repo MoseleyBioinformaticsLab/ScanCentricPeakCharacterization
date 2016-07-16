@@ -1,13 +1,17 @@
-#' Representing the zip file
+#' Representing the zip mass spec file.
 #'
 #' Reference class to represent the zip file container of data and meta-data.
 #'
+#' @param in_file the zip file to create the container for
+#'
 #' @export
 zip_ms_from_zip <- function(in_file){
-
+  ZipMS$new(in_file)
+  ZipMS
 }
 
 zip_ms_from_mzml <- function(in_file, out_dir){
+  message("creating zip file from mzML and populating raw metadata")
   zip_file <- mzml_to_zip(in_file, out_dir)
   if (!is.null(zip_file)) {
     zip_ms_from_zip(zip_file)
@@ -15,23 +19,39 @@ zip_ms_from_mzml <- function(in_file, out_dir){
 }
 
 #' @export
-ZipFile <- R6::R6Class("ZipFile"){
+ZipMS <- R6::R6Class("ZipFile",
   public = list(
     zip_file = NULL,
     metadata_file = NULL,
     raw_ms = NULL,
     peaks = NULL,
+    id = NULL,
 
-    initialize = function(in_zip){
-      self$zip_file <- path.expand(in_zip)
+    initialize = function(in_zip, raw_ms = TRUE, peak_list = TRUE){
+      in_zip <- path.expand(in_zip)
+      self$zip_file <- in_zip
       zip_metadata <- check_zip_file(in_zip)
       self$metadata_file <- "metadata.json"
 
-      self$raw_ms <- raw_ms(in_zip, zip_metadata)
+      if (raw_ms && (!is.null(zip_metadata$raw$data))) {
+        self$raw_ms <- RawMS$new(in_zip, zip_metadata$raw)
+      }
+
+      if (peak_list && (!is.null(zip_metadata$peakpicking_analysis$output))) {
+        peak_list_handle <- unz(in_zip, zip_metadata$peakpicking_analysis$output)
+        self$peak_list <- PeakList$new(peak_list_handle,
+                                       zip_metadata$peak_picking_analysis)
+      }
+
+      self$id <- zip_metadata$id
+
+      invisible(self)
+    },
+    write = function(out_file = NULL){
+      curr_zip_file <- self$zip_file
     }
   )
-
-}
+)
 
 
 #' Storing the raw mass spec data and operating on it
@@ -79,83 +99,48 @@ ZipFile <- R6::R6Class("ZipFile"){
 #'
 #' }
 #'
-raw_ms <- function(in_file, out_dir = dirname(in_file), find_peaks = NULL){
-  if (!is.null(find_peaks)) {
-    RawMS$set("public", "find_peaks", find_peaks, overwrite = TRUE)
-  }
-  RawMS$new(in_file, out_dir)
-}
+"RawMS"
 
 #' @importFrom R6 R6Class
+#' @importFrom jsonlite fromJSON
 #' @export
 RawMS <- R6::R6Class("RawMS",
    public = list(
-   zip_file = NULL,
-   raw_file = NULL,
-   metadata_file = NULL,
-   raw_data = NULL,
-   scan_range = NULL,
-   rt_range = NULL,
-   mz_range = NULL,
-   plot_tic = function(){plot_tic(self$raw_data)},
-   set_scans = function(scan_range = NULL, rt_range = NULL){
-     if (is.null(scan_range) && is.null(rt_range)) {
-       stop("You must provide either scan_range or rt_range", call. = FALSE)
-     }
+     raw_metadata = NULL,
+     raw_data = NULL,
+     scan_range = NULL,
+     rt_range = NULL,
+     mz_range = NULL,
+     plot_tic = function(){plot_tic(self$raw_data)},
+     set_scans = function(scan_range = NULL, rt_range = NULL){
+       if (is.null(scan_range) && is.null(rt_range)) {
+         stop("You must provide either scan_range or rt_range", call. = FALSE)
+       }
 
-     ms_scan_info <- data.frame(time = self$raw_data@scantime,
+       ms_scan_info <- data.frame(time = self$raw_data@scantime,
                                 scan = seq_along(self$raw_data@scantime))
 
-     if (!is.null(scan_range)) {
-       if ((length(scan_range) == 2) && ((scan_range[2] - scan_range[1]) != 1)) {
-         scan_range <- seq(scan_range[1], scan_range[2])
+       if (!is.null(scan_range)) {
+         if ((length(scan_range) == 2) && ((scan_range[2] - scan_range[1]) != 1)) {
+           scan_range <- seq(scan_range[1], scan_range[2])
+         }
+         ms_scan_info <- filter(ms_scan_info, scan %in% scan_range)
+       } else if (!is.null(rt_range)) {
+         assert_that(length(rt_range) == 2)
+
+         rt_call <- paste0("(time >= ", rt_range[1], ") & (time <= ", rt_range[2], ")")
+
+         ms_scan_info <- filter_(ms_scan_info, rt_call)
        }
-       ms_scan_info <- filter(ms_scan_info, scan %in% scan_range)
-     } else if (!is.null(rt_range)) {
-       assert_that(length(rt_range) == 2)
 
-       rt_call <- paste0("(time >= ", rt_range[1], ") & (time <= ", rt_range[2], ")")
+       self$scan_range <- ms_scan_info$scan
+       self$rt_range <- range(ms_scan_info$time)
+     },
 
-       ms_scan_info <- filter_(ms_scan_info, rt_call)
-     }
 
-     self$scan_range <- ms_scan_info$scan
-     self$rt_range <- range(ms_scan_info$time)
-   },
-
-   find_peaks = function(){},
-   peaks = NULL,
-
-   initialize = function(in_file, out_dir = dirname(in_file), find_peaks = NULL){
-     zip_loc <- regexpr(".zip", in_file, ignore.case = TRUE)
-     mzml_loc <- regexpr(".mzml", in_file, ignore.case = TRUE)
-
-     # we are only using zip or mzml files
-     if ((zip_loc == -1) && (mzml_loc == -1)) {
-       stop("File must be either a .zip or .mzML!", call. = FALSE)
-     }
-
-     # setup everything for the zip file
-     if (zip_loc != -1) {
-       self$zip_file <- path.expand(in_file)
-
-       zip_metadata <- check_zip_file(in_file)
-
-       self$raw_file <- zip_metadata$raw$mzML
-       self$metadata_file <- "metadata.json"
-
-     } else if (mzml_loc != -1) {
-       message("Creating zip file from the mzML file")
-       zip_file <- mzml_to_zip(in_file, out_dir)
-       if (!is.null(zip_file)) {
-         self$zip_file <- path.expand(zip_file)
-         zip_metadata <- check_zip_file(zip_file)
-
-         self$raw_file <- zip_metadata$raw$mzML
-         self$metadata_file <- "metadata.json"
-       }
-     }
-     self$raw_data <- import_mzML(unzip(self$zip_file, self$raw_file))
+   initialize = function(zip, metadata){
+     self$raw_data <- import_mzML(unzip(zip, metadata$data))
+     self$raw_metadata <- fromJSON(unzip(zip, metadata$metadata))
 
      # default is to use the MS1 non-precursor scans
      if (is.null(self$scan_range)) {
@@ -165,27 +150,72 @@ RawMS <- R6::R6Class("RawMS",
        self$rt_range <- range(self$raw_data@scantime[self$scan_range])
      }
 
-     if (!is.null(find_peaks)) {
-       self$find_peaks <- find_peaks
-     }
    }
   )
 )
 
-peaks <- R6::R6Class("peaks",
+PeakPickingAnalysis <- R6::R6Class("PeakPickingAnalysis",
    public = list(
-     peak_data = NULL,
-     metadata = NULL,
-     initialize = function(peak_data, metadata) {
+     peak_list = NULL,
+     peakpicking_parameters = NULL,
+     initialize = function(peak_list, peakpicking_parameters) {
        assertthat::assert_that(all(c("mz", "intensity") %in% colnames(peak_data)))
 
-       assertthat::assert_that(all(c("package", "version", "sha", "function_called","parameters") %in% names(metadata$picking_description)))
+       assertthat::assert_that(all(c("package", "version", "sha", "function_called","parameters") %in% names(peakpicking_parameters$picking_description)))
 
        metadata$mz_range <- range(peak_data$mz)
 
-       self$peak_data <- peak_data
-       self$metadata <- metadata
+       self$peak_list <- peak_list
+       self$peakpicking_parameters <- peakpicking_parameters
 
      }
+  )
+)
+
+#' analyze ftms mass-spec data
+#'
+#' This class allows you to analyze mass spec data, and controls the execution
+#' of reading in the mass
+#'
+#' @export
+AnalyzeMS <- R6::R6Class("AnalyzeMS",
+  public = list(
+    load_file = function(in_file, out_dir){
+      is_zip <- regexpr("*.zip", in_file)
+      is_mzML <- regexpr("*.mzML", in_file)
+
+      if (is_zip != -1) {
+        self$zip_ms <- ZipMS$new(in_file)
+      } else if (is_mzML != -1) {
+        self$zip_ms <- zip_ms_from_mzml(in_file, out_dir)
+        self$in_file <- self$zip_ms$zip_file
+      }
+    },
+
+    find_peaks = function(){
+      self$zip_ms$peaks <- self$peak_finder(self$raw_ms)
+    },
+
+    write_results = function(){
+      self$zip_ms$write()
+    },
+
+    set_peak_finder <- function(in_function){
+      self$peak_finder <- in_function
+    },
+
+    initialize = function(in_file, out_dir = NULL, peak_finder = NULL){
+      self$in_file <- in_file
+      self$out_dir <- out_dir
+
+      if (!is.null(peak_finder)) {
+        self$peak_finder <- peak_finder
+      }
+    }
+  ),
+  private = list(
+    zip_ms = NULL,
+    in_file = NULL,
+    peak_finder = NULL
   )
 )
