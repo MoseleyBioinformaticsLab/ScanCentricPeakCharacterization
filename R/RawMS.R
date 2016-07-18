@@ -83,8 +83,15 @@ RawMS <- R6::R6Class("RawMS",
 
 
    initialize = function(zip, metadata){
-     self$raw_data <- import_mzML(unzip(zip, metadata$data))
-     self$raw_metadata <- fromJSON(unzip(zip, metadata$metadata))
+     is_zip <- regexpr("*.zip", zip)
+     if (is_zip != -1) {
+       self$raw_data <- import_raw_ms(unzip(zip, metadata$data))
+       self$raw_metadata <- fromJSON(unzip(zip, metadata$metadata))
+     } else {
+       self$raw_data <- import_raw_ms(zip)
+       self$raw_metadata <- fromJSON(meta_export_json(get_raw_ms_metadata(zip)))
+     }
+
 
      # default is to use the MS1 non-precursor scans
      if (is.null(self$scan_range)) {
