@@ -19,7 +19,7 @@ zip_ms_from_mzml <- function(in_file, out_dir){
 }
 
 #' @export
-ZipMS <- R6::R6Class("ZipFile",
+ZipMS <- R6::R6Class("ZipMS",
   public = list(
     zip_file = NULL,
     metadata_file = NULL,
