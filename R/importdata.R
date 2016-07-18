@@ -1,9 +1,9 @@
-#' import mzML data
+#' import raw mass spec data
 #'
-#' function to import mzML data in a way that provides what we need to work
-#' with it. \code{mz_file} should be the \emph{full path} to the data.
+#' function to import raw mass spec data in a way that provides what we need to work
+#' with it. \code{raw_data} should be the \emph{full path} to the data.
 #'
-#' @param mz_file the mzML file to import
+#' @param raw_data the raw mass spec file to import
 #' @param profstep the profile step to use, should be 0 to make our lives easier
 #' @param includeMSn whether to include MSn data, should be TRUE to get \emph{all data}.
 #' @param ... other xcmsRaw parameters
@@ -12,10 +12,10 @@
 #'
 #' @export
 #' @return xcmsRaw
-import_mzML <- function(mz_file, profstep = 0, includeMSn = TRUE){
-  mz_data <- xcmsRaw(mz_file, profstep = profstep, includeMSn = includeMSn)
+import_raw_ms <- function(raw_data, profstep = 0, includeMSn = TRUE){
+  raw_data <- xcmsRaw(raw_data, profstep = profstep, includeMSn = includeMSn)
 
-  mz_data
+  raw_data
 }
 
 #' plot tic
