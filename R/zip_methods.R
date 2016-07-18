@@ -45,7 +45,7 @@ add_to_zip <- function(object, filename, zip_file){
 #' @param mzml_file the mzML file to zip up
 #' @param out_dir the directory to save the zip file
 #' @export
-mzml_to_zip <- function(mzml_file, out_dir = dirname(mzml_file)){
+mzml_to_zip <- function(mzml_file, out_file){
   mzml_file <- path.expand(mzml_file)
   stopifnot(file.exists(mzml_file))
 
@@ -88,18 +88,18 @@ mzml_to_zip <- function(mzml_file, out_dir = dirname(mzml_file)){
 #'
 #' given a zip and a metadata file, load it and return it
 #'
-#' @param zip_file the zip file to be checked
+#' @param zip_dir the directory of the unzipped data
 #' @param metadata_file the metadata file
 #'
 #' @export
 #' @import jsonlite fromJSON
 #' @return list
-load_metadata <- function(zip_file, metadata_file){
-  zip_contents <- zip_list_contents(zip_file)
+load_metadata <- function(zip_dir, metadata_file){
 
-  assert_that(metadata_file %in% zip_contents$Name)
+  zip_contents <- list.files(zip_dir)
+  assert_that(metadata_file %in% zip_contents)
 
-  metadata <- jsonlite::fromJSON(unzip(zip_file, files = metadata_file))
+  metadata <- jsonlite::fromJSON(file.path(zip_dir, metadata_file))
   metadata
 }
 
@@ -108,18 +108,18 @@ load_metadata <- function(zip_file, metadata_file){
 #' checks that the zip file has the basic contents it should have, and that
 #' files listed in the metadata actually exist.
 #'
-#' @param zip_file the zip file to be checked
+#' @param zip_dir the directory of the unzipped data
 #'
 #' @export
 #' @import assertthat
-#' @return character
-check_zip_file <- function(zip_file){
-  zip_metadata <- load_metadata(zip_file, "metadata.json")
+check_zip_file <- function(zip_dir){
+  zip_metadata <- load_metadata(zip_dir, "metadata.json")
+  zip_contents <- list.files(zip_dir)
 
   assert_that(!is.null(zip_metadata$raw$data))
-  assert_that(zip_metadata$raw$data %in% zip_contents$Name)
+  assert_that(zip_metadata$raw$raw_data %in% zip_contents)
 
   assert_that(!is.null(zip_metadata$raw$metadata))
-  assert_that(zip_metadata$raw$metadata %in% zip_contents$Name)
+  assert_that(zip_metadata$raw$metadata %in% zip_contents)
 
 }
