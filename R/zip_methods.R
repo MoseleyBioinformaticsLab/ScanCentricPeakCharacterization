@@ -84,6 +84,25 @@ mzml_to_zip <- function(mzml_file, out_dir = dirname(mzml_file)){
   out_file
 }
 
+#' load metadata
+#'
+#' given a zip and a metadata file, load it and return it
+#'
+#' @param zip_file the zip file to be checked
+#' @param metadata_file the metadata file
+#'
+#' @export
+#' @import jsonlite fromJSON
+#' @return list
+load_metadata <- function(zip_file, metadata_file){
+  zip_contents <- zip_list_contents(zip_file)
+
+  assert_that(metadata_file %in% zip_contents$Name)
+
+  metadata <- jsonlite::fromJSON(unzip(zip_file, files = metadata_file))
+  metadata
+}
+
 #' check zip file
 #'
 #' checks that the zip file has the basic contents it should have, and that
@@ -95,11 +114,7 @@ mzml_to_zip <- function(mzml_file, out_dir = dirname(mzml_file)){
 #' @import assertthat
 #' @return character
 check_zip_file <- function(zip_file){
-  zip_contents <- zip_list_contents(zip_file)
-
-  assert_that("metadata.json" %in% zip_contents$Name)
-
-  zip_metadata <- jsonlite::fromJSON(unzip(zip_file, files = "metadata.json"))
+  zip_metadata <- load_metadata(zip_file, "metadata.json")
 
   assert_that(!is.null(zip_metadata$raw$data))
   assert_that(zip_metadata$raw$data %in% zip_contents$Name)
@@ -107,5 +122,4 @@ check_zip_file <- function(zip_file){
   assert_that(!is.null(zip_metadata$raw$metadata))
   assert_that(zip_metadata$raw$metadata %in% zip_contents$Name)
 
-  zip_metadata
 }
