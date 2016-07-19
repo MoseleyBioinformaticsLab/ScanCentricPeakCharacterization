@@ -47,7 +47,7 @@ peak_list_2_json <- function(peak_list){
   assert_that(is.data.frame(peak_list))
 
   peak_list2 <- list(Peaks = peak_list)
-  jsonlite::toJSON(peak_list2, auto_unbox = TRUE, pretty = TRUE)
+  jsonlite::toJSON(peak_list2, auto_unbox = TRUE, pretty = TRUE, digits = 8)
 
 }
 
