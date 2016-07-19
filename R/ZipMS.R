@@ -30,6 +30,8 @@ ZipMS <- R6::R6Class("ZipMS",
 
     initialize = function(in_file, out_file = NULL, load_raw = TRUE,
                           load_peak_list = TRUE){
+      private$do_load_raw <- load_raw
+      private$do_load_peak_list <- load_peak_list
       private$temp_directory <- tempdir()
 
       is_zip <- regexpr("*.zip", in_file)
@@ -58,18 +60,55 @@ ZipMS <- R6::R6Class("ZipMS",
                                           self$metadata$peakpicking_analysis$output)
       }
 
+      private$calc_md5_hashes()
+
       invisible(self)
     },
+
     save = function(out_file = NULL){
       curr_zip_file <- self$zip_file
+    },
+
+    update = function(){
+
     }
   ),
   private = list(
     temp_directory = NULL,
     generate_filename = function(out_file){},
+
     load_raw = function(){
       RawMS$new(file.path(private$temp_directory, self$metadata$raw$raw_data),
                 file.path(private$temp_directory, self$metadata$raw$metadata))
+    },
+
+    do_load_raw = NULL,
+    do_load_peak_list = NULL,
+
+    curr_md5 = list(metadata_file = numeric(0),
+                           raw_metadata_file = numeric(0),
+                           raw_data_file = numeric(0),
+                           peaks_metadata_file = numeric(0),
+                           peaks_data_file = numeric(0)),
+    old_md5 = NULL,
+
+    calc_md5_hashes = function(){
+
+      if (!is.null(self$metadata_file)) {
+        private$curr_md5$metadata_file <- tools::md5sum(file.path(private$temp_directory, self$metadata_file))
+      }
+
+      if (!is.null(self$raw_ms)) {
+        private$curr_md5$raw_metadata_file <-
+          tools::md5sum(file.path(private$temp_directory, self$metadata$raw$metadata))
+
+        private$curr_md5$raw_data_file <-
+          tools::md5sum(file.path(private$temp_directory, self$metadata$raw$raw_data))
+      }
+
+      private$old_md5 <- private$curr_md5
     }
+
+
   )
 )
