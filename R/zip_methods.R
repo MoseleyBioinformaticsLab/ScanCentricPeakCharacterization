@@ -92,7 +92,7 @@ mzml_to_zip <- function(mzml_file, out_file){
 #' @param metadata_file the metadata file
 #'
 #' @export
-#' @import jsonlite fromJSON
+#' @importFrom jsonlite fromJSON
 #' @return list
 load_metadata <- function(zip_dir, metadata_file){
 
@@ -116,10 +116,33 @@ check_zip_file <- function(zip_dir){
   zip_metadata <- load_metadata(zip_dir, "metadata.json")
   zip_contents <- list.files(zip_dir)
 
-  assert_that(!is.null(zip_metadata$raw$data))
+  assert_that(!is.null(zip_metadata$raw$raw_data))
   assert_that(zip_metadata$raw$raw_data %in% zip_contents)
 
   assert_that(!is.null(zip_metadata$raw$metadata))
   assert_that(zip_metadata$raw$metadata %in% zip_contents)
 
+}
+
+#' initialize metadata from mzML
+#'
+#' @param zip_dir the directory containing unzipped data
+#' @param mzml_file the mzML file to extract metadata from
+#'
+#' @export
+initialize_metadata_from_mzml <- function(zip_dir, mzml_file){
+  raw_meta <- get_mzml_metadata(file.path(zip_dir, mzml_file))
+
+  zip_meta <- list(id = raw_meta$mzML$id,
+                   raw = list(raw_data = basename(mzml_file),
+                              metadata = "raw_metadata.json"))
+  zip_meta_json <- meta_export_json(zip_meta)
+
+  raw_meta_json <- meta_export_json(raw_meta)
+
+  raw_meta_file <- file.path(zip_dir, "raw_metadata.json")
+  cat(raw_meta_json, file = raw_meta_file)
+
+  zip_meta_file <- file.path(zip_dir, "metadata.json")
+  cat(zip_meta_json, file = zip_meta_file)
 }

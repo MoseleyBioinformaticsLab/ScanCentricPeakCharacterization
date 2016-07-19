@@ -22,33 +22,54 @@ zip_ms_from_mzml <- function(in_file, out_dir){
 ZipMS <- R6::R6Class("ZipMS",
   public = list(
     zip_file = NULL,
+    metadata = NULL,
     metadata_file = NULL,
     raw_ms = NULL,
     peaks = NULL,
     id = NULL,
 
-    initialize = function(in_zip, raw_ms = TRUE, peak_list = TRUE){
-      in_zip <- path.expand(in_zip)
-      self$zip_file <- in_zip
-      zip_metadata <- check_zip_file(in_zip)
+    initialize = function(in_file, out_file = NULL, load_raw = TRUE,
+                          load_peak_list = TRUE){
+      private$temp_directory <- tempdir()
+
+      is_zip <- regexpr("*.zip", in_file)
+      if (is_zip != -1) {
+        in_zip <- path.expand(in_file)
+        self$zip_file <- in_zip
+        unzip(zip_file, exdir = private$temp_directory)
+
+      } else {
+        file.copy(in_file, file.path(private$temp_directory, basename(in_file)))
+        initialize_metadata_from_mzml(private$temp_directory, basename(in_file))
+      }
+
+      check_zip_file(private$temp_directory)
+
       self$metadata_file <- "metadata.json"
+      self$metadata <- load_metadata(private$temp_directory, self$metadata_file)
+      self$id <- self$metadata$id
 
-      if (raw_ms && (!is.null(zip_metadata$raw$data))) {
-        self$raw_ms <- RawMS$new(in_zip, zip_metadata$raw)
+      if (load_raw && (!is.null(self$metadata$raw$raw_data))) {
+        self$raw_ms <- private$load_raw()
       }
 
-      if (peak_list && (!is.null(zip_metadata$peakpicking_analysis$output))) {
-        peak_list_handle <- unz(in_zip, zip_metadata$peakpicking_analysis$output)
-        self$peak_list <- PeakList$new(peak_list_handle,
-                                       zip_metadata$peak_picking_analysis)
+      if (load_peak_list && (!is.null(self$metadata$peakpicking_analysis$output))) {
+        self$peaks <- self$load_peak_list(private$temp_directory,
+                                          self$metadata$peakpicking_analysis$output)
       }
-
-      self$id <- zip_metadata$id
 
       invisible(self)
     },
-    write = function(out_file = NULL){
+    save = function(out_file = NULL){
       curr_zip_file <- self$zip_file
+    }
+  ),
+  private = list(
+    temp_directory = NULL,
+    generate_filename = function(out_file){},
+    load_raw = function(){
+      RawMS$new(file.path(private$temp_directory, self$metadata$raw$raw_data),
+                file.path(private$temp_directory, self$metadata$raw$metadata))
     }
   )
 )

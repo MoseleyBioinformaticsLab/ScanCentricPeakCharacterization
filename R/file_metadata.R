@@ -7,7 +7,7 @@
 #'
 #' @export
 #' @return list
-get_raw_ms_metadata(in_file){
+get_raw_ms_metadata <- function(in_file){
   is_mzml <- regexpr("*.mzML", in_file)
 
   if (is_mzml != -1) {
