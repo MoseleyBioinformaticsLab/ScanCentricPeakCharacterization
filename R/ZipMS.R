@@ -56,8 +56,7 @@ ZipMS <- R6::R6Class("ZipMS",
       }
 
       if (load_peak_list && (!is.null(self$metadata$peakpicking_analysis$output))) {
-        self$peaks <- self$load_peak_list(private$temp_directory,
-                                          self$metadata$peakpicking_analysis$output)
+        self$peaks <- private$load_peak_list()
       }
 
       private$calc_md5_hashes()
@@ -71,6 +70,20 @@ ZipMS <- R6::R6Class("ZipMS",
 
     update = function(){
 
+    },
+
+    add_peak_list = function(peak_list_data){
+      json_meta <- jsonlite::toJSON(peak_list_data$peakpicking_analysis)
+      cat(json_meta, file = file.path(private$temp_directory,
+                                      "peakpicking_parameters.json"))
+      self$metadata$peakpicking_analysis <- list(parameters =
+                                                   "peakpicking_parameters.json",
+                                                 output = "peaklist.json")
+      json_peaklist <- peak_list_2_json(peak_list_data$peak_list)
+      cat(json_peaklist, file = file.path(private$temp_directory,
+                                          "peaklist.json"))
+
+      self$peaks <- peak_list_data
     }
   ),
   private = list(

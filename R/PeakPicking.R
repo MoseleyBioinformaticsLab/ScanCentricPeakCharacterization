@@ -1,15 +1,33 @@
+#' peak picking analysis
+#'
+#' Reference class to hold the results of a peak picking analysis
+#'
+#'
+
+#' @export
+#' @importFrom tibble as_tibble
 PeakPickingAnalysis <- R6::R6Class("PeakPickingAnalysis",
   public = list(
     peak_list = NULL,
     peakpicking_parameters = NULL,
-    initialize = function(peak_list, peakpicking_parameters) {
-      assertthat::assert_that(all(c("mz", "intensity") %in% colnames(peak_data)))
+    initialize = function(in_peaks, in_parameters) {
+      # make this flexible enough to handle either file names or objects themselves
+      if (is.character(in_peaks)) {
+        peak_list <- json_2_peak_list(in_peaks)
+      } else {
+        peak_list <- in_peaks
+      }
+
+      if (is.character(in_parameters)) {
+        peakpicking_parameters <- jsonlite::fromJSON(in_parameters)
+      } else {
+        peakpicking_parameters <- in_parameters
+      }
+      assertthat::assert_that(all(c("ObservedMZ", "Intensity") %in% colnames(peak_list)))
 
       assertthat::assert_that(all(c("package", "version", "sha", "function_called","parameters") %in% names(peakpicking_parameters$picking_description)))
 
-      metadata$mz_range <- range(peak_data$mz)
-
-      self$peak_list <- peak_list
+      self$peak_list <- as_tibble(peak_list)
       self$peakpicking_parameters <- peakpicking_parameters
 
     }
