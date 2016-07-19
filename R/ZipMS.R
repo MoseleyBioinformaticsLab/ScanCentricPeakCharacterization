@@ -95,8 +95,18 @@ ZipMS <- R6::R6Class("ZipMS",
                 file.path(private$temp_directory, self$metadata$raw$metadata))
     },
 
+    load_peak_list = function(){
+      PeakPickingAnalysis$new(file.path(private$temp_directory,
+                                        self$metadata$peakpicking_analysis$output),
+                              file.path(private$temp_directory,
+                                        self$metadata$peakpicking_analysis$parameters))
+    },
+
+
     do_load_raw = NULL,
     do_load_peak_list = NULL,
+
+
 
     curr_md5 = list(metadata_file = numeric(0),
                            raw_metadata_file = numeric(0),
