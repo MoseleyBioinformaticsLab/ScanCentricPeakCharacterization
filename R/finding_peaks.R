@@ -24,7 +24,7 @@ pracma_findpeaks <- function(avg_spectra, ...){
 #' @export
 #' @return tbl_df
 find_peaks_diff <- function(avg_spectra, m = 3){
-  x <- avg_spectra$intensity
+  x <- avg_spectra$Intensity
   shape <- diff(sign(diff(x, na.pad = FALSE)))
   pks <- lapply(which(shape < 0), FUN = function(i){
     z <- i - m + 1
