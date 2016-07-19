@@ -61,24 +61,39 @@ ZipMS <- R6::R6Class("ZipMS",
 
       private$calc_md5_hashes()
 
+      self$out_file <- private$generate_filename(out_file)
+
       invisible(self)
     },
 
-    save = function(out_file = NULL){
-      curr_zip_file <- self$zip_file
+    show_temp_dir = function(){
+      print(private$temp_directory)
     },
 
-    update = function(){
+    save = function(out_file = NULL){
+      if (is.null(out_file)) {
+        out_file <- self$out_file
+        zip(out_file, file.path(private$temp_file, "*"), flags = "-j")
+      }
+    },
 
+    cleanup = function(){
+      unlink(private$temp_directory)
     },
 
     add_peak_list = function(peak_list_data){
-      json_meta <- jsonlite::toJSON(peak_list_data$peakpicking_analysis)
-      cat(json_meta, file = file.path(private$temp_directory,
+      json_peak_meta <- jsonlite::toJSON(peak_list_data$peakpicking_analysis,
+                                         pretty = TRUE, auto_unbox = TRUE)
+      cat(json_peak_meta, file = file.path(private$temp_directory,
                                       "peakpicking_parameters.json"))
       self$metadata$peakpicking_analysis <- list(parameters =
                                                    "peakpicking_parameters.json",
                                                  output = "peaklist.json")
+
+      json_meta <- jsonlite::toJSON(self$metadata, pretty = TRUE, auto_unbox = TRUE)
+      cat(json_meta, file = file.path(private$temp_directory,
+                                      self$metadata_file))
+
       json_peaklist <- peak_list_2_json(peak_list_data$peak_list)
       cat(json_peaklist, file = file.path(private$temp_directory,
                                           "peaklist.json"))
@@ -105,8 +120,6 @@ ZipMS <- R6::R6Class("ZipMS",
 
     do_load_raw = NULL,
     do_load_peak_list = NULL,
-
-
 
     curr_md5 = list(metadata_file = numeric(0),
                            raw_metadata_file = numeric(0),
