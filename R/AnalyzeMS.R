@@ -7,7 +7,7 @@
 AnalyzeMS <- R6::R6Class("AnalyzeMS",
   public = list(
    load_file = function(){
-     self$zip_ms <- ZipMS$new(self$in_file)
+     self$zip_ms <- ZipMS$new(self$in_file, self$out_file)
    },
    found_peaks = NULL,
 
