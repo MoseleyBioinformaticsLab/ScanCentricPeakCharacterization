@@ -27,6 +27,7 @@ ZipMS <- R6::R6Class("ZipMS",
     raw_ms = NULL,
     peaks = NULL,
     id = NULL,
+    out_file = NULL,
 
     initialize = function(in_file, out_file = NULL, load_raw = TRUE,
                           load_peak_list = TRUE){
@@ -34,15 +35,17 @@ ZipMS <- R6::R6Class("ZipMS",
       private$do_load_peak_list <- load_peak_list
       private$temp_directory <- tempdir()
 
+      in_file <- path.expand(in_file)
       is_zip <- regexpr("*.zip", in_file)
       if (is_zip != -1) {
-        in_zip <- path.expand(in_file)
+        in_zip <- in_file
         self$zip_file <- in_zip
         unzip(zip_file, exdir = private$temp_directory)
 
       } else {
         file.copy(in_file, file.path(private$temp_directory, basename(in_file)))
         initialize_metadata_from_mzml(private$temp_directory, basename(in_file))
+        self$zip_file <- in_file
       }
 
       check_zip_file(private$temp_directory)
@@ -73,7 +76,7 @@ ZipMS <- R6::R6Class("ZipMS",
     save = function(out_file = NULL){
       if (is.null(out_file)) {
         out_file <- self$out_file
-        zip(out_file, file.path(private$temp_file, "*"), flags = "-j")
+        zip(out_file, list.files(private$temp_directory, full.names = TRUE), flags = "-j")
       }
     },
 
@@ -103,7 +106,29 @@ ZipMS <- R6::R6Class("ZipMS",
   ),
   private = list(
     temp_directory = NULL,
-    generate_filename = function(out_file){},
+    generate_filename = function(out_file = NULL){
+
+      is_zip_out <- regexpr("*.zip", self$zip_file)
+
+      if (!is.null(out_file)) {
+
+        out_file <- path.expand(out_file)
+        has_id <- regexpr(self$id, out_file)
+        is_zip_out <- regexpr("*.zip", out_file)
+
+        if (has_id == -1) {
+          out_file <- paste0(self$id, "_", out_file)
+        }
+
+        if (is_zip_out == -1) {
+          out_file <- paste0(tools::file_path_sans_ext(out_file), ".zip")
+        }
+
+      } else {
+        out_file <- paste0(tools::file_path_sans_ext(self$zip_file), ".zip")
+      }
+      out_file
+    },
 
     load_raw = function(){
       RawMS$new(file.path(private$temp_directory, self$metadata$raw$raw_data),
