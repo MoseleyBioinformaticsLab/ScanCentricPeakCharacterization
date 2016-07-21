@@ -15,22 +15,54 @@ zip_ms_from_mzml <- function(in_file, out_dir){
 #'
 #' This reference class represents the zip mass spec file. It does this by
 #' providing objects for the zip file, the metadata, as well as various bits
-#' underneath such as the \code{raw data} and \code{peak lists}, and their
-#' associated metadata.
+#' underneath such as the raw data and peak lists, and their
+#' associated metadata. Although it is possible to work with the ZipMS object directly, it
+#' is heavily recommended to use the AnalyzeMS object
+#' for carrying out the various steps of an analysis, including peak finding.
 #'
-#' Although it is possible to work with the \code{ZipMS} object directly, it
-#' is \emph{heavily recommended} to use the \link{\code{AnalyzeMS}} object
-#' for carrying out the various steps of an analysis, including \code{peak finding}.
+#' @section \code{ZipMS} Methods:
 #'
-#' @param in_file the file to load and use
-#' @param out_file the file to save to when done
-#' @param load_raw whether to load the raw data (if it exists)
-#' @param load_peak_list whether to load the peak list data (if it exists)
+#'  use \code{?method-name} to see more details about each individual method
 #'
-#' @export
+#'  \describe{
+#'   \item{\code{zip_ms}}{make a new \code{ZipMS}}
+#'   \item{\code{show_temp_dir}}{show where files are stored}
+#'   \item{\code{save}}{save the file}
+#'   \item{\code{cleanup}}{unlink the \code{temp_directory}}
+#'   \item{\code{add_peak_list}}{add a \code{Peaks} to the data}
+#'  }
+#'
+#'
+#' @section \code{ZipMS} Data Members:
+#'  \describe{
+#'    \item{\code{zip_file}}{the zip file that was read in}
+#'    \item{\code{metadata}}{the actual metadata for the file}
+#'    \item{\code{metadata_file}}{the metadata file}
+#'    \item{\code{raw_ms}}{a \code{RawMS} holding the raw data}
+#'    \item{\code{peaks}}{a \code{Peaks} holding the peak analysis}
+#'    \item{\code{id}}{the sample id}
+#'    \item{\code{out_file}}{the file where data will be saved}
+#'  }
 #'
 #' @seealso AnalyzeMS
+#' @return ZipMS object
 #'
+"ZipMS"
+
+
+#' make a new ZipMS
+#'
+#' @param in_file the file to use (either .zip or .mzML)
+#' @param out_file the file to save to at the end
+#' @param load_raw logical to load the raw data
+#' @param load_peak_list to load the peak list if it exists
+#'
+zip_ms <- function(in_file, out_file = NULL, load_raw = TRUE,
+                   load_peak_list = TRUE){
+  ZipMS$new(in_file, out_file = NULL, load_raw = TRUE, load_peak_list = TRUE)
+}
+
+#' @export
 ZipMS <- R6::R6Class("ZipMS",
   public = list(
     zip_file = NULL,
@@ -42,7 +74,7 @@ ZipMS <- R6::R6Class("ZipMS",
     out_file = NULL,
 
     initialize = function(in_file, out_file = NULL, load_raw = TRUE,
-                          load_peak_list = TRUE){
+                                              load_peak_list = TRUE){
       private$do_load_raw <- load_raw
       private$do_load_peak_list <- load_peak_list
       private$temp_directory <- tempdir()
@@ -88,8 +120,10 @@ ZipMS <- R6::R6Class("ZipMS",
     save = function(out_file = NULL){
       if (is.null(out_file)) {
         out_file <- self$out_file
-        zip(out_file, list.files(private$temp_directory, full.names = TRUE), flags = "-j")
+      } else {
+        out_file <- private$generate_filename(out_file)
       }
+      zip(out_file, list.files(private$temp_directory, full.names = TRUE), flags = "-j")
     },
 
     cleanup = function(){
