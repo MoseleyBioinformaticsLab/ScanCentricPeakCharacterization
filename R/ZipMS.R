@@ -1,10 +1,3 @@
-#' Representing the zip mass spec file.
-#'
-#' Reference class to represent the zip file container of data and meta-data.
-#'
-#' @param in_file the zip file to create the container for
-#'
-#' @export
 zip_ms_from_zip <- function(in_file){
   ZipMS$new(in_file)
   ZipMS
