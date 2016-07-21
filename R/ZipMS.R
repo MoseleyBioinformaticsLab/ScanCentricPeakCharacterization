@@ -11,7 +11,26 @@ zip_ms_from_mzml <- function(in_file, out_dir){
   }
 }
 
+#' Represents the zip mass spec file
+#'
+#' This reference class represents the zip mass spec file. It does this by
+#' providing objects for the zip file, the metadata, as well as various bits
+#' underneath such as the \code{raw data} and \code{peak lists}, and their
+#' associated metadata.
+#'
+#' Although it is possible to work with the \code{ZipMS} object directly, it
+#' is \emph{heavily recommended} to use the \link{\code{AnalyzeMS}} object
+#' for carrying out the various steps of an analysis, including \code{peak finding}.
+#'
+#' @param in_file the file to load and use
+#' @param out_file the file to save to when done
+#' @param load_raw whether to load the raw data (if it exists)
+#' @param load_peak_list whether to load the peak list data (if it exists)
+#'
 #' @export
+#'
+#' @seealso AnalyzeMS
+#'
 ZipMS <- R6::R6Class("ZipMS",
   public = list(
     zip_file = NULL,
