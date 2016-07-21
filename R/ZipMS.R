@@ -62,6 +62,52 @@ zip_ms <- function(in_file, out_file = NULL, load_raw = TRUE,
   ZipMS$new(in_file, out_file = NULL, load_raw = TRUE, load_peak_list = TRUE)
 }
 
+#' ZipMS - save
+#'
+#' @name save
+#' @param out_file the file to save to
+#'
+#' @details \code{out_file}, if it is \code{NULL}, will be taken from when the
+#'  object was generated, and by default will be set to the same as the \code{in_file}.
+#'  If not \code{NULL}, then it is checked that the \code{id} is part of the
+#'  \code{out_file}, and if not, the \code{id} is added to the actual file name.
+#'
+#' @examples
+#' \dontrun{
+#'  new_ms <- zip_ms("in_file")
+#'  new_ms$save()
+#'  new_ms$save("out_file")
+#' }
+NULL
+
+#' ZipMS - show_temp_dir
+#'
+#' shows where the temp directory \code{ZipMS} is using is
+#'
+#' @name show_temp_dir
+#' @usage ZipMS$show_temp_dir()
+#'
+NULL
+
+#' ZipMS - cleanup
+#'
+#' cleans up after things are done
+#'
+#' @name cleanup
+#' @usage ZipMS$cleanup()
+#'
+NULL
+
+#' ZipMS - add_peak_list
+#'
+#' adds a peak list to the \code{ZipMS}
+#'
+#' @name add_peak_list
+#' @usage ZipMS$add_peak_list(peak_list_data)
+#' @param peak_list_data a \code{\link{Peaks}} object
+#'
+NULL
+
 #' @export
 ZipMS <- R6::R6Class("ZipMS",
   public = list(
