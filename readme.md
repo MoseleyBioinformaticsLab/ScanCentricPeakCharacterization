@@ -1,11 +1,14 @@
 ---
 title: "SIRM.FTMS.peakPickingMethods"
-git_commit: "b5445731"
-date: "2016-07-22 14:40:19"
+git_commit: "d6e70b48"
+date: "2016-07-22 14:43:19"
 output: 
   md_document:
     preserve_yaml: TRUE
 ---
+
+SIRM.FTMS.peakPickingMethods
+============================
 
 About
 -----
