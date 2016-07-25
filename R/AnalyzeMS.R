@@ -17,8 +17,8 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
      self$zip_ms$add_peak_list(self$found_peaks)
    },
 
-   write_results = function(){
-     self$zip_ms$write()
+   write_zip = function(){
+     self$zip_ms$write_zip()
    },
 
    set_peak_finder = function(in_function){

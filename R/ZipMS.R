@@ -163,7 +163,7 @@ ZipMS <- R6::R6Class("ZipMS",
       print(private$temp_directory)
     },
 
-    save = function(out_file = NULL){
+    write_zip = function(out_file = NULL){
       if (is.null(out_file)) {
         out_file <- self$out_file
       } else {
