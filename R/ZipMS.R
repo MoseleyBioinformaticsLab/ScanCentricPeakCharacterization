@@ -123,7 +123,9 @@ ZipMS <- R6::R6Class("ZipMS",
                                               load_peak_list = TRUE){
       private$do_load_raw <- load_raw
       private$do_load_peak_list <- load_peak_list
-      private$temp_directory <- tempdir()
+      temp_loc <- tempfile(pattern = "zipms_tmp")
+      dir.create(temp_loc)
+      private$temp_directory <- temp_loc
 
       in_file <- path.expand(in_file)
       is_zip <- regexpr("*.zip", in_file)
