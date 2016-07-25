@@ -4,7 +4,7 @@
 \alias{mzml_to_zip}
 \title{create initial zip from mzML}
 \usage{
-mzml_to_zip(mzml_file, out_dir = dirname(mzml_file))
+mzml_to_zip(mzml_file, out_file)
 }
 \arguments{
 \item{mzml_file}{the mzML file to zip up}

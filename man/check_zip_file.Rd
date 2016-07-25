@@ -4,13 +4,10 @@
 \alias{check_zip_file}
 \title{check zip file}
 \usage{
-check_zip_file(zip_file)
+check_zip_file(zip_dir)
 }
 \arguments{
-\item{zip_file}{the zip file to be checked}
-}
-\value{
-character
+\item{zip_dir}{the directory of the unzipped data}
 }
 \description{
 checks that the zip file has the basic contents it should have, and that

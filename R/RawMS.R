@@ -2,12 +2,11 @@
 #'
 #' This reference class represents a storage container for the raw mass-spec
 #' data from a zipped mzML file and associated metadata. It provides methods
-#' for plotting the \emph{total-ion chromatogram}, setting which scans will
-#' be used for peak picking, as well as setting which function will be used
-#' to do peak picking.
+#' for plotting the \emph{total-ion chromatogram}, and setting which scans will
+#' be used for peak picking
 #'
-#' @param in_file the zip or mzML file to use
-#' @param out_dir which directory a new zip file should be in
+#' @param raw_file the zip or mzML file to use
+#' @param metadata_file the metadata file to use
 #'
 #' @details The \code{find_peaks()} method is not set by default, it must be set
 #'  by the user after instantiation. The \code{find_peaks()} function definition
