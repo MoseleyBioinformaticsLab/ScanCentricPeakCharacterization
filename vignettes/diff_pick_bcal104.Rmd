@@ -1,0 +1,73 @@
+---
+title: "Difference peak picking BCAL 104"
+author: "Robert M Flight"
+date: "`r Sys.time()`"
+commit: "`r substr(git2r::branch_target(git2r::head(git2r::repository())), 1, 8)`"
+output: 
+  pdf_document: 
+    toc: yes
+---
+
+# Difference peak picking BCAL 104
+
+This is a test of the new classes and methods in the `SIRM.FTMS.peakPickingMethods`
+package to see how it will work on a large batch of data.
+
+```{r setup}
+use_dir <- "/mlab/scratch/rmflight/CESB_rawdata/breastcancer_data/bcal_raw_first104"
+setwd(use_dir)
+
+library(SIRM.FTMS.peakPickingMethods)
+library(dplyr)
+
+mzml_files <- list.files(path = use_dir, pattern = "mzML", full.names = TRUE)
+```
+
+```{r peak_finding_function}
+find_peaks_default <- function(data, scan_range){
+  avg_data <- as.data.frame(xcms::getSpec(data, scanrange = scan_range))
+  avg_data$ObservedMZ <- avg_data$mz
+  avg_data$Intensity <- avg_data$intensity
+  avg_data$mz <- NULL
+  avg_data$intensity <- NULL
+  avg_peaks <- find_peaks_diff(avg_data)
+  
+  function_call <- "find_peaks_diff"
+  function_pkg <- find(function_call)
+  pkg_desc <- utils::packageDescription(substring(function_pkg, 9))
+  if (!is.null(pkg_desc$RemoteSha)) {
+    pkg_sha <- pkg_desc$RemoteSha
+  } else {
+    pkg_sha <- ""
+  }
+  pkg_version <- packageVersion(substring(function_pkg, 9))
+  picking_description <- list(package = function_pkg,
+                             version = pkg_desc$Version,
+                             sha = pkg_sha,
+                             function_called = function_call,
+                             parameters = list(scan_range = force(scan_range))
+                             )
+  PeakPickingAnalysis$new(in_peaks = avg_peaks,
+                          in_parameters = list(scan_range = force(scan_range),
+                                                        picking_description = picking_description))
+}
+```
+
+
+```{r test_one}
+in_file <- mzml_files[1]
+
+out_dir <- file.path(use_dir, "peak_picked")
+file_name <- basename(in_file) %>% gsub(".mzML", ".zip", .)
+
+out_file <- file.path(out_dir, file_name)
+
+pick_ms <- AnalyzeMS$new(in_file, out_file)
+pick_ms$load_file()
+
+pick_ms$set_peak_finder(find_peaks_default)
+pick_ms$find_peaks()
+pick_ms$write_zip()
+pick_ms$zip_ms$cleanup()
+```
+
