@@ -179,7 +179,7 @@ ZipMS <- R6::R6Class("ZipMS",
     },
 
     add_peak_list = function(peak_list_data){
-      json_peak_meta <- jsonlite::toJSON(peak_list_data$peakpicking_analysis,
+      json_peak_meta <- jsonlite::toJSON(peak_list_data$peakpicking_parameters,
                                          pretty = TRUE, auto_unbox = TRUE)
       cat(json_peak_meta, file = file.path(private$temp_directory,
                                       "peakpicking_parameters.json"))
