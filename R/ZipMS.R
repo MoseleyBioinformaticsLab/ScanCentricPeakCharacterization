@@ -185,7 +185,7 @@ ZipMS <- R6::R6Class("ZipMS",
                                       "peakpicking_parameters.json"))
       self$metadata$peakpicking_analysis <- list(parameters =
                                                    "peakpicking_parameters.json",
-                                                 output = "peaklist.json")
+                                                 output = "raw_peaklist.json")
 
       json_meta <- jsonlite::toJSON(self$metadata, pretty = TRUE, auto_unbox = TRUE)
       cat(json_meta, file = file.path(private$temp_directory,
@@ -193,7 +193,7 @@ ZipMS <- R6::R6Class("ZipMS",
 
       json_peaklist <- peak_list_2_json(peak_list_data$peak_list)
       cat(json_peaklist, file = file.path(private$temp_directory,
-                                          "peaklist.json"))
+                                          "raw_peaklist.json"))
 
       self$peaks <- peak_list_data
     }
