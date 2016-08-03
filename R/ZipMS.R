@@ -132,7 +132,7 @@ ZipMS <- R6::R6Class("ZipMS",
       if (is_zip != -1) {
         in_zip <- in_file
         self$zip_file <- in_zip
-        unzip(zip_file, exdir = private$temp_directory)
+        unzip(in_zip, exdir = private$temp_directory)
 
       } else {
         file.copy(in_file, file.path(private$temp_directory, basename(in_file)))
