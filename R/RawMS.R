@@ -90,7 +90,7 @@ RawMS <- R6::R6Class("RawMS",
        ms1_index <- seq_along(self$raw_data@scantime)
        msn_precursor_scans <- self$raw_data@msnPrecursorScan
        if (length(msn_precursor_scans) != 0) {
-         self$scan_range <- ms1_index[-msn_precursors]
+         self$scan_range <- ms1_index[-msn_precursor_scans]
        } else {
          self$scan_range <- ms1_index
        }
