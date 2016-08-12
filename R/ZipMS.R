@@ -120,10 +120,17 @@ ZipMS <- R6::R6Class("ZipMS",
     out_file = NULL,
 
     initialize = function(in_file, out_file = NULL, load_raw = TRUE,
-                                              load_peak_list = TRUE){
+                                              load_peak_list = TRUE,
+                          temp_loc = NULL){
       private$do_load_raw <- load_raw
       private$do_load_peak_list <- load_peak_list
-      temp_loc <- tempfile(pattern = "zipms_tmp")
+
+      if (is.null(temp_loc)) {
+        temp_loc <- tempfile(pattern = "zipms_tmp")
+      } else {
+        temp_loc <- tempfile(pattern = "zipms_tmp", tmpdir = temp_loc)
+      }
+
       dir.create(temp_loc)
       private$temp_directory <- temp_loc
 
@@ -176,6 +183,7 @@ ZipMS <- R6::R6Class("ZipMS",
 
     cleanup = function(){
       unlink(private$temp_directory)
+      file.remove(private$temp_directory)
     },
 
     add_peak_list = function(peak_list_data){
