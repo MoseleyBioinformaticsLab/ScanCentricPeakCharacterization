@@ -7,7 +7,7 @@
 AnalyzeMS <- R6::R6Class("AnalyzeMS",
   public = list(
    load_file = function(){
-     self$zip_ms <- ZipMS$new(self$in_file, self$out_file)
+     self$zip_ms <- ZipMS$new(self$in_file, self$out_file, temp_loc = self$temp_loc)
    },
    found_peaks = NULL,
 
@@ -30,8 +30,9 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
    zip_ms = NULL,
    in_file = NULL,
    out_file = NULL,
+   temp_loc = NULL,
 
-   initialize = function(in_file, out_file = NULL, peak_finder = NULL){
+   initialize = function(in_file, out_file = NULL, peak_finder = NULL, temp_loc = NULL){
      self$in_file <- in_file
      if (!is.null(out_file)) {
        self$out_file <- out_file
@@ -40,6 +41,10 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
 
      if (!is.null(peak_finder)) {
        self$peak_finder <- peak_finder
+     }
+
+     if (!is.null(temp_loc)) {
+       self$temp_loc <- temp_loc
      }
    }
   )
