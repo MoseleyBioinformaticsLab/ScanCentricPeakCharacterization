@@ -182,8 +182,8 @@ ZipMS <- R6::R6Class("ZipMS",
     },
 
     cleanup = function(){
-      unlink(private$temp_directory)
-      file.remove(private$temp_directory)
+      unlink(private$temp_directory, recursive = TRUE, force = TRUE)
+      #file.remove(private$temp_directory)
     },
 
     add_peak_list = function(peak_list_data){
