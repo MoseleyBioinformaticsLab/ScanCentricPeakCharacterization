@@ -69,11 +69,11 @@ r_squared <- function(x, y){
 mz_peak <- mz_data[seq(initial_peaks[1, 3], initial_peaks[1, 4]), c("mz", "log_int")]
 pracma_peak_index <- seq(initial_peaks[1, 3], initial_peaks[1, 4])
 
-test_peak_points <- function(mz_peak, min_peak = 5){
+test_peak_points <- function(mz_peak, min_points = 5){
   n_point <- nrow(mz_peak)
-  if (n_point >= min_peak) {
-    test_index <- lapply(seq(1, n_point - min_peak), function(start_loc){
-      lapply(seq(start_loc + min_peak - 1, n_point), function(end_loc){
+  if (n_point >= min_points) {
+    test_index <- lapply(seq(1, n_point - min_points), function(start_loc){
+      lapply(seq(start_loc + min_points - 1, n_point), function(end_loc){
         c(start_loc, end_loc)
       })
     })
@@ -97,14 +97,15 @@ choose_peak_points <- function(rsq_results, min_rsq = 0.98){
   filter_rsq <- rsq_results[rsq_results[,4] >= min_rsq, ]
   if (nrow(filter_rsq) > 0) {
     out_index <- filter_rsq[which.max(filter_rsq[, 3]), 1:2]
+    out_points <- seq(out_index[1], out_index[2])
   } else {
-    out_index <- c(NA, NA)
+    out_points <- NA
   }
-  out_index
+  out_points
 }
 
 peak_points <- choose_peak_points(mz_rsq)
-peak_index <- pracma_peak_index[peak_points[1]:peak_points[2]]
+peak_index <- pracma_peak_index[peak_points]
 ```
 
 # Fit the Model
@@ -138,13 +139,28 @@ mean of the x-points, and then the intensity of the peak at the center based
 on the model.
 
 ```{r center_intensity}
-peak_center_intensity <- function(x, coefficients){
+model_peak_center_intensity <- function(x, coefficients){
   center_x <- mean(x)
   center_int <- coefficients[1]
-  c(center = center_x, intensity = center_int)
+  c(ObservedMZ = center_x, Intensity = center_int)
 }
 
-peak_center <- peak_center_intensity(mz_data$mz[peak_index], peak_model)
+peak_center <- model_peak_center_intensity(mz_data$mz[peak_index], peak_model)
+
+basic_peak_center_intensity <- function(mz, intensity){
+  n_point <- length(mz)
+  seq_point <- seq(1, n_point)
+  if ((n_point %% 2) == 0) {
+    peak_center <- mean(mz)
+    
+    peak_intensity <- mean(intensity[floor(mean(seq_point))],
+                           intensity[ceiling(mean(seq_point))])
+  } else {
+    peak_center <- mz[mean(seq_point)]
+    peak_intensity <- intensity[mean(seq_point)]
+  }
+  c(ObservedMZ = peak_center, Intensity = peak_intensity)
+}
 ```
 
 
@@ -161,9 +177,9 @@ The peak area we will caculate a couple of different ways.
 raw_sum <- sum(mz_data$intensity[pracma_peak_index])
 log_sum <- sum(mz_data$log_int[pracma_peak_index] - mz_data$log_int[pracma_peak_index][1])
 
-area_sum_points <- function(peak_mz, peak_intensity, zero_value){
+area_sum_points <- function(peak_mz, peak_intensity, zero_value = 0){
   mean_diff <- mean(diff(peak_mz))
-  sum((peak_intensity - zero_value) * mean_diff)
+  c(Area = sum((peak_intensity - zero_value) * mean_diff))
 }
 
 area_sum <- area_sum_points(mz_data$mz[pracma_peak_index], mz_data$intensity[pracma_peak_index], 0)
@@ -188,11 +204,50 @@ integrate_model <- function(peak_loc, model_coeff, n_point = 100, log_transform 
   mn_peak_loc <- peak_loc - mean(peak_loc)
   
   peak_area <- stats::integrate(integrate_function, min(mn_peak_loc), max(mn_peak_loc), log_transform = log_transform)
-  peak_area$value
+  c(Area = peak_area$value)
   
 }
 
 area_integrate <- integrate_model(mz_data$mz[peak_index], peak_model)
+```
+
+## Wrap Up Into Bigger Function
+
+Now we can take all of our smaller functions for each step, and wrap them up
+into something that will do all the steps for a given peak.
+
+```{r peak_info}
+possible_peak <- mz_data[pracma_peak_index, ]
+min_points <- 5
+peak_info <- function(possible_peak, min_points = 5){
+  if (nrow(possible_peak) >= min_points) {
+    rsq_peak <- test_peak_points(possible_peak[, c("mz", "log_int")], min_points = min_points)
+    peak_area_basic <- area_sum_points(possible_peak$mz, possible_peak$intensity)
+    peak_center_basic <- basic_peak_center_intensity(possible_peak$mz, possible_peak$intensity)
+    if (!is.na(rsq_peak[1])) {
+      rsq_points <- choose_peak_points(rsq_peak)
+      peak_model <- parabolic_fit(possible_peak[rsq_points, "mz"], possible_peak[rsq_points, "log_int"])
+      peak_center_model <- model_peak_center_intensity(possible_peak$mz[rsq_points], peak_model)
+      peak_center_model["Intensity"] <- exp(peak_center_model["Intensity"])
+      peak_area_model <- integrate_model(possible_peak$mz[rsq_points], peak_model)
+    } else {
+      peak_center_model <- c(ObservedMZ = NA, Intensity = NA)
+      peak_area_model <- c(Area = NA)
+    }
+    
+  } else {
+    peak_area_basic <- c(Area = NA)
+    peak_center_basic <- c(ObservedMZ = NA, Intensity = NA)
+    peak_center_model <- c(ObservedMZ = NA, Intensity = NA)
+    peak_area_model <- c(Area = NA)
+  }
+  out_peak <- as.data.frame(rbind(c(peak_center_basic, peak_area_basic),
+                                  c(peak_center_model, peak_area_model)))
+  out_peak$type <- c("basic", "model")
+  out_peak
+}
+
+peak_stats <- peak_info(mz_data[pracma_peak_index, ], 5)
 ```
 
 
