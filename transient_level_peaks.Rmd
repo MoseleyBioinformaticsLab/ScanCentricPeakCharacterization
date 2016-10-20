@@ -94,7 +94,7 @@ test_peak_points <- function(mz_peak, min_points = 5){
 mz_rsq <- test_peak_points(mz_peak)
 
 choose_peak_points <- function(rsq_results, min_rsq = 0.98){
-  filter_rsq <- rsq_results[rsq_results[,4] >= min_rsq, ]
+  filter_rsq <- rsq_results[rsq_results[,4] >= min_rsq, , drop = FALSE]
   if (nrow(filter_rsq) > 0) {
     out_index <- filter_rsq[which.max(filter_rsq[, 3]), 1:2]
     out_points <- seq(out_index[1], out_index[2])
@@ -222,10 +222,10 @@ min_points <- 5
 peak_info <- function(possible_peak, min_points = 5){
   if (nrow(possible_peak) >= min_points) {
     rsq_peak <- test_peak_points(possible_peak[, c("mz", "log_int")], min_points = min_points)
+    rsq_points <- choose_peak_points(rsq_peak)
     peak_area_basic <- area_sum_points(possible_peak$mz, possible_peak$intensity)
     peak_center_basic <- basic_peak_center_intensity(possible_peak$mz, possible_peak$intensity)
-    if (!is.na(rsq_peak[1])) {
-      rsq_points <- choose_peak_points(rsq_peak)
+    if (!is.na(rsq_points[1])) {
       peak_model <- parabolic_fit(possible_peak[rsq_points, "mz"], possible_peak[rsq_points, "log_int"])
       peak_center_model <- model_peak_center_intensity(possible_peak$mz[rsq_points], peak_model)
       peak_center_model["Intensity"] <- exp(peak_center_model["Intensity"])
@@ -250,6 +250,34 @@ peak_info <- function(possible_peak, min_points = 5){
 peak_stats <- peak_info(mz_data[pracma_peak_index, ], 5)
 ```
 
+So this gives us the information on a single peak. Now, of course we need to run
+it on a lot of peaks.
+
+```{r find_peaks}
+find_peaks <- function(mz_data, min_points = 5, n_peak = Inf){
+  peak_locations <- pracma::findpeaks(mz_data$intensity, nups = floor(min_points/2),
+                                      ndowns = floor(min_points/2))
+  peak_locations <- matrix(peak_locations, ncol = 4, byrow = FALSE)
+  mz_data$log_int <- metabolomicsUtilities::log_with_min(mz_data$intensity)
+  
+  if (is.infinite(n_peak)) {
+    n_peak <- nrow(peak_locations)
+  } else {
+    n_peak <- min(c(nrow(peak_locations), n_peak))
+  }
+  mz_peaks <- lapply(seq(1, n_peak), function(in_peak){
+    print(in_peak)
+    peak_loc <- seq(peak_locations[in_peak, 3], peak_locations[in_peak, 4])
+    peak_stats <- peak_info(mz_data[peak_loc, ], min_points = min_points)
+    peak_stats$Peak <- in_peak
+    peak_stats
+  })
+  out_peaks <- do.call(rbind, mz_peaks)
+  out_peaks
+}
+
+scan_peaks <- find_peaks(scan_level)
+```
 
 
 This gives an error, way way down in `.centered.coeffs`, where it looks like it
