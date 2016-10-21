@@ -266,7 +266,7 @@ find_peaks <- function(mz_data, min_points = 5, n_peak = Inf){
     n_peak <- min(c(nrow(peak_locations), n_peak))
   }
   mz_peaks <- lapply(seq(1, n_peak), function(in_peak){
-    print(in_peak)
+    #print(in_peak)
     peak_loc <- seq(peak_locations[in_peak, 3], peak_locations[in_peak, 4])
     peak_stats <- peak_info(mz_data[peak_loc, ], min_points = min_points)
     peak_stats$Peak <- in_peak
