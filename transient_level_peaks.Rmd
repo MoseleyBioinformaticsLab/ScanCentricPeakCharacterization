@@ -279,6 +279,46 @@ find_peaks <- function(mz_data, min_points = 5, n_peak = Inf){
 scan_peaks <- find_peaks(scan_level)
 ```
 
+## Use Derivative for Center
+
+We should be able to use the derivative of the parabola to find where the inflection
+point is, regardless of how many points we have on each side. Lets write a function and 
+test this idea.
+
+Based on the equation for the parabola:
+
+$y = a + bx + cx^2$
+
+The derivative should be:
+
+$b + 2cx = 0$
+
+So, solving for 0
+
+$x = -b / 2c$
+
+```{r center_by_derivative}
+derive_peak_center <- function(x_in, model_coeff){
+  peak_center <- ((-1 * model_coeff[2]) / (2 * model_coeff[3])) + mean(x_in)
+  peak_center
+}
+
+x <- seq(2, 10)
+coeff_1 <- c(3, 6, -0.5)
+
+y_fun <- function(x_in, model_coeff){
+  out_val <- model_coeff[1] + model_coeff[2]*x_in + model_coeff[3]*(x_in^2)
+  out_val
+}
+
+y_out <- y_fun(x, coeff_1)
+
+# create some x's that don't have all of the original points
+x2 <- seq(4, 10)
+coeff_2 <- parabolic_fit(x2, y_out[3:9])
+derive_peak_center(x2, coeff_2)
+```
+
 
 This gives an error, way way down in `.centered.coeffs`, where it looks like it
 is doing the actual regression. Lets see if we can recreate what is going on.
