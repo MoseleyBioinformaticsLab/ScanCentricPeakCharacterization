@@ -139,10 +139,17 @@ mean of the x-points, and then the intensity of the peak at the center based
 on the model.
 
 ```{r center_intensity}
+#' peak center
+#' 
+#' use the derivative of the parabolic equation to find the peak center,
+#' and then put the center into the equation to find the intensity at that
+#' point.
 model_peak_center_intensity <- function(x, coefficients){
-  center_x <- mean(x)
-  center_int <- coefficients[1]
-  c(ObservedMZ = center_x, Intensity = center_int)
+  mn_x <- mean(x)
+  peak_center <- ((-1 * coefficients[2]) / (2 * coefficients[3]))
+  center_int <- coefficients[1] + coefficients[2] * peak_center + 
+    (coefficients[3] * (peak_center ^ 2))
+  c(ObservedMZ = peak_center + mn_x, Intensity = center_int)
 }
 
 peak_center <- model_peak_center_intensity(mz_data$mz[peak_index], peak_model)
