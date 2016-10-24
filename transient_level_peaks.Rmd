@@ -21,6 +21,7 @@ library(xcms)
 library(dplyr)
 library(ggplot2)
 library(SIRM.FTMS.peakPickingMethods)
+options(digits = 16)
 
 mz_file <- "/home/rmflight/Projects/work/CESB/ftms.QC/mzML_exported/92Cpos.mzML"
 rawdata <- xcms::xcmsRaw(mz_file, profstep = 0)
@@ -44,98 +45,7 @@ mz_data <- scan_test
 scan_peaks <- find_peaks(scan_level)
 ```
 
-
-
-This gives an error, way way down in `.centered.coeffs`, where it looks like it
-is doing the actual regression. Lets see if we can recreate what is going on.
-
-```{r long_peak_picking}
-plot_data <- as.data.frame(scan_matrix2)
-plot_data$class <- "original"
-peak.base <- scan_matrix2
-# locate.peaks
-num.pts = 5
-R2.thresh = 0.90
-oneside.min = 1
-thresh = -Inf
-loc.max <- FTICRMS:::.loc.maxes(peak.base[, 2])
-loc.max <- intersect(which(peak.base[, 2] >= thresh), loc.max)
-loc.max <- loc.max[loc.max >= oneside.min + 1 & loc.max <= 
-            length(peak.base[, 2]) - oneside.min]
-
-plot_max <- plot_data[loc.max, , drop = FALSE]
-plot_max$class <- "max"
-plot_plot <- rbind(plot_data, plot_max)
-
-x <- loc.max
-locs <- x + ((-num.pts + oneside.min + 1):(num.pts - 
-                oneside.min - 1))
-locs <- locs[locs >= 1 & locs <= dim(peak.base)[1]]
-
-pt_loc <- plot_data[locs, ]
-pt_loc$class <- "locate_loc"
-plot_plot <- rbind(plot_plot, pt_loc)
-
-# .peak.parab
-pts <- peak.base[locs, ]
-# which ones went into here
-parab_locs <- locs
-
-# which points fit the parabola
-Rsq <- sapply(1:(dim(pts)[1] - num.pts + 1), function(x) {
-        FTICRMS::.Rsquared(pts[x + (0:(num.pts - 1)), ])
-})
-locs <- which.max(Rsq) + (0:(num.pts - 1))
-
-rsq_pts <- plot_data[parab_locs[locs], ]
-rsq_pts$class <- "rsq"
-plot_plot <- rbind(plot_plot, rsq_pts)
-
-
-rsq_pts$mz2 <- rsq_pts$mz ^ 2
-rsq_pts$class <- "org"
-rsq_model <- lm(intensity ~ mz + mz2, data = rsq_pts)
-rsq_pred <- data.frame(mz = rsq_pts$mz, intensity = predict(rsq_model), mz2 = rsq_pts$mz2, class = "pred")
-rsq_plot <- rbind(rsq_pts, rsq_pred)
-
-# .centered.coeffs
-M <- pts[locs, ]
-Y <- M[, 2]
-X <- M[, 1] - mean(M[, 1])
-X2 <- X ^ 2
-
-model_frame <- data.frame(Y = Y, X = X, X2 = X2)
-
-m_mod <- lm(Y ~ X + X2, data = model_frame)
-p_mod <- predict(m_mod)
-
-x_plot <- data.frame(mz = c(X, X), int = c(Y, p_mod), class = rep(c("org", "pred"), each = length(Y)))
-ggplot(x_plot, aes(x = mz, y = exp(int), color = class)) + geom_point() + geom_line()
-
-coeffs <- coefficients(m_mod)
-out_val <- c(mean(pts[locs, 1]) - coeffs[2]/2/coeffs[3],
-             coeffs[1] - coeffs[2]^2/4/coeffs[3], -1/coeffs[3])
-names(out_val) <- c("center", "intensity", "width")
-
-out_val2 <- data.frame(mz = c(out_val["center"],
-                              out_val["center"] - out_val["width"],
-                              out_val["center"] + out_val["width"]),
-                       intensity = c(out_val["intensity"],
-                                     0,
-                                     0),
-                       class = "found")
-
-plot_plot <- rbind(plot_plot, out_val2)
-
-ggplot(plot_plot, aes(x = mz, y = intensity, color = class)) + geom_point() + geom_line()
-```
-
-So something seems off with the width. Not sure what exactly. We will generate
-two separate sets of functions and see if we can get the FTICRMS code to run 
-even on some peaks and pick out some differences.
-
-We will add a `try` in their code to capture the error message and allow it to
-keep running, and then replace `solve` with the `lm` call.
+# Trying to fix Parabolic Peak Picking
 
 ## Original
 
@@ -287,19 +197,18 @@ locate.peaks2 <- function (peak.base, num.pts = 5, R2.thresh = 0.98, oneside.min
 
 ```{r run_peaks}
 scan_data <- as.matrix(scan_level)
-scan_data[, 2] <- log_with_min(scan_data[, 2, drop = FALSE])
+scan_data[, 2] <- SIRM.FTMS.peakPickingMethods:::log_with_min(scan_data[, 2, drop = FALSE])
 peaks1 <- locate.peaks(scan_data)
 
 peaks2 <- locate.peaks2(scan_data)
+
+all.equal(peaks1, peaks2)
 ```
 
-So, something weird, is that they don't just evaluate all of the possible peak
-points for fit to Rsquared and then fit on those. For example, running `FTICRMS::.Rsquared` on
-`pts[6:13]` returns a value of 0.99, implying they fit the polynomial extremely well. So
-these are the points that define the peak. 
+# Compare My Code and Theirs
 
-Could we run really simple peak finding (i.e. the regex method), and then check 
-for fit above a particular level, testing the range of points going from both sides
-to make sure we have all possible combinations, and then generate the fit, and
-integrate to get the peak area.
-dropping points as needed. 
+Given that I've essentially rewritten the parabolic based peak finding code, we
+should compare them to each other to make sure that the results are not too different.
+
+
+
