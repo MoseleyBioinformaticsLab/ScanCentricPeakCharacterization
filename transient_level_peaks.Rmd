@@ -130,6 +130,12 @@ parabolic_fit <- function(x, y){
 }
 
 peak_model <- parabolic_fit(mz_data$mz[peak_index], mz_data$log_int[peak_index])
+
+linear_fit <- function(x, y){
+  center_x <- x - mean(x)
+  x_matrix <- cbind(1, center_x)
+  as.vector(solve(t(x_matrix) %*% x_matrix, t(x_matrix) %*% y, tol = 1e-18))
+}
 ```
 
 # Find Center of Peak and Intensity
@@ -195,7 +201,40 @@ area_sum <- area_sum_points(mz_data$mz[pracma_peak_index], mz_data$intensity[pra
 ## Integrate Over Range
 
 ```{r integrate_points}
-integrate_model <- function(peak_loc, model_coeff, n_point = 100, log_transform = "log"){
+integrate_corners <- function(peak_mz, peak_int, full_peak_loc, model_peak_loc){
+  full_is_model <- which(full_peak_loc %in% model_peak_loc)
+  model_start <- full_is_model[1]
+  model_stop <- full_is_model[length(full_is_model)]
+  
+  left_side_index <- c(full_peak_loc[1], full_peak_loc[model_start])
+  right_side_index <- c(full_peak_loc[model_stop], full_peak_loc[length(full_peak_loc)])
+  
+  if (length(unique(left_side_index)) > 1) {
+    left_model <- linear_fit(peak_mz[left_side_index], peak_int[left_side_index])
+    left_zero <- (left_model[1] / (-1*left_model[2])) + mean(peak_mz[left_side_index])
+  
+    left_base <- abs(left_zero - peak_mz[left_side_index[2]])
+    left_height <- abs(0 - peak_int[left_side_index[2]])
+    left_area <- 0.5 * (left_base * left_height)
+  } else {
+    left_area <- 0
+  }
+  
+  if (length(unique(right_side_index)) > 1) {
+    right_model <- linear_fit(peak_mz[right_side_index], peak_int[right_side_index])
+    right_zero <- (right_model[1] / (-1*right_model[2])) + mean(peak_mz[right_side_index])
+    right_base <- abs(right_zero - peak_mz[right_side_index[1]])
+    right_height <- abs(0 - peak_int[right_side_index[1]])
+    right_area <- 0.5 * (right_base * right_height)
+  } else {
+    right_area <- 0
+  }
+  
+  c(Area = right_area + left_area)
+}
+
+integrate_model <- function(model_mz, model_coeff, n_point = 100, log_transform = "log"){
+  # setup the model
   model_function <- function(model_coeff){
     function(x, log_transform = "log"){
       out_val <- model_coeff[1] + model_coeff[2]*x + model_coeff[3]*(x^2)
@@ -205,17 +244,25 @@ integrate_model <- function(peak_loc, model_coeff, n_point = 100, log_transform 
       out_val
     }
   }
-  
+  # and it's function
   integrate_function <- model_function(model_coeff)
+  # mean center so it works right
+  mn_model_loc <- model_mz - mean(model_mz)
   
-  mn_peak_loc <- peak_loc - mean(peak_loc)
-  
-  peak_area <- stats::integrate(integrate_function, min(mn_peak_loc), max(mn_peak_loc), log_transform = log_transform)
-  c(Area = peak_area$value)
+  model_area <- stats::integrate(integrate_function, min(mn_model_loc), max(mn_model_loc), log_transform = log_transform)
+  c(Area = model_area$value)
   
 }
 
-area_integrate <- integrate_model(mz_data$mz[peak_index], peak_model)
+integration_based_area <- function(mz_data, int_data, full_peak_loc, model_peak_loc, model_coeff, n_point = 100, log_transform = "log"){
+  model_area <- integrate_model(mz_data[model_peak_loc], model_coeff, n_point, log_transform)
+  
+  side_area <- integrate_corners(mz_data, int_data, full_peak_loc, model_peak_loc)
+  
+  c(Area = model_area + side_area)
+}
+
+area_integrate <- integration_based_area(mz_data$mz, mz_data$intensity, pracma_peak_index, peak_index, peak_model)
 ```
 
 ## Wrap Up Into Bigger Function
@@ -236,7 +283,9 @@ peak_info <- function(possible_peak, min_points = 5){
       peak_model <- parabolic_fit(possible_peak[rsq_points, "mz"], possible_peak[rsq_points, "log_int"])
       peak_center_model <- model_peak_center_intensity(possible_peak$mz[rsq_points], peak_model)
       peak_center_model["Intensity"] <- exp(peak_center_model["Intensity"])
-      peak_area_model <- integrate_model(possible_peak$mz[rsq_points], peak_model)
+      full_points <- seq(1, nrow(possible_peak))
+      peak_area_model <- integration_based_area(possible_peak$mz, possible_peak$intensity,
+                                                full_points, rsq_points, peak_model)
     } else {
       peak_center_model <- c(ObservedMZ = NA, Intensity = NA)
       peak_area_model <- c(Area = NA)
@@ -273,7 +322,7 @@ find_peaks <- function(mz_data, min_points = 5, n_peak = Inf){
     n_peak <- min(c(nrow(peak_locations), n_peak))
   }
   mz_peaks <- lapply(seq(1, n_peak), function(in_peak){
-    #print(in_peak)
+    print(in_peak)
     peak_loc <- seq(peak_locations[in_peak, 3], peak_locations[in_peak, 4])
     peak_stats <- peak_info(mz_data[peak_loc, ], min_points = min_points)
     peak_stats$Peak <- in_peak
