@@ -169,24 +169,53 @@ test_peak_points <- function(mz_peak, min_points = 5){
   pt_rsq
 }
 
+#' test points area
+#'
+#' given an mz data.frame, test whether the non-zero intensity points account for a
+#' significant amount of area and are a certain number of points
+#'
+#' @param mz_peak the mz and intensity values defining the peak
+#' @param min_points the minimum number of points to include in the peak
+#'
+#' @details returns a matrix of vectors, where the vector is:
+#' \enumerate{
+#'   \item start of points
+#'   \item end of points
+#'   \item area
+#' }
+#' @return numeric
+test_peak_area <- function(mz_peak, min_points = 5, min_area = 0.1){
+  non_zero_points <- which(mz_peak$intensity != 0)
+  mz_peak_nonzero <- mz_peak[non_zero_points, ]
+  n_point <- nrow(mz_peak_nonzero)
+
+  if (n_point >= min_points) {
+    mean_mz_diff <- mean(diff(mz_peak$mz))
+    peak_area <- sum(mean_mz_diff * mz_peak$intensity)
+    peak_info <- c(start = non_zero_points[1], stop = non_zero_points[length(non_zero_points)],
+        area = peak_area)
+  } else {
+    peak_info <- c(start = NA, stop = NA, area = NA)
+  }
+  peak_info
+}
 
 #' choose the peak
 #'
 #' given a matrix that defines the possible sets of points for a parabolic,
 #' choose the longest set with an r-squared fit above a certain criteria
 #'
-#' @param rsq_results matrix of results from \code{test_peak_points}
-#' @param min_rsq minimum cutoff for the fit to use
+#' @param area_results vector of information from \code{test_peak_area}
+#' @param min_area the minimum area to consider
 #'
 #' @return numeric
-choose_peak_points <- function(rsq_results, min_rsq = 0.98){
-  filter_rsq <- rsq_results[rsq_results[,4] >= min_rsq, , drop = FALSE]
-  if (nrow(filter_rsq) > 0) {
-    out_index <- filter_rsq[which.max(filter_rsq[, 3]), 1:2]
-    out_points <- seq(out_index[1], out_index[2])
+choose_peak_points_area <- function(area_results, min_area = 0.1){
+  if (!is.na(area_results["area"])) {
+    out_points <- seq(area_results["start"], area_results["stop"])
   } else {
     out_points <- NA
   }
+
   out_points
 }
 
@@ -394,22 +423,23 @@ integration_based_area <- function(mz_data, int_data, full_peak_loc, model_peak_
 #'
 #' @param possible_peak data.frame of mz, intensity and log intensity (log_int)
 #' @param min_points the minimum number of points in a peak
+#' @param min_area the minimum area for a peak
 #'
 #' @return numeric
 #' @export
-peak_info <- function(possible_peak, min_points = 5){
+peak_info <- function(possible_peak, min_points = 5, min_area = 0.1){
   if (nrow(possible_peak) >= min_points) {
-    rsq_peak <- test_peak_points(possible_peak[, c("mz", "log_int")], min_points = min_points)
-    rsq_points <- choose_peak_points(rsq_peak)
+    area_peak <- test_peak_area(possible_peak[, c("mz", "intensity")], min_points = min_points - 2)
+    area_points <- choose_peak_points_area(area_peak, min_area)
     peak_area_basic <- area_sum_points(possible_peak$mz, possible_peak$intensity)
     peak_center_basic <- basic_peak_center_intensity(possible_peak$mz, possible_peak$intensity)
-    if (!is.na(rsq_points[1])) {
-      peak_model <- parabolic_fit(possible_peak[rsq_points, "mz"], possible_peak[rsq_points, "log_int"])
-      peak_center_model <- model_peak_center_intensity(possible_peak$mz[rsq_points], peak_model)
+    if (!is.na(area_points[1])) {
+      peak_model <- parabolic_fit(possible_peak[area_points, "mz"], possible_peak[area_points, "log_int"])
+      peak_center_model <- model_peak_center_intensity(possible_peak[area_points, "mz"], peak_model)
       peak_center_model["Intensity"] <- exp(peak_center_model["Intensity"])
       full_points <- seq(1, nrow(possible_peak))
       peak_area_model <- integration_based_area(possible_peak$mz, possible_peak$intensity,
-                                                full_points, rsq_points, peak_model)
+                                                full_points, area_points, peak_model)
     } else {
       peak_center_model <- c(ObservedMZ = NA, Intensity = NA)
       peak_area_model <- c(Area = NA)
