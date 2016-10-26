@@ -45,4 +45,83 @@ mz_data <- scan_test
 scan_peaks <- find_peaks(scan_level)
 ```
 
+# Check Parabolic vs Basic differences
 
+We will look for examples where there is a big difference in the `model` center
+and the `basic` center, as that may imply there is something odd going on.
+
+```{r model_vs_basic}
+basic_peaks <- dplyr::filter(scan_peaks, type == "basic")
+area_peaks <- dplyr::filter(scan_peaks, type == "area")
+rsq_98_peaks <- dplyr::filter(scan_peaks, type == "rsq_98")
+rsq_95_peaks <- dplyr::filter(scan_peaks, type == "rsq_95")
+
+area_diff <- abs(area_peaks$ObservedMZ - basic_peaks$ObservedMZ)
+rsq_98_diff <- abs(rsq_98_peaks$ObservedMZ - basic_peaks$ObservedMZ)
+rsq_95_diff <- abs(rsq_95_peaks$ObservedMZ - basic_peaks$ObservedMZ)
+
+sum(area_diff <= 5e-4)
+
+sum(is.na(rsq_98_diff))
+sum(rsq_98_diff[!is.na(rsq_98_diff)] <= 5e-4)
+
+sum(is.na(rsq_95_diff))
+sum(rsq_95_diff[!is.na(rsq_95_diff)] <= 5e-4)
+
+```
+
+```{r plot_all_peaks}
+library(plotly)
+p <- ggplot(scan_level, aes(x = mz, y = intensity)) + geom_line()
+q <- p + geom_point(data = scan_peaks, aes(x = ObservedMZ, y = Intensity, color = type))
+ggplotly(q)
+```
+
+```{r check_2556}
+use_peak <- 2556
+
+mz_data <- dplyr::filter(scan_level, (mz >= 1174.77) & (mz <= 1174.8))
+min_points <- 5
+n_peak <- Inf
+
+peak_locations <- pracma::findpeaks(mz_data$intensity, nups = floor(min_points/2),
+                                      ndowns = floor(min_points/2))
+peak_locations <- matrix(peak_locations, ncol = 4, byrow = FALSE)
+mz_data$log_int <- metabolomicsUtilities::log_with_min(mz_data$intensity)
+
+in_peak <- 1
+peak_loc <- seq(peak_locations[in_peak, 3], peak_locations[in_peak, 4])
+
+mz_data_plot1 <- mz_data
+mz_data_plot1$type <- "org"
+mz_data_plot1 <- rbind(mz_data_plot1, mz_data_plot1[peak_loc, ])
+mz_data_plot1[23:34, "type"] <- "pracma"
+
+ggplot(mz_data_plot1, aes(x = mz, y = intensity, color = type)) + geom_point() + geom_line()
+```
+
+OK, this looks good. Lets see what went into the model.
+
+```{r}
+possible_peak <- mz_data[peak_loc, ]
+min_area <- 0.1
+
+area_peak <- SIRM.FTMS.peakPickingMethods:::test_peak_area(possible_peak[, c("mz", "intensity")], min_points = min_points - 2)
+area_points <- SIRM.FTMS.peakPickingMethods:::choose_peak_points_area(area_peak, min_area)
+
+
+```
+
+# Things to Do
+
+* For basic peak method, the intensity should be done as a weighted average
+of the intensity of two nearest points, where weight is proportional to distance
+from the points
+* For area based peak method, can we exclude points based on their slope to
+the next point in the peak? Points to exclude would have low slopes at
+the ends.
+* Alternatively, instead of R^2 on the parabolic model, could we use residuals
+of the points to the model to exclude them?
+* The way we should be judging the quality of each method is by examining
+the variance in the location, intensity, and area of a given peak across
+multiple transients.

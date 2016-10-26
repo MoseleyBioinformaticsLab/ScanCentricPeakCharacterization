@@ -147,7 +147,7 @@ r_squared <- function(x, y){
 #'   \item r-square fit for the set of points
 #' }
 #' @return numeric
-test_peak_points <- function(mz_peak, min_points = 5){
+test_peak_rsq <- function(mz_peak, min_points = 5){
   n_point <- nrow(mz_peak)
   if (n_point >= min_points) {
     test_index <- lapply(seq(1, n_point - min_points), function(start_loc){
@@ -167,6 +167,24 @@ test_peak_points <- function(mz_peak, min_points = 5){
     pt_rsq <- matrix(NA, nrow = 1, 4)
   }
   pt_rsq
+}
+
+#' choose peak rsq
+#'
+#' @param rsq_results matrix of results from \code{test_peak_rsq}
+#' @param min_rsq minimum cutoff for the fit to use
+#'
+#' @return numeric
+choose_peak_rsq <- function(rsq_results, min_rsq = 0.98){
+  filter_rsq <- rsq_results[rsq_results[,4] >= min_rsq, , drop = FALSE]
+
+  if (nrow(filter_rsq) > 0) {
+    out_index <- filter_rsq[which.max(filter_rsq[, 3]), 1:2]
+    out_points <- seq(out_index[1], out_index[2])
+  } else {
+    out_points <- NA
+  }
+  out_points
 }
 
 #' test points area
@@ -416,6 +434,64 @@ integration_based_area <- function(mz_data, int_data, full_peak_loc, model_peak_
   c(Area = model_area + side_area)
 }
 
+#' get area peak
+#'
+#' @param possible_peak the peak data
+#' @param min_points how many points needed
+#'
+#' @return numeric
+get_area_peak <- function(possible_peak, min_points){
+  area_peak <- test_peak_area(possible_peak[, c("mz", "intensity")], min_points = min_points - 2)
+  area_points <- choose_peak_points_area(area_peak, min_area)
+
+  if (!is.na(area_points[1])) {
+    peak_model <- parabolic_fit(possible_peak[area_points, "mz"], possible_peak[area_points, "log_int"])
+    peak_center_model <- model_peak_center_intensity(possible_peak[area_points, "mz"], peak_model)
+    peak_center_model["Intensity"] <- exp(peak_center_model["Intensity"])
+    full_points <- seq(1, nrow(possible_peak))
+    peak_area_model <- integration_based_area(possible_peak$mz, possible_peak$intensity,
+                                              full_points, area_points, peak_model)
+  } else {
+    peak_center_model <- c(ObservedMZ = NA, Intensity = NA)
+    peak_area_model <- c(Area = NA)
+  }
+  data.frame(ObservedMZ = peak_center_model["ObservedMZ"],
+             Intensity = peak_center_model["Intensity"],
+             Area = peak_area_model,
+             type = "area")
+}
+
+#' get rsq peak
+#'
+#' @param possible_peak the peak data
+#' @param min_rsq minimum rsq
+#' @param min_points min number of points
+#'
+#' @return numeric
+get_rsq_peak <- function(possible_peak, min_rsq, min_points){
+  rsq_peak <- test_peak_rsq(possible_peak[, c("mz", "log_int")], min_points = min_points)
+  rsq_points <- choose_peak_rsq(rsq_peak, min_rsq)
+
+  min_rsq_text <- substring(as.character(min_rsq), 3)
+
+  if (!is.na(rsq_points[1])) {
+    peak_model <- parabolic_fit(possible_peak[rsq_points, "mz"], possible_peak[rsq_points, "log_int"])
+    peak_center_model <- model_peak_center_intensity(possible_peak[rsq_points, "mz"], peak_model)
+    peak_center_model["Intensity"] <- exp(peak_center_model["Intensity"])
+    full_points <- seq(1, nrow(possible_peak))
+    peak_area_model <- integration_based_area(possible_peak$mz, possible_peak$intensity,
+                                              full_points, rsq_points, peak_model)
+  } else {
+    peak_center_model <- c(ObservedMZ = NA, Intensity = NA)
+    peak_area_model <- c(Area = NA)
+  }
+  data.frame(ObservedMZ = peak_center_model["ObservedMZ"],
+             Intensity = peak_center_model["Intensity"],
+             Area = peak_area_model,
+             type = paste0("rsq_", min_rsq_text))
+}
+
+
 #' peak info
 #'
 #' given a peak found, try to fit a parabolic model and return the center,
@@ -429,31 +505,30 @@ integration_based_area <- function(mz_data, int_data, full_peak_loc, model_peak_
 #' @export
 peak_info <- function(possible_peak, min_points = 5, min_area = 0.1){
   if (nrow(possible_peak) >= min_points) {
-    area_peak <- test_peak_area(possible_peak[, c("mz", "intensity")], min_points = min_points - 2)
-    area_points <- choose_peak_points_area(area_peak, min_area)
+    # always do the basic peaks
     peak_area_basic <- area_sum_points(possible_peak$mz, possible_peak$intensity)
     peak_center_basic <- basic_peak_center_intensity(possible_peak$mz, possible_peak$intensity)
-    if (!is.na(area_points[1])) {
-      peak_model <- parabolic_fit(possible_peak[area_points, "mz"], possible_peak[area_points, "log_int"])
-      peak_center_model <- model_peak_center_intensity(possible_peak[area_points, "mz"], peak_model)
-      peak_center_model["Intensity"] <- exp(peak_center_model["Intensity"])
-      full_points <- seq(1, nrow(possible_peak))
-      peak_area_model <- integration_based_area(possible_peak$mz, possible_peak$intensity,
-                                                full_points, area_points, peak_model)
-    } else {
-      peak_center_model <- c(ObservedMZ = NA, Intensity = NA)
-      peak_area_model <- c(Area = NA)
-    }
 
+    basic_info <- data.frame(ObservedMZ = peak_center_basic["ObservedMZ"],
+               Intensity = peak_center_basic["Intensity"],
+               Area = peak_area_basic,
+               type = "basic")
+    # then try area based first
+    area_info <- get_area_peak(possible_peak, min_points)
+
+    # then model with 0.98 as cutoff
+    rsq_98_info <- get_rsq_peak(possible_peak, 0.98, min_points)
+
+    # then model with 0.95 as cutoff
+    rsq_95_info <- get_rsq_peak(possible_peak, 0.95, min_points)
+
+    out_peak <- rbind(basic_info, area_info)
+    out_peak <- rbind(out_peak, rsq_98_info)
+    out_peak <- rbind(out_peak, rsq_95_info)
   } else {
-    peak_area_basic <- c(Area = NA)
-    peak_center_basic <- c(ObservedMZ = NA, Intensity = NA)
-    peak_center_model <- c(ObservedMZ = NA, Intensity = NA)
-    peak_area_model <- c(Area = NA)
+    out_peak <- data.frame(ObservedMZ = NA, Intensity = NA, Area = NA, type = NA)
   }
-  out_peak <- as.data.frame(rbind(c(peak_center_basic, peak_area_basic),
-                                  c(peak_center_model, peak_area_model)))
-  out_peak$type <- c("basic", "model")
+
   out_peak
 }
 
