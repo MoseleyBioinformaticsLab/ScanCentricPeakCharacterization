@@ -218,6 +218,91 @@ test_peak_area <- function(mz_peak, min_points = 5, min_area = 0.1){
   peak_info
 }
 
+#' calculate subsequent slopes
+#'
+#' for a set of mz - intensity point pairs, get the point-to-point slopes
+#'
+#' @param mz the mz values
+#' @param intensity the intensity values
+#'
+#' @return numeric
+calc_point_slopes <- function(mz, intensity){
+  n_point <- length(mz)
+  point_slope <- vapply(seq(2, n_point), function(end_point){
+    start_point <- end_point - 1
+    (intensity[end_point] - intensity[start_point]) /
+      (mz[end_point] - mz[start_point])
+  }, numeric(1))
+  point_slope
+}
+
+#' test points area slope
+#'
+#' given an mz data.frame, test whether the non-zero intensity points account for a
+#' significant amount of area and are a certain number of points, while rejecting
+#' points that have relatively low slope on either side of the peak
+#'
+#' @param mz_peak the mz and intensity values defining the peak
+#' @param min_points the minimum number of points to include in the peak
+#' @param max_slope the maximum slope to not remove
+#' @details returns a matrix of vectors, where the vector is:
+#' \enumerate{
+#'   \item start of points
+#'   \item end of points
+#'   \item area
+#' }
+#' @return numeric
+test_peak_area_slope <- function(mz_peak, min_points = 5, min_area = 0.1, max_slope = 0.1){
+  org_points <- seq(1, nrow(mz_peak))
+  non_zero_points <- which(mz_peak$intensity != 0)
+  mz_peak <- mz_peak[non_zero_points, ]
+  org_points <- org_points[non_zero_points]
+
+  point_slopes <- calc_point_slopes(mz_peak[, "mz"], mz_peak[, "intensity"])
+  relative_slopes <- abs(point_slopes / max(point_slopes))
+
+  # this is all to check the ends of the points for low slopes. It starts at
+  # each end, checks if point is below the cutoff, and if it is, then adds it.
+  # We want to do this to exclude points that are causing low slopes in the peak,
+  # but not in the middle. Also do it this way because the slopes are calculated
+  # starting with the second point.
+  forward_check <- seq(1, length(relative_slopes))
+  rev_check <- seq(length(relative_slopes), 1, -1)
+
+  forward_lo_points <- numeric(0)
+  ipoint <- 1
+  while ((ipoint <= length(forward_check)) && (relative_slopes[forward_check[ipoint]] <= max_slope)) {
+    forward_lo_points <- c(forward_lo_points, forward_check[ipoint])
+    ipoint <- ipoint + 1
+  }
+
+  ipoint <- 1
+  rev_lo_points <- numeric(0)
+  while ((ipoint <= length(rev_check)) && (relative_slopes[rev_check[ipoint]] <= max_slope)) {
+    rev_lo_points <- c(rev_lo_points, reverse_check[ipoint])
+    ipoint <- ipoint + 1
+  }
+
+  reject_points <- c(seq(1, nrow(mz_peak) - 1)[forward_lo_points],
+                     seq(2, nrow(mz_peak))[rev_lo_points])
+
+
+  possible_points <- org_points[-reject_points]
+  n_point <- length(possible_points)
+
+  if (n_point >= min_points) {
+    possible_mz <- mz_peak[possible_points, ]
+    mean_mz_diff <- mean(diff(possible_mz$mz))
+    peak_area <- sum(mean_mz_diff * possible_mz$intensity)
+    peak_info <- c(start = possible_points[1], stop = possible_points[length(possible_points)],
+                   area = peak_area)
+  } else {
+    peak_info <- c(start = NA, stop = NA, area = NA)
+  }
+  peak_info
+}
+
+
 #' choose the peak
 #'
 #' given a matrix that defines the possible sets of points for a parabolic,
