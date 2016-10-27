@@ -310,20 +310,24 @@ model_peak_center_intensity <- function(x, coefficients){
 #' @param mz the mz values
 #' @param intensity the intensity values
 #'
+#' @importFrom stats weighted.mean
 #' @return numeric
 #' @export
 basic_peak_center_intensity <- function(mz, intensity){
-  n_point <- length(mz)
-  seq_point <- seq(1, n_point)
-  if ((n_point %% 2) == 0) {
-    peak_center <- mean(mz)
+  peak_center <- mean(mz)
 
-    peak_intensity <- mean(intensity[floor(mean(seq_point))],
-                           intensity[ceiling(mean(seq_point))])
-  } else {
-    peak_center <- mz[mean(seq_point)]
-    peak_intensity <- intensity[mean(seq_point)]
-  }
+  # this is used to track the points so we can pick the two that are closest
+  point_index <- seq(1, length(mz))
+  diff_center <- abs(peak_center - mz)
+
+  # get the two closest points so they can be used for determining the
+  # intensity of the center
+  closest_points <- point_index[order(diff_center, decreasing = FALSE)[1:2]]
+  closest_diff <- diff_center[closest_points]
+  closest_intensity <- intensity[closest_points]
+
+  peak_intensity <- stats::weighted.mean(closest_intensity, 1 / closest_diff)
+
   c(ObservedMZ = peak_center, Intensity = peak_intensity)
 }
 
