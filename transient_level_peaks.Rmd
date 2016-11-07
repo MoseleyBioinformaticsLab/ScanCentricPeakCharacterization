@@ -21,6 +21,7 @@ library(xcms)
 library(dplyr)
 library(ggplot2)
 library(SIRM.FTMS.peakPickingMethods)
+library(ggplot2)
 options(digits = 16)
 
 mz_file <- "/home/rmflight/Projects/work/CESB/ftms.QC/mzML_exported/92Cpos.mzML"
@@ -92,6 +93,10 @@ mz_data$log_int <- metabolomicsUtilities::log_with_min(mz_data$intensity)
 in_peak <- 1
 peak_loc <- seq(peak_locations[in_peak, 3], peak_locations[in_peak, 4])
 
+possible_peak <- mz_data[peak_loc, ]
+
+
+
 mz_data_plot1 <- mz_data
 mz_data_plot1$type <- "org"
 mz_data_plot1 <- rbind(mz_data_plot1, mz_data_plot1[peak_loc, ])
@@ -114,9 +119,6 @@ area_points <- SIRM.FTMS.peakPickingMethods:::choose_peak_points_area(area_peak,
 
 # Things to Do
 
-* For basic peak method, the intensity should be done as a weighted average
-of the intensity of two nearest points, where weight is proportional to distance
-from the points
 * For area based peak method, can we exclude points based on their slope to
 the next point in the peak? Points to exclude would have low slopes at
 the ends.
