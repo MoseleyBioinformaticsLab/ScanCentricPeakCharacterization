@@ -550,6 +550,33 @@ get_area_peak <- function(possible_peak, min_points){
              type = "area")
 }
 
+#' get area peak
+#'
+#' @param possible_peak the peak data
+#' @param min_points how many points needed
+#'
+#' @return numeric
+get_area_peak_rejslope <- function(possible_peak, min_points){
+  area_peak <- test_peak_area_slope(possible_peak[, c("mz", "intensity")], min_points = min_points - 2)
+  area_points <- choose_peak_points_area(area_peak, min_area)
+
+  if (!is.na(area_points[1])) {
+    peak_model <- parabolic_fit(possible_peak[area_points, "mz"], possible_peak[area_points, "log_int"])
+    peak_center_model <- model_peak_center_intensity(possible_peak[area_points, "mz"], peak_model)
+    peak_center_model["Intensity"] <- exp(peak_center_model["Intensity"])
+    full_points <- seq(1, nrow(possible_peak))
+    peak_area_model <- integration_based_area(possible_peak$mz, possible_peak$intensity,
+                                              full_points, area_points, peak_model)
+  } else {
+    peak_center_model <- c(ObservedMZ = NA, Intensity = NA)
+    peak_area_model <- c(Area = NA)
+  }
+  data.frame(ObservedMZ = peak_center_model["ObservedMZ"],
+             Intensity = peak_center_model["Intensity"],
+             Area = peak_area_model,
+             type = "area_hislope")
+}
+
 #' get rsq peak
 #'
 #' @param possible_peak the peak data
@@ -605,6 +632,9 @@ peak_info <- function(possible_peak, min_points = 5, min_area = 0.1){
     # then try area based first
     area_info <- get_area_peak(possible_peak, min_points)
 
+    # rejecting the low slope points
+    area_info_hislop <- get_area_peak_rejslope(possible_peak, min_points)
+
     # then model with 0.98 as cutoff
     rsq_98_info <- get_rsq_peak(possible_peak, 0.98, min_points)
 
@@ -614,6 +644,7 @@ peak_info <- function(possible_peak, min_points = 5, min_area = 0.1){
     out_peak <- rbind(basic_info, area_info)
     out_peak <- rbind(out_peak, rsq_98_info)
     out_peak <- rbind(out_peak, rsq_95_info)
+    out_peak <- rbind(out_peak, area_info_hislop)
   } else {
     out_peak <- data.frame(ObservedMZ = NA, Intensity = NA, Area = NA, type = NA)
   }
