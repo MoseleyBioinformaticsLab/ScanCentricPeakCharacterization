@@ -32,6 +32,42 @@ scan_test <- filter(scan_level, (mz >= 150.026) & (mz <= 150.0271))
 mz_data <- scan_test
 ```
 
+```{r try_cauchy_function}
+cauchy_estimate <- function(x, max_real, params){
+  xnot <- params[1]
+  g <- params[2]
+  max_real <- max_real[1]
+  denom <- pi * g * (1 + ((x - xnot) / g)^2)
+  new_y <- 1 / denom
+  scale_factor <- max_real / max(new_y)
+  new_y * scale_factor
+}
+
+test_mz <- mz_data
+x.0 <- median(test_mz[test_mz$intensity >= 400, "mz"])
+gamma.0 <- 1e-4
+
+out_cauchy <- cauchy_estimate(test_mz$mz, max(test_mz$intensity), c(x.0, gamma.0, max(test_mz$intensity)))
+
+test_plot <- test_mz[, c("mz", "intensity")]
+test_plot$type <- "orig"
+test_plot <- rbind(test_plot, data.frame(mz = test_mz$mz, intensity = out_cauchy, type = "cauchy"))
+
+ggplot(test_plot, aes(x = mz, y = intensity, color = type)) + geom_line() + geom_point()
+
+test_mz$max_value <- max(test_mz$intensity)
+fit_weight <- test_mz$intensity / test_mz$max_value
+fit <- nls(intensity ~ cauchy_estimate(mz, max_value, c(xnot, g)), data = test_mz, start = c(xnot = x.0, g = gamma.0), 
+           nls.control(minFactor = 1/1e14, warnOnly = TRUE, maxiter = 200), weights = fit_weight)
+
+fit_cauchy <- fit$m$predict()
+
+fit_cauchy <- data.frame(mz = test_mz$mz, intensity = fit_cauchy, type = "fit")
+ggplot(test_plot, aes(x = mz, y = intensity, color = type)) + geom_point() + geom_line() +
+  geom_point(data = fit_cauchy) + geom_line(data = fit_cauchy)
+```
+
+
 # Workflow for Transient-Level Peak Finding
 
 * Transform to log-space
