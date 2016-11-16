@@ -32,6 +32,24 @@ scan_test <- filter(scan_level, (mz >= 150.026) & (mz <= 150.0271))
 mz_data <- scan_test
 ```
 
+So, our basic idea is to start very simply, and then escalate for peaks where the
+simple things don't work. This requires us to set some simple metrics that tell
+us whether or not a peak was likely picked correctly.
+
+The steps I am imagining are:
+
+* Classify as a flat or pointed peak
+  * This is important because it changes how we handle looking at the center from
+  the model.
+* Fit a parabolic model to log-transformed values
+* Flat peaks: check that center intensity is above max point, and between the flat points
+* Pointed peaks: check that center intensity is within a weighted value of max, and near to it
+* If checks fail, then:
+* Try weighted parabolic fit, where weights are derived from point intensities
+* Check again
+* Try weighted **cauchy** fit
+* Record generated parameters, and whether sanity checks pass for a peak.
+
 ```{r try_cauchy_function}
 cauchy_estimate <- function(x, max_real, params){
   xnot <- params[1]
