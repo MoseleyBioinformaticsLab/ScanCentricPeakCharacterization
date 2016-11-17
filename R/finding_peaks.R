@@ -257,6 +257,7 @@ test_peak_area_slope <- function(mz_peak, min_points = 5, min_area = 0.1, max_sl
   non_zero_points <- which(mz_peak$intensity != 0)
   mz_peak <- mz_peak[non_zero_points, ]
   org_points <- org_points[non_zero_points]
+  new_points <- seq(1, length(org_points))
 
   point_slopes <- calc_point_slopes(mz_peak[, "mz"], mz_peak[, "intensity"])
   relative_slopes <- abs(point_slopes / max(point_slopes))
@@ -267,7 +268,7 @@ test_peak_area_slope <- function(mz_peak, min_points = 5, min_area = 0.1, max_sl
   # but not in the middle. Also do it this way because the slopes are calculated
   # starting with the second point.
   forward_check <- seq(1, length(relative_slopes))
-  rev_check <- seq(length(relative_slopes), 1, -1)
+  reverse_check <- seq(length(relative_slopes), 1, -1)
 
   forward_lo_points <- numeric(0)
   ipoint <- 1
@@ -278,7 +279,7 @@ test_peak_area_slope <- function(mz_peak, min_points = 5, min_area = 0.1, max_sl
 
   ipoint <- 1
   rev_lo_points <- numeric(0)
-  while ((ipoint <= length(rev_check)) && (relative_slopes[rev_check[ipoint]] <= max_slope)) {
+  while ((ipoint <= length(reverse_check)) && (relative_slopes[reverse_check[ipoint]] <= max_slope)) {
     rev_lo_points <- c(rev_lo_points, reverse_check[ipoint])
     ipoint <- ipoint + 1
   }
@@ -287,14 +288,19 @@ test_peak_area_slope <- function(mz_peak, min_points = 5, min_area = 0.1, max_sl
                      seq(2, nrow(mz_peak))[rev_lo_points])
 
 
-  possible_points <- org_points[-reject_points]
+  if (length(reject_points) == 0) {
+    possible_points <- new_points
+  } else {
+    possible_points <- new_points[-reject_points]
+  }
+
   n_point <- length(possible_points)
 
   if (n_point >= min_points) {
     possible_mz <- mz_peak[possible_points, ]
     mean_mz_diff <- mean(diff(possible_mz$mz))
     peak_area <- sum(mean_mz_diff * possible_mz$intensity)
-    peak_info <- c(start = possible_points[1], stop = possible_points[length(possible_points)],
+    peak_info <- c(start = org_points[possible_points[1]], stop = org_points[possible_points[length(possible_points)]],
                    area = peak_area)
   } else {
     peak_info <- c(start = NA, stop = NA, area = NA)
