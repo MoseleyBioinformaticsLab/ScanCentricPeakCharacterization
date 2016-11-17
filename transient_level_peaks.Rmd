@@ -50,6 +50,65 @@ The steps I am imagining are:
 * Try weighted **cauchy** fit
 * Record generated parameters, and whether sanity checks pass for a peak.
 
+## Classification as flat or pointed
+
+To classify the peaks as flat or pointed, lets try examining the relative
+differences between the two highest points in a peak.
+
+```{r classify_peak}
+mz_data <- scan_level
+min_points <- 5
+n_peak <- Inf
+peak_locations <- pracma::findpeaks(mz_data$intensity, nups = floor(min_points/2),
+                                      ndowns = floor(min_points/2))
+peak_locations <- matrix(peak_locations, ncol = 4, byrow = FALSE)
+n_peak <- nrow(peak_locations)
+
+mz_data$log_int <- SIRM.FTMS.peakPickingMethods:::log_with_min(mz_data$intensity)
+
+flat_cut <- 0.98
+
+# For each peak identified, classify it as flat or pointed, and then define
+# how high the max intensity from any model should be, as well as the limits
+# where the center point from the model should be.
+all_peak_diffs <- lapply(seq(1, n_peak), function(in_peak){
+  peak_loc <- seq(peak_locations[in_peak, 3], peak_locations[in_peak, 4])
+  peak_data <- mz_data[peak_loc, ]
+  peak_loc2 <- seq(1, nrow(peak_data))
+  peak_max_loc <- which.max(peak_data$intensity[peak_loc2])
+  peak_loc_nomax <- peak_loc2[peak_loc2 != peak_max_loc]
+  peak_2nd_loc <- peak_loc_nomax[which.max(peak_data$intensity[peak_loc_nomax])]
+  peak_ratio <- peak_data$intensity[peak_2nd_loc] / peak_data$intensity[peak_max_loc]
+  if (peak_ratio >= flat_cut) {
+    use_locs <- sort(c(peak_max_loc, peak_2nd_loc))
+    max_data <- list(peak_points = peak_loc,
+                           max_intensity = peak_data$intensity[peak_max_loc],
+                           min_loc = peak_data$mz[use_locs[1]], max_loc = peak_data$mz[use_locs[2]],
+                           type = "flat")
+  } else {
+    
+    either_side_diff <- abs(peak_data$mz[peak_max_loc + 1] - peak_data$mz[peak_max_loc - 1]) / 2
+    max_data <- list(peak_points = peak_loc,
+                           max_intensity = peak_data$intensity[peak_max_loc],
+                           min_loc = peak_data$mz[peak_max_loc] - either_side_diff,
+                           max_loc = peak_data$mz[peak_max_loc] + either_side_diff,
+                           type = "point", stringsAsFactors = FALSE)
+  }
+  max_data
+})
+
+
+
+
+```
+
+```{r plot_two_measures}
+peak_type_info <- data.frame(diff_ratio = all_peak_diffs, center_dist = center_dist_from_max, which = seq(1, length(all_peak_diffs)))
+ggplot(peak_type_info, aes(x = center_dist, y = diff_ratio)) + geom_point(alpha = 0.5) +
+  geom_point(data = peak_type_info[1,], color = "red")
+```
+
+
 ```{r try_cauchy_function}
 cauchy_estimate <- function(x, max_real, params){
   xnot <- params[1]
