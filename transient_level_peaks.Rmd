@@ -98,6 +98,48 @@ all_peak_diffs <- lapply(seq(1, n_peak), function(in_peak){
 })
 
 
+# playing with regression
+in_peak <- all_peak_diffs[[1]]
+x <- mz_data[in_peak$peak_points, "mz"]
+y <- mz_data[in_peak$peak_points, "log_int"]
+x_center <- x - mean(x)
+x_c2 <- x_center ^ 2
+
+X <- matrix(c(rep(1, length(x)), x_center, x_c2), nrow = length(x), ncol = 3, byrow = FALSE)
+
+in_data <- data.frame(y = y, x = x_center, x2 = x_c2)
+
+test_model <- lm(y ~ x + x2, data = in_data)
+
+w <- mz_data[in_peak$peak_points, "intensity"] / max(mz_data[in_peak$peak_points, "intensity"]) / 2
+
+test_model2 <- lm(y ~ x + x2, data = in_data, weights = w)
+p1 <- data.frame(y = predict(test_model), x = x_center, type = "model1")
+p2 <- data.frame(y = predict(test_model2), x = x_center, type = "model2")
+
+test_pt <- seq(from = x_center[1], to = x_center[length(x_center)], length.out = 10000)
+out_data <- data.frame(x = test_pt, x2 = test_pt^2)
+
+p3 <- data.frame(y = predict(test_model2, newdata = out_data), x = out_data$x)
+
+ggplot(in_data, aes(x = x, y = exp(y))) + geom_point() + geom_line() + geom_point(data = p1, color = "red") + geom_point(data = p2, color = "blue") + ylim(0, 5e4) + geom_point(data = p3, color = "green")
+
+p3[which.max(p3$y), ]
+
+out_lmwfit <- lm.wfit(X, y, w)
+all.equal(out_lmwfit$residuals, test_model2$residuals)
+
+# peak_info <- lapply(all_peak_diffs, function(in_peak) {
+#   peak_data <- mz_data[in_peak$peak_points, ]
+#   peak_model1 <- SIRM.FTMS.peakPickingMethods:::parabolic_fit(peak_data$mz, peak_data$log_int)
+#   peak_center_model1 <- model_peak_center_intensity(peak_data$mz, peak_model1)
+#   is_middle <- (peak_center_model1["ObservedMZ"] >= in_peak$min_loc) & (peak_center_model1["ObservedMZ"] <= in_peak$max_loc)
+#   is_above <- exp(peak_center_model1["Intensity"]) >= in_peak$max_intensity
+#   
+#   peak_weights <- peak_data$intensity / max(peak_data$intensity)
+#   peak_model2 <- SIRM.FTMS.peakPickingMethods:::parabolic_fit(peak_data$mz*peak_weights, peak_data$log_int*peak_weights)
+#   peak_center_model2 <- model_peak_center_intensity(peak_data$mz*peak_weights, peak_model2)
+# })
 
 
 ```
