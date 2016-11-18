@@ -401,6 +401,43 @@ model_peak_center_intensity <- function(x, coefficients){
   c(ObservedMZ = peak_center + mn_x, Intensity = center_int)
 }
 
+#' sum of squares residuals
+#'
+#' returns the sum of squares residuals from an \code{lm} object
+#'
+#' @param object the lm object
+#'
+#' @export
+#' @return numeric
+ssr <- function(object){
+  w <- object$weights
+  r <- object$residuals
+  if (is.null(w)) {
+    rss <- sum(r^2)
+  } else {
+    rss <- sum(r^2 * w)
+  }
+
+  sqrt(rss/object$df)
+}
+
+#' transformed residuals
+#'
+#' given a set of original and fitted values and a transform, return a set of
+#' transformed residuals.
+#'
+#' @param original the original points
+#' @param fitted the fitted points
+#' @param transform the function that should be used to transform the values
+#'
+#' @return numeric
+#' @export
+transform_residuals <- function(original, fitted, transform = exp){
+  org_t <- transform(original)
+  fit_t <- transform(fitted)
+  org_t - fit_t
+}
+
 #' basic peak center
 #'
 #' given the peak, finds center based on the mean, and intensity by averaging
