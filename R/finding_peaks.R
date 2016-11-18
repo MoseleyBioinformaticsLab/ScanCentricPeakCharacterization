@@ -335,13 +335,21 @@ choose_peak_points_area <- function(area_results, min_area = 0.1){
 #'
 #' @param x the x-values, independent
 #' @param y the y-values, dependent
+#' @param w weights
 #'
-#' @return vector
-parabolic_fit <- function(x, y){
+#' @importFrom stats lm.fit lm.wfit
+#' @return list
+parabolic_fit <- function(x, y, w = NULL){
   center_x <- x - mean(x)
-  x_matrix <- cbind(1, center_x, center_x^2)
 
-  as.vector(solve(t(x_matrix) %*% x_matrix, t(x_matrix) %*% y, tol = 1e-18))
+  X <- matrix(c(rep(1, length(x)), center_x, center_x^2), nrow = length(x), ncol = 3, byrow = FALSE)
+
+  if (is.null(w)) {
+    out_fit <- stats::lm.fit(X, y)
+  } else {
+    out_fit <- stats::lm.wfit(X, y, w)
+  }
+  out_fit
 }
 
 #' linear fit
