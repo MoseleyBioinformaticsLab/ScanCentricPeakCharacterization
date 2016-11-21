@@ -719,6 +719,66 @@ peak_info <- function(possible_peak, min_points = 5, min_area = 0.1){
   out_peak
 }
 
+#' parabolic fitted peak
+#'
+#' given the peak, simply returns the model and residuals for the full peak
+#' and the area
+#'
+#' @param possible_peak data.frame of mz, intensity and log intensity
+#' @param w the weights to use for the points
+#'
+#' @return data.frame
+#' @export
+get_fitted_peak_info <- function(possible_peak, w = NULL){
+  peak_model <- parabolic_fit(possible_peak[, "mz"], possible_peak[, "log_int"], w)
+  peak_model$residuals <- transform_residuals(possible_peak[, "log_int"], peak_model$fitted.values)
+  peak_ssr <- ssr(peak_model)
+
+  peak_center_model <- model_peak_center_intensity(possible_peak[, "mz"], peak_model$coefficients)
+  peak_center_model["Intensity"] <- exp(peak_center_model["Intensity"])
+  full_points <- seq(1, nrow(possible_peak))
+  peak_area_model <- integration_based_area(possible_peak$mz, possible_peak$intensity,
+                                            full_points, full_points, peak_model$coefficients)
+  data.frame(ObservedMZ = peak_center_model["ObservedMZ"],
+             Intensity = peak_center_model["Intensity"],
+             Area = peak_area_model,
+             SSR = peak_ssr)
+
+}
+
+#' peak info2
+#'
+#' given a peak found, try to fit a parabolic model and return the center,
+#' intensity, and area using basic and model based if possible.
+#'
+#' @param possible_peak data.frame of mz, intensity and log intensity (log_int)
+#' @param min_points the minimum number of points in a peak
+#' @param min_area the minimum area for a peak
+#'
+#' @return numeric
+#' @export
+peak_info2 <- function(possible_peak, min_points = 5, min_area = 0.1){
+  if (nrow(possible_peak) >= min_points) {
+
+    unweighted_info <- get_fitted_peak_info(possible_peak)
+    unweighted_info$type <- "lm_unweighted"
+    weights <- possible_peak[, "intensity"] / max(possible_peak[, "intensity"])
+    weighted_info <- get_fitted_peak_info(possible_peak, w = weights)
+    weighted_info$type <- "lm_weighted"
+
+    cauchy_info <- get_cauchy_info(possible_peak, w = weights)
+    cauchy_info$type <- "nls_weighted"
+
+    out_peak <- rbind(unweighted_info, weighted_info)
+    out_peak <- rbind(cauchy_info)
+  } else {
+    out_peak <- data.frame(ObservedMZ = NA, Intensity = NA, Area = NA, type = NA)
+  }
+
+  out_peak
+}
+
+
 #' find the peaks
 #'
 #' Uses the \code{pracma::findpeaks} regular expression diff algorithm to find
