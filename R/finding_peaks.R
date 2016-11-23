@@ -862,10 +862,11 @@ define_peak_type <- function(peak_data, flat_cut = 0.98){
 #' @param mz_data a data.frame of mz and intensity
 #' @param min_points minimum number of points to define a peak
 #' @param n_peak maximum number of peaks to return
+#' @param flat_cut minimum ratio of high points to say peak is "flat"
 #'
 #' @export
 #' @return list
-find_peaks <- function(mz_data, min_points = 5, n_peak = Inf){
+find_peaks <- function(mz_data, min_points = 5, n_peak = Inf, flat_cut = 0.98){
   peak_locations <- pracma::findpeaks(mz_data$intensity, nups = floor(min_points/2),
                                       ndowns = floor(min_points/2))
   peak_locations <- matrix(peak_locations, ncol = 4, byrow = FALSE)
@@ -885,7 +886,9 @@ find_peaks <- function(mz_data, min_points = 5, n_peak = Inf){
     peak_stats$Peak <- in_peak
     rownames(peak_stats) <- NULL
     peak_stats
+    peak_type <- define_peak_type(mz_data[peak_loc, ], flat_cut)
+    return(list(stats = peak_stats, type = peak_type))
   })
   #out_peaks <- do.call(rbind, mz_peaks)
-  out_peaks
+  mz_peaks
 }
