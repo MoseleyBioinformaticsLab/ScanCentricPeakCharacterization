@@ -97,6 +97,11 @@ all_peak_diffs <- lapply(seq(1, n_peak), function(in_peak){
   max_data
 })
 
+for (ipeak in seq_len(length(all_peak_diffs))) {
+  peak_diff <- all_peak_diffs[[ipeak]]
+  peak_loc <- peak_diff$peak_points
+  tmp <- peak_info(mz_data[peak_loc, ], min_points = min_points)
+}
 
 # playing with regression
 in_peak <- all_peak_diffs[[1]]
@@ -152,17 +157,29 @@ ggplot(peak_type_info, aes(x = center_dist, y = diff_ratio)) + geom_point(alpha 
 
 
 ```{r try_cauchy_function}
-cauchy_estimate <- function(x, max_real, params){
+cauchy_estimate <- function(x, params){
   xnot <- params[1]
   g <- params[2]
-  max_real <- max_real[1]
+  max_real <- params[3]
   denom <- pi * g * (1 + ((x - xnot) / g)^2)
   new_y <- 1 / denom
   scale_factor <- max_real / max(new_y)
   new_y * scale_factor
 }
 
-test_mz <- mz_data
+test_params <- c(20, 2, 10)
+
+use_x <- seq(1, 40, length.out = 100)
+pure_y <- cauchy_estimate(use_x, test_params)
+error_y <- fakeDataWithError::add_uniform_noise(1, pure_y, 0.1)
+
+test_data <- data.frame(mz = use_x, intensity = error_y)
+
+test_fit <- nls(intensity ~ cauchy_estimate(mz, c(xnot, g, scale)), data = test_data, start = c(xnot = 18, g = 1, scale = 15))
+test_data$pred <- test_fit$m$predict()
+ggplot(test_data, aes(x = mz, y = intensity)) + geom_point() + geom_line() + geom_point(aes(x = mz, y = pred), color = "red")
+
+test_mz <- mz_data[all_peak_diffs[[1]]$peak_points, ]
 x.0 <- median(test_mz[test_mz$intensity >= 400, "mz"])
 gamma.0 <- 1e-4
 
