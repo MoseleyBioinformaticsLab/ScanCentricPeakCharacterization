@@ -864,7 +864,7 @@ define_peak_type <- function(peak_data, flat_cut = 0.98){
 #' @param n_peak maximum number of peaks to return
 #'
 #' @export
-#' @return data.frame
+#' @return list
 find_peaks <- function(mz_data, min_points = 5, n_peak = Inf){
   peak_locations <- pracma::findpeaks(mz_data$intensity, nups = floor(min_points/2),
                                       ndowns = floor(min_points/2))
@@ -879,10 +879,13 @@ find_peaks <- function(mz_data, min_points = 5, n_peak = Inf){
   mz_peaks <- lapply(seq(1, n_peak), function(in_peak){
     #print(in_peak)
     peak_loc <- seq(peak_locations[in_peak, 3], peak_locations[in_peak, 4])
-    peak_stats <- peak_info(mz_data[peak_loc, ], min_points = min_points)
+    peak_stats1 <- peak_info(mz_data[peak_loc, ], min_points = min_points)
+    peak_stats2 <- peak_info2(mz_data[peak_loc, ], min_points = min_points)
+    peak_stats <- rbind(peak_stats1, peak_stats2)
     peak_stats$Peak <- in_peak
+    rownames(peak_stats) <- NULL
     peak_stats
   })
-  out_peaks <- do.call(rbind, mz_peaks)
+  #out_peaks <- do.call(rbind, mz_peaks)
   out_peaks
 }
