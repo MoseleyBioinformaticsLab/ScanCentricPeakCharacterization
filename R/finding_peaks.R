@@ -746,6 +746,47 @@ get_fitted_peak_info <- function(possible_peak, w = NULL){
 
 }
 
+#' generate peak info using a cauchy fit
+#'
+#' @param possible_peak data.frame of mz, intensity
+#' @param w the weightes to use for the points
+#'
+#' @return data.frame
+#' @export
+get_cauchy_peak_info <- function(possible_peak, w = NULL){
+  # the function to use for estimating the cauchy peak
+  # x: the values in x
+  # params: center, peak-width at half-height, and scaling factor
+  cauchy_estimate <- function(x, params){
+    xnot <- params[1]
+    g <- params[2]
+    max_real <- params[3]
+    denom <- pi * g * (1 + ((x - xnot) / g)^2)
+    new_y <- 1 / denom
+    scale_factor <- max_real / max(new_y)
+    new_y * scale_factor
+  }
+  test_mz <- possible_peak
+  fit_weight <- test_mz$intensity / max(test_mz$intensity)
+  x.0 <- median(test_mz$mz[fit_weight >= 0.1])
+  gamma.0 <- 1.2e-4
+  scale.0 <- max(test_mz$intensity)
+  fit <- nls(intensity ~ cauchy_estimate(mz, c(xnot, g, scale)), data = test_mz, start = c(xnot = x.0, g = gamma.0, scale = scale.0),
+             nls.control(minFactor = 1/1e14, warnOnly = TRUE, maxiter = 200), weights = fit_weight)
+  fit_params <- fit$m$getAllPars()
+
+  fit_cauchy <- fit$m$predict()
+  fit_model <- list(residuals = fit_cauchy - test_mz$intensity, weights = fit_weight,
+                    df = nrow(possible_peak) - 1)
+  fit_ssr <- ssr(fit_model)
+  fit_area <- stats::integrate(cauchy_estimate, min(test_mz$mz), max(test_mz$mz), params = fit_params)
+
+  data.frame(ObservedMZ = fit_params[1],
+             Intensity = cauchy_estimate(fit_params[1], fit_params),
+             Area = fit_area$value,
+             SSR = fit_ssr)
+}
+
 #' peak info2
 #'
 #' given a peak found, try to fit a parabolic model and return the center,
