@@ -807,11 +807,11 @@ peak_info2 <- function(possible_peak, min_points = 5, min_area = 0.1){
     weighted_info <- get_fitted_peak_info(possible_peak, w = weights)
     weighted_info$type <- "lm_weighted"
 
-    cauchy_info <- get_cauchy_info(possible_peak, w = weights)
+    cauchy_info <- get_cauchy_peak_info(possible_peak, w = weights)
     cauchy_info$type <- "nls_weighted"
 
     out_peak <- rbind(unweighted_info, weighted_info)
-    out_peak <- rbind(cauchy_info)
+    out_peak <- rbind(out_peak, cauchy_info)
   } else {
     out_peak <- data.frame(ObservedMZ = NA, Intensity = NA, Area = NA, type = NA)
   }
@@ -819,6 +819,39 @@ peak_info2 <- function(possible_peak, min_points = 5, min_area = 0.1){
   out_peak
 }
 
+#' define peak type
+#'
+#' Given the peak mz and intensity, decide what type of peak it is and roughly
+#' where the peak should be.
+#'
+#' @param peak_data data.frame of mz and intensity
+#' @param flat_cut what cutoff should be used to say a peak is "flat"?
+#'
+#' @export
+#' @return list
+define_peak_type <- function(peak_data, flat_cut = 0.98){
+  peak_loc2 <- seq(1, nrow(peak_data))
+  peak_max_loc <- which.max(peak_data$intensity[peak_loc2])
+  peak_loc_nomax <- peak_loc2[peak_loc2 != peak_max_loc]
+  peak_2nd_loc <- peak_loc_nomax[which.max(peak_data$intensity[peak_loc_nomax])]
+  peak_ratio <- peak_data$intensity[peak_2nd_loc] / peak_data$intensity[peak_max_loc]
+  if (peak_ratio >= flat_cut) {
+    use_locs <- sort(c(peak_max_loc, peak_2nd_loc))
+    max_data <- list(peak_points = peak_loc,
+                     max_intensity = peak_data$intensity[peak_max_loc],
+                     min_loc = peak_data$mz[use_locs[1]], max_loc = peak_data$mz[use_locs[2]],
+                     type = "flat")
+  } else {
+
+    either_side_diff <- abs(peak_data$mz[peak_max_loc + 1] - peak_data$mz[peak_max_loc - 1]) / 2
+    max_data <- list(peak_points = peak_loc,
+                     max_intensity = peak_data$intensity[peak_max_loc],
+                     min_loc = peak_data$mz[peak_max_loc] - either_side_diff,
+                     max_loc = peak_data$mz[peak_max_loc] + either_side_diff,
+                     type = "point", stringsAsFactors = FALSE)
+  }
+  max_data
+}
 
 #' find the peaks
 #'
