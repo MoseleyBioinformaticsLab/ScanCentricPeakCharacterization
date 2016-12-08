@@ -880,14 +880,9 @@ find_peaks <- function(mz_data, min_points = 5, n_peak = Inf, flat_cut = 0.98){
   mz_peaks <- lapply(seq(1, n_peak), function(in_peak){
     #print(in_peak)
     peak_loc <- seq(peak_locations[in_peak, 3], peak_locations[in_peak, 4])
-    peak_stats1 <- peak_info(mz_data[peak_loc, ], min_points = min_points)
-    peak_stats2 <- peak_info2(mz_data[peak_loc, ], min_points = min_points)
-    peak_stats <- rbind(peak_stats1, peak_stats2)
-    peak_stats$Peak <- in_peak
-    rownames(peak_stats) <- NULL
-    peak_stats
-    peak_type <- define_peak_type(mz_data[peak_loc, ], flat_cut)
-    return(list(stats = peak_stats, type = peak_type))
+    out_peak <- PeakMS$new(mz_data[peak_loc, ], min_points = min_points, flat_cut = flat_cut)
+    out_peak$peak_id <- in_peak
+    out_peak
   })
   #out_peaks <- do.call(rbind, mz_peaks)
   mz_peaks
