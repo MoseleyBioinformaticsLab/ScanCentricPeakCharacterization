@@ -52,7 +52,7 @@ PeakMS <- R6::R6Class("PeakMS",
 ScanMS <- R6::R6Class("ScanMS",
   public = list(
     peaks = NULL,
-    get_peak_info = function(which_peak = NULL){
+    get_peak_info = function(which_peak = NULL, calc_type = NULL){
       n_peak <- length(self$peaks)
       if (is.null(which_peak)) {
         which_peak <- seq(1, n_peak)
@@ -60,6 +60,11 @@ ScanMS <- R6::R6Class("ScanMS",
       out_info <- lapply(self$peaks[which_peak], function(x){
         tmp_info <- x$peak_info
         tmp_info$peak <- x$peak_id
+
+        if (!is.null(calc_type)) {
+          tmp_info <- dplyr::filter(tmp_info, type %in% calc_type)
+        }
+
         tmp_info
       })
       do.call(rbind, out_info)
