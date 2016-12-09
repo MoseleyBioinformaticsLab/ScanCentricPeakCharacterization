@@ -83,9 +83,10 @@ ScanMS <- R6::R6Class("ScanMS",
       }
 
       self$peaks <- lapply(seq(1, n_peak), function(in_peak){
-        #print(in_peak)
+        print(in_peak)
+        "!DEBUG Peak `in_peak`"
         peak_loc <- seq(peak_locations[in_peak, 3], peak_locations[in_peak, 4])
-        out_peak <- PeakMS$new(mz_data[peak_loc, ], min_points = min_points, flat_cut = flat_cut)
+        out_peak <- PeakMS$new(scan_data[peak_loc, ], min_points = min_points, flat_cut = flat_cut)
         out_peak$peak_id <- in_peak
         out_peak
       })
