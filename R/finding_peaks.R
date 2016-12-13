@@ -583,7 +583,7 @@ integration_based_area <- function(mz_data, int_data, full_peak_loc, model_peak_
 #' @return numeric
 get_area_peak <- function(possible_peak, min_points){
   area_peak <- test_peak_area(possible_peak[, c("mz", "intensity")], min_points = min_points - 2)
-  area_points <- choose_peak_points_area(area_peak, min_area)
+  area_points <- choose_peak_points_area(area_peak)
 
   if (!is.na(area_points[1])) {
     peak_model <- parabolic_fit(possible_peak[area_points, "mz"], possible_peak[area_points, "log_int"])
@@ -614,7 +614,7 @@ get_area_peak <- function(possible_peak, min_points){
 #' @return numeric
 get_area_peak_rejslope <- function(possible_peak, min_points){
   area_peak <- test_peak_area_slope(possible_peak[, c("mz", "intensity")], min_points = min_points - 2)
-  area_points <- choose_peak_points_area(area_peak, min_area)
+  area_points <- choose_peak_points_area(area_peak)
 
   if (!is.na(area_points[1])) {
     peak_model <- parabolic_fit(possible_peak[area_points, "mz"], possible_peak[area_points, "log_int"])
@@ -629,7 +629,7 @@ get_area_peak_rejslope <- function(possible_peak, min_points){
   } else {
     peak_center_model <- c(ObservedMZ = NA, Intensity = NA)
     peak_area_model <- c(Area = NA)
-    peak_ssr <- ssr(peak_model)
+    peak_ssr <- NA
   }
   data.frame(ObservedMZ = peak_center_model["ObservedMZ"],
              Intensity = peak_center_model["Intensity"],
