@@ -771,8 +771,8 @@ get_cauchy_peak_info <- function(possible_peak, w = NULL){
   x.0 <- median(test_mz$mz[fit_weight >= 0.1])
   gamma.0 <- 1.2e-4
   scale.0 <- max(test_mz$intensity)
-  fit <- nls(intensity ~ cauchy_estimate(mz, c(xnot, g, scale)), data = test_mz, start = c(xnot = x.0, g = gamma.0, scale = scale.0),
-             nls.control(minFactor = 1/1e14, warnOnly = TRUE, maxiter = 200), weights = fit_weight)
+  fit <- suppressWarnings(nls(intensity ~ cauchy_estimate(mz, c(xnot, g, scale)), data = test_mz, start = c(xnot = x.0, g = gamma.0, scale = scale.0),
+             nls.control(minFactor = 1/1e14, warnOnly = TRUE, maxiter = 200), weights = fit_weight))
   fit_params <- fit$m$getAllPars()
 
   fit_cauchy <- fit$m$predict()
@@ -837,14 +837,14 @@ define_peak_type <- function(peak_data, flat_cut = 0.98){
   peak_ratio <- peak_data$intensity[peak_2nd_loc] / peak_data$intensity[peak_max_loc]
   if (peak_ratio >= flat_cut) {
     use_locs <- sort(c(peak_max_loc, peak_2nd_loc))
-    max_data <- list(peak_points = peak_loc,
+    max_data <- list(peak_points = peak_loc2,
                      max_intensity = peak_data$intensity[peak_max_loc],
                      min_loc = peak_data$mz[use_locs[1]], max_loc = peak_data$mz[use_locs[2]],
                      type = "flat")
   } else {
 
     either_side_diff <- abs(peak_data$mz[peak_max_loc + 1] - peak_data$mz[peak_max_loc - 1]) / 2
-    max_data <- list(peak_points = peak_loc,
+    max_data <- list(peak_points = peak_loc2,
                      max_intensity = peak_data$intensity[peak_max_loc],
                      min_loc = peak_data$mz[peak_max_loc] - either_side_diff,
                      max_loc = peak_data$mz[peak_max_loc] + either_side_diff,
