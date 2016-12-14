@@ -215,12 +215,12 @@ ZipMS <- R6::R6Class("ZipMS",
       if (!is.null(out_file)) {
 
         out_file <- path.expand(out_file)
-        has_id <- regexpr(self$id, out_file)
+        #has_id <- regexpr(self$id, out_file)
         is_zip_out <- regexpr("*.zip", out_file)
 
-        if (has_id == -1) {
-          out_file <- paste0(self$id, "_", out_file)
-        }
+        # if (has_id == -1) {
+        #   out_file <- paste0(self$id, "_", out_file)
+        # }
 
         if (is_zip_out == -1) {
           out_file <- paste0(tools::file_path_sans_ext(out_file), ".zip")
