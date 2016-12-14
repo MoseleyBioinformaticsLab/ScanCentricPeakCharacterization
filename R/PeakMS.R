@@ -70,6 +70,10 @@ ScanMS <- R6::R6Class("ScanMS",
       do.call(rbind, out_info)
     },
 
+    print = function(...){
+      cat("R6 ScanMS with ", length(self$peaks), " peaks\n", sep = "")
+    },
+
     initialize = function(scan_data, min_points = 5, n_peak = Inf, flat_cut = 0.98){
       peak_locations <- pracma::findpeaks(scan_data$intensity, nups = floor(min_points/2),
                                           ndowns = floor(min_points/2))
@@ -83,7 +87,7 @@ ScanMS <- R6::R6Class("ScanMS",
       }
 
       self$peaks <- lapply(seq(1, n_peak), function(in_peak){
-        print(in_peak)
+        #print(in_peak)
         "!DEBUG Peak `in_peak`"
         peak_loc <- seq(peak_locations[in_peak, 3], peak_locations[in_peak, 4])
         out_peak <- PeakMS$new(scan_data[peak_loc, ], min_points = min_points, flat_cut = flat_cut)
@@ -92,5 +96,24 @@ ScanMS <- R6::R6Class("ScanMS",
       })
       invisible(self)
     }
+  )
+)
+
+
+#' Storing a master list of peaks
+#'
+#' Stores a master list of peaks, and which peaks from which scan match it
+#'
+#' @export
+"MasterPeakList"
+
+MasterPeakList <- R6::R6Class("MasterPeakList",
+  public = list(
+    scan_mz = NULL,
+    scan_intensity = NULL,
+    scan = NULL,
+    master = NULL,
+
+    initialize = function(){}
   )
 )
