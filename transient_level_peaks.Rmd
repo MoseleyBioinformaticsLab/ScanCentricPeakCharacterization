@@ -71,26 +71,37 @@ notify(msg = "multiscans done")
 ```
 
 
-```{r try_to_match_up}
+```{r extract_peak_lists}
 peak_lists <- lapply(multi_scans, function(x){
-  x$get_peak_info(calc_type = "basic")
+  x$get_peak_info(calc_type = "lm_weighted")
 })
+```
+
+```{r correspondence}
+count_notna <- function(in_matrix){
+  apply(in_matrix, 1, function(x){sum(!is.na(x))})
+}
+
+create_master <- function(mz_matrix){
+  rowMeans(mz_matrix, na.rm = TRUE)
+}
 
 peaks_n <- vapply(peak_lists, nrow, numeric(1))
 
 init_multiplier <- 10
-master_peaks <- rep(NA, max(peaks_n) * init_multiplier)
 
 scan_mz  <- scan_intensity <- scan_peak <- matrix(NA, nrow = peaks_n * init_multiplier, ncol = length(peak_lists))
 
 n_in1 <- length(peak_lists[[1]]$ObservedMZ)
 
-master_peaks[1:n_in1] <- peak_lists[[1]]$ObservedMZ
+# initialize the master list
 scan_mz[1:n_in1, 1] <- peak_lists[[1]]$ObservedMZ
 scan_intensity[1:n_in1, 1] <- peak_lists[[1]]$Intensity
 scan_peak[1:n_in1, 1] <- peak_lists[[1]]$peak
 
-diff_cut <- 2e-5
+master_peaks <- create_master(scan_mz)
+
+diff_cut <- 4e-5
 
 new_peaks <- rep(0, length(peak_lists))
 new_peaks[1] <- n_in1
@@ -99,7 +110,7 @@ new_peaks[1] <- n_in1
 out_scan <- length(peak_lists)
 
 for (iscan in seq(2, out_scan)) {
-  print(iscan)
+  #print(iscan)
   tmp_scan <- peak_lists[[iscan]]
   n_scan_peak <- nrow(tmp_scan)
   peak_new <- rep(FALSE, n_scan_peak)
@@ -119,25 +130,38 @@ for (iscan in seq(2, out_scan)) {
   n_new <- sum(peak_new)
   new_peaks[iscan] <- n_new
   if (n_new > 0) {
-    fit_new <- (sum(is.na(master_peaks)) - n_new) >= 0
+    fit_new <- (sum(is.nan(master_peaks)) - n_new) >= 0
     
     if (!fit_new) {
       n_na <- n_new + 2000
-      master_peaks <- c(master_peaks, rep(NA, n_na))
+      #master_peaks <- c(master_peaks, rep(NA, n_na))
       na_matrix <- matrix(NA, nrow = n_na, ncol = length(peak_lists))
       scan_mz <- rbind(scan_mz, na_matrix)
       scan_intensity <- rbind(scan_intensity, na_matrix)
       scan_peak <- rbind(scan_peak, na_matrix)
     } 
-    which_na <- min(which(is.na(master_peaks)))
+    master_peaks <- create_master(scan_mz)
+    which_na <- min(which(is.nan(master_peaks)))
     new_loc <- seq(which_na, which_na + n_new - 1)
-    master_peaks[new_loc] <- tmp_scan[peak_new, "ObservedMZ"]
+    
     scan_mz[new_loc, iscan] <- tmp_scan[peak_new, "ObservedMZ"]
     scan_intensity[new_loc, iscan] <- tmp_scan[peak_new, "Intensity"]
     scan_peak[new_loc, iscan] <- tmp_scan[peak_new, "peak"]
+    master_peaks <- create_master(scan_mz)
+    
+    new_order <- order(master_peaks, decreasing = FALSE)
+    scan_mz <- scan_mz[new_order, ]
+    scan_intensity <- scan_intensity[new_order, ]
+    scan_peak <- scan_peak[new_order, ]
+    master_peaks <- master_peaks[new_order]
   }
   
 }
+
+notify(msg = "correspondence done")
+
+n_notna <- count_notna(scan_mz)
+hist(n_notna, 100)
 ```
 
 
