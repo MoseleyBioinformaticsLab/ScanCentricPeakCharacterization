@@ -17,6 +17,8 @@ Working out how to do transient level peak picking.
 Lets load up some data working at the transient level.
 
 ```{r load_transient_level}
+library(notifier)
+
 library(xcms)
 library(dplyr)
 library(ggplot2)
@@ -50,6 +52,93 @@ The steps I am imagining are:
 * Try weighted **cauchy** fit
 * Record generated parameters, and whether sanity checks pass for a peak.
 
+## Peak Correspondence
+
+We've got a bunch of methods for summarizing the peaks down to a single location
+and intensity, now we need to figure out which one is best and most consistent.
+To help with this, we need to match up the peaks across scans and get peak
+correspondence. Lets play with that
+
+```{r get_peaks_from_multiple_scans, cache=TRUE, cache.lazy=FALSE}
+multi_scans <- vector(mode = "list", length = 36)
+
+for (in_scan in seq(1, 36)) {
+  print(in_scan)
+  multi_scans[[in_scan]] <- ScanMS$new(as.data.frame(xcms::getScan(rawdata, in_scan)))
+}
+
+notify(msg = "multiscans done")
+```
+
+
+```{r try_to_match_up}
+peak_lists <- lapply(multi_scans, function(x){
+  x$get_peak_info(calc_type = "basic")
+})
+
+peaks_n <- vapply(peak_lists, nrow, numeric(1))
+
+init_multiplier <- 10
+master_peaks <- rep(NA, max(peaks_n) * init_multiplier)
+
+scan_mz  <- scan_intensity <- scan_peak <- matrix(NA, nrow = peaks_n * init_multiplier, ncol = length(peak_lists))
+
+n_in1 <- length(peak_lists[[1]]$ObservedMZ)
+
+master_peaks[1:n_in1] <- peak_lists[[1]]$ObservedMZ
+scan_mz[1:n_in1, 1] <- peak_lists[[1]]$ObservedMZ
+scan_intensity[1:n_in1, 1] <- peak_lists[[1]]$Intensity
+scan_peak[1:n_in1, 1] <- peak_lists[[1]]$peak
+
+diff_cut <- 2e-5
+
+new_peaks <- rep(0, length(peak_lists))
+new_peaks[1] <- n_in1
+
+#out_scan <- 3
+out_scan <- length(peak_lists)
+
+for (iscan in seq(2, out_scan)) {
+  print(iscan)
+  tmp_scan <- peak_lists[[iscan]]
+  n_scan_peak <- nrow(tmp_scan)
+  peak_new <- rep(FALSE, n_scan_peak)
+  for (ipeak in seq(1, n_scan_peak)) {
+    diff_master <- abs(tmp_scan[ipeak, "ObservedMZ"] - master_peaks)
+    
+    if (min(diff_master, na.rm = TRUE) <= diff_cut) {
+      which_min <- which.min(diff_master)
+      scan_mz[which_min, iscan] <- tmp_scan[ipeak, "ObservedMZ"]
+      scan_intensity[which_min, iscan] <- tmp_scan[ipeak, "Intensity"]
+      scan_peak[which_min, iscan] <- tmp_scan[ipeak, "peak"]
+    } else {
+      peak_new[ipeak] <- TRUE
+    }
+  }
+  
+  n_new <- sum(peak_new)
+  new_peaks[iscan] <- n_new
+  if (n_new > 0) {
+    fit_new <- (sum(is.na(master_peaks)) - n_new) >= 0
+    
+    if (!fit_new) {
+      n_na <- n_new + 2000
+      master_peaks <- c(master_peaks, rep(NA, n_na))
+      na_matrix <- matrix(NA, nrow = n_na, ncol = length(peak_lists))
+      scan_mz <- rbind(scan_mz, na_matrix)
+      scan_intensity <- rbind(scan_intensity, na_matrix)
+      scan_peak <- rbind(scan_peak, na_matrix)
+    } 
+    which_na <- min(which(is.na(master_peaks)))
+    new_loc <- seq(which_na, which_na + n_new - 1)
+    master_peaks[new_loc] <- tmp_scan[peak_new, "ObservedMZ"]
+    scan_mz[new_loc, iscan] <- tmp_scan[peak_new, "ObservedMZ"]
+    scan_intensity[new_loc, iscan] <- tmp_scan[peak_new, "Intensity"]
+    scan_peak[new_loc, iscan] <- tmp_scan[peak_new, "peak"]
+  }
+  
+}
+```
 
 
 # Workflow for Transient-Level Peak Finding
@@ -62,88 +151,4 @@ The steps I am imagining are:
     * Find the peak center and intensity based on the model
     * Integrate parabola and sides to get peak area
 
-```{r peak_pick_one_transient}
-scan_peaks <- find_peaks(scan_level)
-```
 
-# Check Parabolic vs Basic differences
-
-We will look for examples where there is a big difference in the `model` center
-and the `basic` center, as that may imply there is something odd going on.
-
-```{r model_vs_basic}
-basic_peaks <- dplyr::filter(scan_peaks, type == "basic")
-area_peaks <- dplyr::filter(scan_peaks, type == "area")
-rsq_98_peaks <- dplyr::filter(scan_peaks, type == "rsq_98")
-rsq_95_peaks <- dplyr::filter(scan_peaks, type == "rsq_95")
-
-area_diff <- abs(area_peaks$ObservedMZ - basic_peaks$ObservedMZ)
-rsq_98_diff <- abs(rsq_98_peaks$ObservedMZ - basic_peaks$ObservedMZ)
-rsq_95_diff <- abs(rsq_95_peaks$ObservedMZ - basic_peaks$ObservedMZ)
-
-sum(area_diff <= 5e-4)
-
-sum(is.na(rsq_98_diff))
-sum(rsq_98_diff[!is.na(rsq_98_diff)] <= 5e-4)
-
-sum(is.na(rsq_95_diff))
-sum(rsq_95_diff[!is.na(rsq_95_diff)] <= 5e-4)
-
-```
-
-```{r plot_all_peaks}
-library(plotly)
-p <- ggplot(scan_level, aes(x = mz, y = intensity)) + geom_line()
-q <- p + geom_point(data = scan_peaks, aes(x = ObservedMZ, y = Intensity, color = type))
-ggplotly(q)
-```
-
-```{r check_2556}
-use_peak <- 2556
-
-mz_data <- dplyr::filter(scan_level, (mz >= 1174.77) & (mz <= 1174.8))
-min_points <- 5
-n_peak <- Inf
-
-peak_locations <- pracma::findpeaks(mz_data$intensity, nups = floor(min_points/2),
-                                      ndowns = floor(min_points/2))
-peak_locations <- matrix(peak_locations, ncol = 4, byrow = FALSE)
-mz_data$log_int <- metabolomicsUtilities::log_with_min(mz_data$intensity)
-
-in_peak <- 1
-peak_loc <- seq(peak_locations[in_peak, 3], peak_locations[in_peak, 4])
-
-possible_peak <- mz_data[peak_loc, ]
-
-
-
-mz_data_plot1 <- mz_data
-mz_data_plot1$type <- "org"
-mz_data_plot1 <- rbind(mz_data_plot1, mz_data_plot1[peak_loc, ])
-mz_data_plot1[23:34, "type"] <- "pracma"
-
-ggplot(mz_data_plot1, aes(x = mz, y = intensity, color = type)) + geom_point() + geom_line()
-```
-
-OK, this looks good. Lets see what went into the model.
-
-```{r}
-possible_peak <- mz_data[peak_loc, ]
-min_area <- 0.1
-
-area_peak <- SIRM.FTMS.peakPickingMethods:::test_peak_area(possible_peak[, c("mz", "intensity")], min_points = min_points - 2)
-area_points <- SIRM.FTMS.peakPickingMethods:::choose_peak_points_area(area_peak, min_area)
-
-
-```
-
-# Things to Do
-
-* For area based peak method, can we exclude points based on their slope to
-the next point in the peak? Points to exclude would have low slopes at
-the ends.
-* Alternatively, instead of R^2 on the parabolic model, could we use residuals
-of the points to the model to exclude them?
-* The way we should be judging the quality of each method is by examining
-the variance in the location, intensity, and area of a given peak across
-multiple transients.
