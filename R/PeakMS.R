@@ -24,15 +24,26 @@ PeakMS <- R6::R6Class("PeakMS",
       peak_stats1 <- peak_info(peak_data, min_points = min_points)
       peak_stats2 <- peak_info2(peak_data, min_points = min_points)
 
-      self$peak_info <- rbind(peak_stats1, peak_stats2)
-      rownames(self$peak_info) <- NULL
+      tmp_stats <- rbind(peak_stats1, peak_stats2)
+      rownames(tmp_stats) <- NULL
 
       self$peak_type <- define_peak_type(peak_data, flat_cut)
+
+      self$peak_info <- private$check_peak_location(self$peak_type, tmp_stats)
       self$peak_data <- peak_data
       invisible(self)
     }
+  ),
+  private = list(
+    check_peak_location <- function(max_info, peak_info){
+      peak_info <- dplyr::mutate(peak_info, g_int = Intensity >= max_info$max_intensity,
+                                 is_loc = (ObservedMZ >= max_info$min_loc) && (ObservedMZ <= max_info$max_loc))
+      peak_info
+    }
   )
 )
+
+check_peak_location <- function(max_point, peak_info)
 
 #' Storing all of the peaks associated with a scan
 #'
