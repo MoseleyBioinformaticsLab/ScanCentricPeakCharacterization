@@ -25,13 +25,6 @@ library(ggplot2)
 library(SIRM.FTMS.peakPickingMethods)
 library(ggplot2)
 options(digits = 16)
-
-mz_file <- "/home/rmflight/Projects/work/CESB/ftms.QC/mzML_exported/92Cpos.mzML"
-rawdata <- xcms::xcmsRaw(mz_file, profstep = 0)
-scan_level <- as.data.frame(xcms::getScan(rawdata, 1))
-
-scan_test <- filter(scan_level, (mz >= 150.026) & (mz <= 150.0271))
-mz_data <- scan_test
 ```
 
 So, our basic idea is to start very simply, and then escalate for peaks where the
@@ -59,23 +52,17 @@ and intensity, now we need to figure out which one is best and most consistent.
 To help with this, we need to match up the peaks across scans and get peak
 correspondence. Lets play with that
 
+
+```{r}
+raw_92C <- RawMS$new("92Cpos.mzML", "92Cpos_metadata.json")
+```
+
+
 ```{r get_peaks_from_multiple_scans, cache=TRUE, cache.lazy=FALSE}
-multi_scans <- vector(mode = "list", length = 36)
-
-for (in_scan in seq(1, 36)) {
-  print(in_scan)
-  multi_scans[[in_scan]] <- ScanMS$new(as.data.frame(xcms::getScan(rawdata, in_scan)))
-}
-
-notify(msg = "multiscans done")
+options(mc.cores = 10)
+multi_scan <- MultiScans$new(raw_92C)
 ```
 
-
-```{r extract_peak_lists}
-peak_lists <- lapply(multi_scans, function(x){
-  x$get_peak_info(calc_type = "lm_weighted")
-})
-```
 
 ```{r correspondence}
 count_notna <- function(in_matrix){
