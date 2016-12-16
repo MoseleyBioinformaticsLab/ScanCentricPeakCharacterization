@@ -35,15 +35,13 @@ PeakMS <- R6::R6Class("PeakMS",
     }
   ),
   private = list(
-    check_peak_location <- function(max_info, peak_info){
+    check_peak_location = function(max_info, peak_info){
       peak_info <- dplyr::mutate(peak_info, g_int = Intensity >= max_info$max_intensity,
                                  is_loc = (ObservedMZ >= max_info$min_loc) && (ObservedMZ <= max_info$max_loc))
       peak_info
     }
   )
 )
-
-check_peak_location <- function(max_point, peak_info)
 
 #' Storing all of the peaks associated with a scan
 #'
@@ -110,6 +108,29 @@ ScanMS <- R6::R6Class("ScanMS",
   )
 )
 
+#' multiple ms scans
+#'
+#' stores the results of peak picking on multiple MS scans
+#'
+#' @import assertthat
+#' @export
+"MultiScans"
+
+MultiScans <- R6::R6Class("MultiScans",
+  public = list(
+    scans = NULL,
+
+    initialize = function(raw_ms, min_points = 5, n_peak = Inf, flat_cut = 0.98){
+      assertthat::assert_that(any(class(raw_ms) %in% "RawMS"))
+
+      self$scans <- l_or_mclapply(raw_ms$scan_range, function(in_scan){
+        ScanMS$new(as.data.frame(xcms::getScan(raw_ms$raw_data, in_scan)))
+      })
+      invisible(self)
+
+    }
+  )
+)
 
 #' Storing a master list of peaks
 #'

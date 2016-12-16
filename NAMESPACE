@@ -2,6 +2,7 @@
 
 export(AnalyzeMS)
 export(MasterPeakList)
+export(MultiScans)
 export(PeakMS)
 export(PeakPickingAnalysis)
 export(RawMS)
