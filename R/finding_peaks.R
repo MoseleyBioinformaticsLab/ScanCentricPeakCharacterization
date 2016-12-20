@@ -329,6 +329,59 @@ choose_peak_points_area <- function(area_results, min_area = 0.1){
 }
 
 
+#' exponential fit
+#'
+#' Given a set of X's and Y's, calculates the fit for y = x + x^2 + x^n ...
+#'
+#' @param x the x values, independent
+#' @param y the y values, dependent
+#' @param w weights
+#' @param n_exp how many exponents to use
+#'
+#' @return list
+#' @export
+exponential_fit <- function(x, y, w = NULL, n_exp = 1){
+  center_x <- x# - mean(x, na.rm = TRUE)
+
+  x_exp <- lapply(seq(0, n_exp), function(in_exp){
+    center_x^in_exp
+  })
+  X <- do.call(cbind, x_exp)
+
+  if (is.null(w)) {
+    out_fit <- stats::lm.fit(X, y)
+  } else {
+    out_fit <- stats::lm.wfit(X, y, w)
+  }
+  names(out_fit$coefficients) <- NULL
+
+  out_fit
+}
+
+#' exponential predictions
+#'
+#' Given a model coefficients, and X's, calculate the Y values. Note that this
+#' function makes a very simple assumption, that the length of the coefficients
+#' corresponds to a number of exponential terms in the model, i.e. if the
+#' coefficients has 3 terms, then the model was \emph{Y = a + bx + cx^2}.
+#'
+#' @param coef model coefficients
+#' @param x the new x-values
+#'
+#' @return numeric
+#' @export
+exponential_predict <- function(coef, x){
+  n_exp <- seq(0, length(coef) - 1)
+
+  x_exp <- lapply(n_exp, function(in_exp){
+    x^in_exp
+  })
+  X <- do.call(cbind, x_exp)
+
+  Y <- X %*% coef
+  Y
+}
+
 #' parabolic fit
 #'
 #' calculates the coefficients of a parabolic fit (y = x + x^2) of x to y
