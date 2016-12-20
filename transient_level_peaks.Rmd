@@ -53,9 +53,73 @@ To help with this, we need to match up the peaks across scans and get peak
 correspondence. Lets play with that
 
 
-```{r}
+```{r raw_data}
 raw_92C <- RawMS$new("92Cpos.mzML", "92Cpos_metadata.json")
 ```
+
+```{r digital_resolution}
+#' filter raw scan data
+#' 
+#' filter the raw scan data so we can use it for resolution
+#' 
+#' @param rawdata data.frame of mz and intensity
+#' @param cutoff the maximum difference value to consider
+#' @importfrom dplyr filter, lag, mutate
+get_scan_nozeros <- function(rawdata, cutoff = 2.25e-3){
+  lag_cutoff <- paste0("!(lag >= ", cutoff, ")")
+  rawdata <- dplyr::filter_(rawdata, "!(intensity == 0)")
+  rawdata <- dplyr::mutate_(rawdata, lag = "mz - lag(mz)")
+  rawdata <- dplyr::filter_(rawdata, lag_cutoff)
+  rawdata <- dplyr::mutate_(rawdata, mz2 = "mz^2", mz3 = "mz^3")
+  rawdata
+}
+
+all_scans <- lapply(seq(raw_92C$scan_range), function(in_scan){
+  tmp_rawdata <- as.data.frame(xcms::getScan(raw_92C$raw_data, in_scan))
+  filter_rawdata <- get_scan_nozeros(tmp_rawdata)
+  filter_rawdata
+})
+
+all_scans_merge <- do.call(rbind, all_scans)
+all_fit <- exponential_fit(all_scans_merge$mz, all_scans_merge$lag, n_exp = 3)$coefficients
+all_fit <- data.frame(coef = all_fit, which = letters[1:4], type = "all")
+
+scan_models <- lapply(seq(raw_92C$scan_range), function(in_scan){
+  tmp_rawdata <- as.data.frame(xcms::getScan(raw_92C$raw_data, in_scan))
+  filter_rawdata <- get_scan_nozeros(tmp_rawdata)
+  tmp <- exponential_fit(filter_rawdata$mz, filter_rawdata$lag, n_exp = 3)$coefficients
+  data.frame(coef = tmp, which = letters[1:4], type = "indiv")
+})
+
+scan_coeffs <- do.call(rbind, scan_models)
+
+mean_coeffs <- dplyr::group_by(scan_coeffs, which) %>% dplyr::summarise(., coef = mean(coef))
+
+library(ggforce)
+
+ggplot(scan_coeffs, aes(x = which, y = coef)) + geom_sina(bins = 40) +
+  geom_point(data = all_fit, color = "blue") +
+  geom_point(data = mean_coeffs, color = "red") + 
+  facet_wrap(~which, scales = "free")
+```
+
+Based on this, the coefficients aren't changing a whole lot.
+
+Lets see what happens when we graph the predictions from both against each other
+
+```{r graph_preds}
+mean_pred <- data.frame
+```
+
+
+ToDo's:
+
+* Compare average fit and all data fit, see if they are comparable
+* See if we can replace `parabolic_fit` with the `exponential_fit`, and whether
+or not **we need to do mean centering first**, which has previously seemed really
+important for the parabolic peak fitting.
+* Write a `predict_exponential_fit` function to generate the predictions for the
+search window width to find correspondent M/Z's to a query M/Z. 
 
 
 ```{r get_peaks_from_multiple_scans, cache=TRUE, cache.lazy=FALSE}
