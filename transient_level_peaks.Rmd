@@ -108,7 +108,17 @@ Based on this, the coefficients aren't changing a whole lot.
 Lets see what happens when we graph the predictions from both against each other
 
 ```{r graph_preds}
-mean_pred <- data.frame
+mean_pred <- data.frame(x = rep(all_scans[[1]]$mz, 2),
+                        y = c(exponential_predict(mean_coeffs$coef, all_scans[[1]]$mz),
+                              exponential_predict(all_fit$coef, all_scans[[1]]$mz)),
+                        which = rep(c("mean", "all"), each = nrow(all_scans[[1]])))
+
+ggplot(mean_pred, aes(x = x, y = y, color = which)) + geom_point()
+
+tmp_pred <- data.frame(mean = filter(mean_pred, which == "mean") %>% select(., y),
+                       all = filter(mean_pred, which == "all") %>% select(., y))
+names(tmp_pred) <- c("mean", "all")
+ggplot(tmp_pred, aes(x = mean, y = all)) + geom_point()
 ```
 
 
