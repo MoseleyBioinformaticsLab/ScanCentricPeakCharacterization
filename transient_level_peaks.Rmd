@@ -119,6 +119,11 @@ tmp_pred <- data.frame(mean = filter(mean_pred, which == "mean") %>% select(., y
                        all = filter(mean_pred, which == "all") %>% select(., y))
 names(tmp_pred) <- c("mean", "all")
 ggplot(tmp_pred, aes(x = mean, y = all)) + geom_point()
+
+tmp_pred <- mutate(tmp_pred, diff = abs(mean - all))
+tmp_pred$mz <- all_scans[[1]]$mz
+
+ggplot(tmp_pred, aes(x = diff)) + geom_histogram(bins = 40)
 ```
 
 
@@ -128,8 +133,42 @@ ToDo's:
 * See if we can replace `parabolic_fit` with the `exponential_fit`, and whether
 or not **we need to do mean centering first**, which has previously seemed really
 important for the parabolic peak fitting.
-* Write a `predict_exponential_fit` function to generate the predictions for the
-search window width to find correspondent M/Z's to a query M/Z. 
+
+```{r single_scan_check_centering}
+raw_92C$set_scans(scan_range = 1)
+scan_92C <- MultiScans$new(raw_92C, n_peak = 10)
+
+test_peak <- scan_92C$scans[[1]]$peaks[[1]]$peak_data
+
+weights <- test_peak$intensity / max(test_peak$intensity)
+
+tp_model <- exponential_fit(test_peak$mz, test_peak$log_int, w = weights, n_exp = 2)
+
+tp_res1 <- data.frame(mz = test_peak$mz, log_int = tp_model$fitted.values)
+
+mz2 <- test_peak$mz - mean(test_peak$mz)
+tp_model2 <- exponential_fit(mz2, test_peak$log_int, w = weights, n_exp = 2)
+
+tp_res2 <- data.frame(mz = test_peak$mz, log_int = tp_model2$fitted.values)
+
+ggplot(test_peak, aes(x = mz, y = log_int)) + geom_line() + geom_point() + geom_point(data = tp_res1, color = "red") + geom_point(data = tp_res2, color = "blue")
+
+
+tp_model3 <- SIRM.FTMS.peakPickingMethods:::parabolic_fit(test_peak$mz, test_peak$log_int, w = weights)
+all.equal(tp_model2, tp_model3)
+
+# wait, is it the fact that the parabola shouldn't have an intercept??
+x <- test_peak$mz - mean(test_peak$mz)
+Y <- test_peak$log_int - mean(test_peak$log_int)
+X <- matrix(c(rep(1, length(x)), x, x^2), nrow = length(x), ncol = 3)
+
+tp_model4 <- lm.wfit(X, Y, w = weights)
+
+tp_in4 <- data.frame(x = x, y = Y)
+tp_res4 <- data.frame(x = x, y = tp_model4$fitted.values)
+
+ggplot(tp_in4, aes(x = x, y = y)) + geom_line() + geom_point() + geom_point(data = tp_res4, color = "blue")
+```
 
 
 ```{r get_peaks_from_multiple_scans, cache=TRUE, cache.lazy=FALSE}
