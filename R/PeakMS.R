@@ -152,6 +152,11 @@ MultiScans <- R6::R6Class("MultiScans",
     n_peaks = function(){
       vapply(self$scans, function(x){x$n_peaks()}, numeric(1))
     },
+    res_mz_model = function(){
+      tmp_models <- lapply(self$scans, function(x){x$res_mz_model})
+      set_model <- do.call(rbind, tmp_models)
+      colMeans(set_model)
+    },
 
     initialize = function(raw_ms, min_points = 5, n_peak = Inf, flat_cut = 0.98){
       assertthat::assert_that(any(class(raw_ms) %in% "RawMS"))
@@ -195,6 +200,8 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
       n_peaks <- multi_scans$n_peaks()
       n_scans <- length(n_peaks)
+
+      res_mz_model <- multi_scans$res_mz_model()
 
       init_multiplier <- 20
 
