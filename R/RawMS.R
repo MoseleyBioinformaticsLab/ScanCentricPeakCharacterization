@@ -44,6 +44,21 @@
 #'
 "RawMS"
 
+get_ms1_scans <- function(raw_data){
+  ms1_index <- seq_along(raw_data@scantime)
+  msn_precursor_scans <- raw_data@msnPrecursorScan
+  if (length(msn_precursor_scans) != 0) {
+    msn_precursor_scans <- unique(msn_precursor_scans)
+    msn_precursor_scans <- msn_precursor_scans[!is.na(msn_precursor_scans)]
+    scan_range <- ms1_index[-msn_precursor_scans]
+  } else {
+    scan_range <- ms1_index
+  }
+  rt_range <- range(raw_data@scantime[scan_range])
+
+  list(scan_range = scan_range, rt_range = rt_range)
+}
+
 #' @importFrom R6 R6Class
 #' @importFrom jsonlite fromJSON
 #' @export
@@ -57,27 +72,30 @@ RawMS <- R6::R6Class("RawMS",
      plot_tic = function(){plot_tic(self$raw_data)},
      set_scans = function(scan_range = NULL, rt_range = NULL){
        if (is.null(scan_range) && is.null(rt_range)) {
-         stop("You must provide either scan_range or rt_range", call. = FALSE)
-       }
+         message("Setting scans to be MS1 non-precursor scans!")
+         ranges <- get_ms1_scans(self$raw_data)
+         self$scan_range <- ranges$scan_range
+         self$rt_range <- ranges$rt_range
+       } else {
+         ms_scan_info <- data.frame(time = self$raw_data@scantime,
+                                    scan = seq_along(self$raw_data@scantime))
 
-       ms_scan_info <- data.frame(time = self$raw_data@scantime,
-                                scan = seq_along(self$raw_data@scantime))
+         if (!is.null(scan_range)) {
+           if ((length(scan_range) == 2) && ((scan_range[2] - scan_range[1]) != 1)) {
+             scan_range <- seq(scan_range[1], scan_range[2])
+           }
+           ms_scan_info <- filter(ms_scan_info, scan %in% scan_range)
+         } else if (!is.null(rt_range)) {
+           assert_that(length(rt_range) == 2)
 
-       if (!is.null(scan_range)) {
-         if ((length(scan_range) == 2) && ((scan_range[2] - scan_range[1]) != 1)) {
-           scan_range <- seq(scan_range[1], scan_range[2])
+           rt_call <- paste0("(time >= ", rt_range[1], ") & (time <= ", rt_range[2], ")")
+
+           ms_scan_info <- filter_(ms_scan_info, rt_call)
          }
-         ms_scan_info <- filter(ms_scan_info, scan %in% scan_range)
-       } else if (!is.null(rt_range)) {
-         assert_that(length(rt_range) == 2)
 
-         rt_call <- paste0("(time >= ", rt_range[1], ") & (time <= ", rt_range[2], ")")
-
-         ms_scan_info <- filter_(ms_scan_info, rt_call)
+         self$scan_range <- ms_scan_info$scan
+         self$rt_range <- range(ms_scan_info$time)
        }
-
-       self$scan_range <- ms_scan_info$scan
-       self$rt_range <- range(ms_scan_info$time)
      },
 
 
@@ -87,16 +105,11 @@ RawMS <- R6::R6Class("RawMS",
 
      # default is to use the MS1 non-precursor scans
      if (is.null(self$scan_range)) {
-       ms1_index <- seq_along(self$raw_data@scantime)
-       msn_precursor_scans <- self$raw_data@msnPrecursorScan
-       if (length(msn_precursor_scans) != 0) {
-         msn_precursor_scans <- unique(msn_precursor_scans)
-         msn_precursor_scans <- msn_precursor_scans[!is.na(msn_precursor_scans)]
-         self$scan_range <- ms1_index[-msn_precursor_scans]
-       } else {
-         self$scan_range <- ms1_index
-       }
-       self$rt_range <- range(self$raw_data@scantime[self$scan_range])
+       # message("Using MS1 non-precursor scans!")
+       ranges <- get_ms1_scans(self@raw_data)
+       self$scan_range <- ranges$scan_range
+       self$rt_range <- ranges$rt_range
+
      }
 
    }
