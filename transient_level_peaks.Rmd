@@ -131,7 +131,7 @@ multi_scan <- MultiScans$new(raw_92C)
 
 
 ```{r correspondence}
-
+thirds <- MultiScans$new(multi_scan, res_multiplier = 1/3)
 ```
 
 
