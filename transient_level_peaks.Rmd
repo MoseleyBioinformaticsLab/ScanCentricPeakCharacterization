@@ -50,7 +50,17 @@ The steps I am imagining are:
 We've got a bunch of methods for summarizing the peaks down to a single location
 and intensity, now we need to figure out which one is best and most consistent.
 To help with this, we need to match up the peaks across scans and get peak
-correspondence. Lets play with that
+correspondence. Lets play with that.
+
+For peak correspondence, we need to set sensible limits for searching for a 
+matching peak. To start, we will use a limit based on the digital resolution.
+
+After an initial pass at matching peaks, we might use a calculation of the 
+standard deviation of a window of m/z. To enable this, we take a middle m/z 
+(should be the actual value of a correspondent peak), and go so many m/z on either
+side, and then take **all** of the peaks from all of the scans within that window,
+and calculate their squared distance to (the main peak / their own correspondent peak)
+and then divide by (the number of peaks total - the number of corresponding peaks).
 
 
 ```{r raw_data}
@@ -58,25 +68,11 @@ raw_92C <- RawMS$new("92Cpos.mzML", "92Cpos_metadata.json")
 ```
 
 ```{r digital_resolution}
-#' filter raw scan data
-#' 
-#' filter the raw scan data so we can use it for resolution
-#' 
-#' @param rawdata data.frame of mz and intensity
-#' @param cutoff the maximum difference value to consider
-#' @importfrom dplyr filter, lag, mutate
-get_scan_nozeros <- function(rawdata, cutoff = 2.25e-3){
-  lag_cutoff <- paste0("!(lag >= ", cutoff, ")")
-  rawdata <- dplyr::filter_(rawdata, "!(intensity == 0)")
-  rawdata <- dplyr::mutate_(rawdata, lag = "mz - lag(mz)")
-  rawdata <- dplyr::filter_(rawdata, lag_cutoff)
-  rawdata <- dplyr::mutate_(rawdata, mz2 = "mz^2", mz3 = "mz^3")
-  rawdata
-}
+
 
 all_scans <- lapply(seq(raw_92C$scan_range), function(in_scan){
   tmp_rawdata <- as.data.frame(xcms::getScan(raw_92C$raw_data, in_scan))
-  filter_rawdata <- get_scan_nozeros(tmp_rawdata)
+  filter_rawdata <- SIRM.FTMS.peakPickingMethods:::get_scan_nozeros(tmp_rawdata)
   filter_rawdata
 })
 
@@ -86,7 +82,7 @@ all_fit <- data.frame(coef = all_fit, which = letters[1:4], type = "all")
 
 scan_models <- lapply(seq(raw_92C$scan_range), function(in_scan){
   tmp_rawdata <- as.data.frame(xcms::getScan(raw_92C$raw_data, in_scan))
-  filter_rawdata <- get_scan_nozeros(tmp_rawdata)
+  filter_rawdata <- SIRM.FTMS.peakPickingMethods:::get_scan_nozeros(tmp_rawdata)
   tmp <- exponential_fit(filter_rawdata$mz, filter_rawdata$lag, n_exp = 3)$coefficients
   data.frame(coef = tmp, which = letters[1:4], type = "indiv")
 })
@@ -136,7 +132,7 @@ important for the parabolic peak fitting.
 
 ```{r single_scan_check_centering}
 raw_92C$set_scans(scan_range = 1)
-scan_92C <- MultiScans$new(raw_92C, n_peak = 10)
+scan_92C <- MultiScans$new(raw_92C)
 
 test_peak <- scan_92C$scans[[1]]$peaks[[1]]$peak_data
 
@@ -178,90 +174,7 @@ multi_scan <- MultiScans$new(raw_92C)
 
 
 ```{r correspondence}
-count_notna <- function(in_matrix){
-  apply(in_matrix, 1, function(x){sum(!is.na(x))})
-}
 
-create_master <- function(mz_matrix){
-  rowMeans(mz_matrix, na.rm = TRUE)
-}
-
-peaks_n <- vapply(peak_lists, nrow, numeric(1))
-
-init_multiplier <- 10
-
-scan_mz  <- scan_intensity <- scan_peak <- matrix(NA, nrow = peaks_n * init_multiplier, ncol = length(peak_lists))
-
-n_in1 <- length(peak_lists[[1]]$ObservedMZ)
-
-# initialize the master list
-scan_mz[1:n_in1, 1] <- peak_lists[[1]]$ObservedMZ
-scan_intensity[1:n_in1, 1] <- peak_lists[[1]]$Intensity
-scan_peak[1:n_in1, 1] <- peak_lists[[1]]$peak
-
-master_peaks <- create_master(scan_mz)
-
-diff_cut <- 4e-5
-
-new_peaks <- rep(0, length(peak_lists))
-new_peaks[1] <- n_in1
-
-#out_scan <- 3
-out_scan <- length(peak_lists)
-
-for (iscan in seq(2, out_scan)) {
-  #print(iscan)
-  tmp_scan <- peak_lists[[iscan]]
-  n_scan_peak <- nrow(tmp_scan)
-  peak_new <- rep(FALSE, n_scan_peak)
-  for (ipeak in seq(1, n_scan_peak)) {
-    diff_master <- abs(tmp_scan[ipeak, "ObservedMZ"] - master_peaks)
-    
-    if (min(diff_master, na.rm = TRUE) <= diff_cut) {
-      which_min <- which.min(diff_master)
-      scan_mz[which_min, iscan] <- tmp_scan[ipeak, "ObservedMZ"]
-      scan_intensity[which_min, iscan] <- tmp_scan[ipeak, "Intensity"]
-      scan_peak[which_min, iscan] <- tmp_scan[ipeak, "peak"]
-    } else {
-      peak_new[ipeak] <- TRUE
-    }
-  }
-  
-  n_new <- sum(peak_new)
-  new_peaks[iscan] <- n_new
-  if (n_new > 0) {
-    fit_new <- (sum(is.nan(master_peaks)) - n_new) >= 0
-    
-    if (!fit_new) {
-      n_na <- n_new + 2000
-      #master_peaks <- c(master_peaks, rep(NA, n_na))
-      na_matrix <- matrix(NA, nrow = n_na, ncol = length(peak_lists))
-      scan_mz <- rbind(scan_mz, na_matrix)
-      scan_intensity <- rbind(scan_intensity, na_matrix)
-      scan_peak <- rbind(scan_peak, na_matrix)
-    } 
-    master_peaks <- create_master(scan_mz)
-    which_na <- min(which(is.nan(master_peaks)))
-    new_loc <- seq(which_na, which_na + n_new - 1)
-    
-    scan_mz[new_loc, iscan] <- tmp_scan[peak_new, "ObservedMZ"]
-    scan_intensity[new_loc, iscan] <- tmp_scan[peak_new, "Intensity"]
-    scan_peak[new_loc, iscan] <- tmp_scan[peak_new, "peak"]
-    master_peaks <- create_master(scan_mz)
-    
-    new_order <- order(master_peaks, decreasing = FALSE)
-    scan_mz <- scan_mz[new_order, ]
-    scan_intensity <- scan_intensity[new_order, ]
-    scan_peak <- scan_peak[new_order, ]
-    master_peaks <- master_peaks[new_order]
-  }
-  
-}
-
-notify(msg = "correspondence done")
-
-n_notna <- count_notna(scan_mz)
-hist(n_notna, 100)
 ```
 
 
