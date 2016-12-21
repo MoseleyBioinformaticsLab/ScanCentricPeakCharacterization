@@ -106,7 +106,7 @@ RawMS <- R6::R6Class("RawMS",
      # default is to use the MS1 non-precursor scans
      if (is.null(self$scan_range)) {
        # message("Using MS1 non-precursor scans!")
-       ranges <- get_ms1_scans(self@raw_data)
+       ranges <- get_ms1_scans(self$raw_data)
        self$scan_range <- ranges$scan_range
        self$rt_range <- ranges$rt_range
 
