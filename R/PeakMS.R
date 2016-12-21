@@ -195,7 +195,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     },
 
 
-    initialize = function(multi_scans, calc_type = "lm_weighted", resolution = 1e-5){
+    initialize = function(multi_scans, calc_type = "lm_weighted", res_multiplier = NULL){
       assertthat::assert_that(any(class(multi_scans) %in% "MultiScans"))
 
       n_peaks <- multi_scans$n_peaks()
@@ -216,7 +216,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
       self$create_master()
 
-      diff_cut <- 4 * resolution
+      #diff_cut <- 4 * resolution
 
       self$novel_peaks <- rep(0, n_scans)
       self$novel_peaks[1] <- n_in1
@@ -227,11 +227,19 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
         #print(iscan)
         tmp_scan <- multi_scans$scans[[iscan]]$get_peak_info(calc_type = calc_type)
         n_scan_peak <- nrow(tmp_scan)
+
+        # creating resolution based on
+        res_from_mz <- exponential_predict(res_mz_model, tmp_scan$ObservedMZ)
+
+        if (!is.null(res_multiplier)) {
+          res_from_mz <- res_from_mz * res_multiplier
+        }
+
         peak_new <- rep(FALSE, n_scan_peak)
         for (ipeak in seq(1, n_scan_peak)) {
           diff_master <- abs(tmp_scan[ipeak, "ObservedMZ"] - self$master)
 
-          if (min(diff_master, na.rm = TRUE) <= diff_cut) {
+          if (min(diff_master, na.rm = TRUE) <= res_from_mz[ipeak]) {
             which_min <- which.min(diff_master)
             self$scan_mz[which_min, iscan] <- tmp_scan[ipeak, "ObservedMZ"]
             self$scan_intensity[which_min, iscan] <- tmp_scan[ipeak, "Intensity"]
