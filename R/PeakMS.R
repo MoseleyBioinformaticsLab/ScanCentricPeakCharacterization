@@ -43,6 +43,22 @@ PeakMS <- R6::R6Class("PeakMS",
   )
 )
 
+#' filter raw scan data
+#'
+#' filter the raw scan data so we can use it for resolution
+#'
+#' @param rawdata data.frame of mz and intensity
+#' @param cutoff the maximum difference value to consider
+#'
+#' @importfrom dplyr filter, lag
+get_scan_nozeros <- function(rawdata, cutoff = 2.25e-3){
+  lag_cutoff <- paste0("!(lag >= ", cutoff, ")")
+  rawdata <- dplyr::filter_(rawdata, "!(intensity == 0)")
+  rawdata <- dplyr::mutate_(rawdata, lag = "mz - lag(mz)")
+  rawdata <- dplyr::filter_(rawdata, lag_cutoff)
+  rawdata
+}
+
 #' Storing all of the peaks associated with a scan
 #'
 #' Reference class to hold the results of peak finding of an entire "scan"
@@ -78,6 +94,7 @@ ScanMS <- R6::R6Class("ScanMS",
       })
       do.call(rbind, out_info)
     },
+    res_mz_model = NULL,
 
     print = function(...){
       cat("R6 ScanMS with ", length(self$peaks), " peaks\n", sep = "")
@@ -106,7 +123,17 @@ ScanMS <- R6::R6Class("ScanMS",
         out_peak$peak_id <- in_peak
         out_peak
       })
+
+      self$res_mz_model <- private$create_mz_model(scan_data)
+
       invisible(self)
+    }
+  ),
+  private = list(
+    create_mz_model = function(scan_data){
+      scan_data <- get_scan_nozeros(scan_data)
+      mz_model <- exponential_fit(scan_data$mz, scan_data$lag, n_exp = 3)
+      mz_model$coefficients
     }
   )
 )
