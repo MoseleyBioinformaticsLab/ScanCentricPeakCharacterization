@@ -331,16 +331,23 @@ choose_peak_points_area <- function(area_results, min_area = 0.1){
 
 #' exponential fit
 #'
-#' Given a set of X's and Y's, calculates the fit for y = x + x^2 + x^n ...
+#' Given a set of X's and Y's, calculates the fit for y = a + bx + cx^2 + dx^n ...
 #'
 #' @param x the x values, independent
 #' @param y the y values, dependent
 #' @param w weights
 #' @param n_exp how many exponents to use
+#' @param center whether the X-values should be centered first or not
 #'
 #' @return list
 #' @export
-exponential_fit <- function(x, y, w = NULL, n_exp = 1){
+exponential_fit <- function(x, y, w = NULL, n_exp = 1, center = FALSE){
+  if (center) {
+    mean_x <- mean(x, na.rm = TRUE)
+    center_x <- x - mean_x
+  } else {
+    center_x <- x
+  }
   center_x <- x# - mean(x, na.rm = TRUE)
 
   x_exp <- lapply(seq(0, n_exp), function(in_exp){
@@ -355,6 +362,7 @@ exponential_fit <- function(x, y, w = NULL, n_exp = 1){
   }
   names(out_fit$coefficients) <- NULL
 
+  out_fit$mean_x <- mean_x
   out_fit
 }
 
