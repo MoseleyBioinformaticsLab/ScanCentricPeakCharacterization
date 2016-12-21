@@ -178,7 +178,93 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     scan_intensity = NULL,
     scan = NULL,
     master = NULL,
+    novel_peaks = NULL,
 
-    initialize = function(){}
+    count_notna = function(){
+      apply(self$scan_mz, 1, function(x){sum(!is.na(x))})
+    },
+
+    create_master = function(){
+      self$master <- rowMeans(self$scan_mz, na.rm = TRUE)
+      invisible(self)
+    },
+
+
+    initialize = function(multi_scans, calc_type = "lm_weighted", resolution = 1e-5){
+      assertthat::assert_that(any(class(multi_scans) %in% "MultiScans"))
+
+      n_peaks <- multi_scans$n_peaks()
+      n_scans <- length(n_peaks)
+
+      init_multiplier <- 20
+
+      self$scan_mz <- self$scan_intensity <- self$scan <- matrix(NA, nrow = max(n_peaks) * init_multiplier, ncol = n_scans)
+
+      # initialize the master list
+      tmp_scan <- multi_scans$scans[[1]]$get_peak_info(calc_type = calc_type)
+      n_in1 <- nrow(tmp_scan)
+      self$scan_mz[1:n_in1, 1] <- tmp_scan$ObservedMZ
+      self$scan_intensity[1:n_in1, 1] <- tmp_scan$Intensity
+      self$scan[1:n_in1, 1] <- tmp_scan$peak
+
+      self$create_master()
+
+      diff_cut <- 4 * resolution
+
+      self$novel_peaks <- rep(0, n_scans)
+      self$novel_peaks[1] <- n_in1
+
+      #out_scan <- 3
+
+      for (iscan in seq(2, n_scans)) {
+        #print(iscan)
+        tmp_scan <- multi_scans$scans[[iscan]]$get_peak_info(calc_type = calc_type)
+        n_scan_peak <- nrow(tmp_scan)
+        peak_new <- rep(FALSE, n_scan_peak)
+        for (ipeak in seq(1, n_scan_peak)) {
+          diff_master <- abs(tmp_scan[ipeak, "ObservedMZ"] - self$master)
+
+          if (min(diff_master, na.rm = TRUE) <= diff_cut) {
+            which_min <- which.min(diff_master)
+            self$scan_mz[which_min, iscan] <- tmp_scan[ipeak, "ObservedMZ"]
+            self$scan_intensity[which_min, iscan] <- tmp_scan[ipeak, "Intensity"]
+            self$scan[which_min, iscan] <- tmp_scan[ipeak, "peak"]
+          } else {
+            peak_new[ipeak] <- TRUE
+          }
+        }
+
+        n_new <- sum(peak_new)
+        self$novel_peaks[iscan] <- n_new
+        if (n_new > 0) {
+          fit_new <- (sum(is.nan(self$master)) - n_new) >= 0
+
+          if (!fit_new) {
+            n_na <- n_new + 2000
+            #master_peaks <- c(master_peaks, rep(NA, n_na))
+            na_matrix <- matrix(NA, nrow = n_na, ncol = n_scans)
+            self$scan_mz <- rbind(self$scan_mz, na_matrix)
+            self$scan_intensity <- rbind(self$scan_intensity, na_matrix)
+            self$scan <- rbind(self$scan, na_matrix)
+          }
+          self$create_master()
+          which_na <- min(which(is.nan(self$master)))
+          new_loc <- seq(which_na, which_na + n_new - 1)
+
+          self$scan_mz[new_loc, iscan] <- tmp_scan[peak_new, "ObservedMZ"]
+          self$scan_intensity[new_loc, iscan] <- tmp_scan[peak_new, "Intensity"]
+          self$scan[new_loc, iscan] <- tmp_scan[peak_new, "peak"]
+          self$create_master()
+
+          new_order <- order(self$master, decreasing = FALSE)
+          self$scan_mz <- self$scan_mz[new_order, ]
+          self$scan_intensity <- self$scan_intensity[new_order, ]
+          self$scan <- self$scan[new_order, ]
+          self$create_master()
+        }
+
+      }
+
+    }
   )
 )
