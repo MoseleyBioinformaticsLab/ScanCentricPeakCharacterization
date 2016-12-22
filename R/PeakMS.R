@@ -252,10 +252,14 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
             self$scan_intensity[ipeak, iscan] <- tmp_scan[which_min, "Intensity"]
             self$scan[ipeak, iscan] <- tmp_scan[which_min, "peak"]
             tmp_scan[which_min, "matched"] <- TRUE
+
+            # remove the matched peak, because we don't want to match it to
+            # something else, 1 master, 1 scan peak correspondence
+            tmp_scan <- tmp_scan[!tmp_scan$matched, ]
           }
         }
 
-        n_new <- sum(!tmp_scan$matched)
+        n_new <- nrow(tmp_scan)
         #print(n_new)
         self$novel_peaks[iscan] <- n_new
         if (n_new > 0) {
@@ -273,9 +277,9 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
           which_na <- min(which(is.nan(self$master)))
           new_loc <- seq(which_na, which_na + n_new - 1)
 
-          self$scan_mz[new_loc, iscan] <- tmp_scan[!tmp_scan$matched, "ObservedMZ"]
-          self$scan_intensity[new_loc, iscan] <- tmp_scan[!tmp_scan$matched, "Intensity"]
-          self$scan[new_loc, iscan] <- tmp_scan[!tmp_scan$matched, "peak"]
+          self$scan_mz[new_loc, iscan] <- tmp_scan[, "ObservedMZ"]
+          self$scan_intensity[new_loc, iscan] <- tmp_scan[, "Intensity"]
+          self$scan[new_loc, iscan] <- tmp_scan[, "peak"]
           self$create_master()
 
           new_order <- order(self$master, decreasing = FALSE)
