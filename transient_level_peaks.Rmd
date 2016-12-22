@@ -130,8 +130,16 @@ multi_scan <- MultiScans$new(raw_92C)
 ```
 
 
-```{r correspondence}
-thirds <- MultiScans$new(multi_scan, res_multiplier = 1/3)
+```{r correspondence, cache = TRUE, cache.lazy=FALSE}
+thirds <- MasterPeakList$new(multi_scan, res_multiplier = 1/3)
+
+seconds <- MasterPeakList$new(multi_scan, res_multiplier = 1/2)
+
+once <- MasterPeakList$new(multi_scan, res_multiplier = 1)
+
+twice <- MasterPeakList$new(multi_scan, res_multiplier = 2)
+
+three <- MasterPeakList$new(multi_scan, res_multiplier = 3)
 ```
 
 
