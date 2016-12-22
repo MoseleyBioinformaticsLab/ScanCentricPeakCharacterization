@@ -194,10 +194,11 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       invisible(self)
     },
 
+    cleanup <- function(){
 
-    initialize = function(multi_scans, calc_type = "lm_weighted", res_multiplier = NULL){
-      assertthat::assert_that(any(class(multi_scans) %in% "MultiScans"))
+    },
 
+    resolution_correspondence = function(multi_scans, calc_type, res_multiplier){
       n_peaks <- multi_scans$n_peaks()
       n_scans <- length(n_peaks)
 
@@ -280,6 +281,13 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
         }
 
       }
+    },
+
+
+    initialize = function(multi_scans, calc_type = "lm_weighted", res_multiplier = NULL){
+      assertthat::assert_that(any(class(multi_scans) %in% "MultiScans"))
+
+      self$resolution_correspondence(multi_scans, calc_type, res_multiplier)
 
     }
   )
