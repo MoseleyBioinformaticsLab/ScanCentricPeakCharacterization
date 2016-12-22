@@ -194,7 +194,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       invisible(self)
     },
 
-    cleanup <- function(){
+    cleanup = function(){
       which_nona <- self$count_notna() != 0
       self$scan_mz <- self$scan_mz[which_nona, ]
       self$scan_intensity <- self$scan_intensity[which_nona, ]
