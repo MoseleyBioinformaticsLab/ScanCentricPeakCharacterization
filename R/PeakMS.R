@@ -250,6 +250,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
         }
 
         n_new <- sum(peak_new)
+        #print(n_new)
         self$novel_peaks[iscan] <- n_new
         if (n_new > 0) {
           fit_new <- (sum(is.nan(self$master)) - n_new) >= 0
