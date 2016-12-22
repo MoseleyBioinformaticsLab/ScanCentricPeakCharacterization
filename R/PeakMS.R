@@ -195,7 +195,12 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     },
 
     cleanup <- function(){
+      which_nona <- self$count_notna() != 0
+      self$scan_mz <- self$scan_mz[which_nona, ]
+      self$scan_intensity <- self$scan_intensity[which_nona, ]
+      self$scan <- self$scan[which_nona, ]
 
+      self$create_master()
     },
 
     resolution_correspondence = function(multi_scans, calc_type, res_multiplier){
@@ -281,6 +286,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
         }
 
       }
+      self$cleanup()
     },
 
 
