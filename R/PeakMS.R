@@ -232,30 +232,30 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       for (iscan in seq(2, n_scans)) {
         #print(iscan)
         tmp_scan <- multi_scans$scans[[iscan]]$get_peak_info(calc_type = calc_type)
-        n_scan_peak <- nrow(tmp_scan)
+        n_master <- sum(self$count_notna() != 0)
 
         # creating resolution based on
-        res_from_mz <- exponential_predict(res_mz_model, tmp_scan$ObservedMZ)
+        res_from_mz <- exponential_predict(res_mz_model, self$master)
 
         if (!is.null(res_multiplier)) {
           res_from_mz <- res_from_mz * res_multiplier
         }
 
-        peak_new <- rep(FALSE, n_scan_peak)
-        for (ipeak in seq(1, n_scan_peak)) {
-          diff_master <- abs(tmp_scan[ipeak, "ObservedMZ"] - self$master)
+        tmp_scan$matched <- FALSE
 
-          if (min(diff_master, na.rm = TRUE) <= res_from_mz[ipeak]) {
-            which_min <- which.min(diff_master)
-            self$scan_mz[which_min, iscan] <- tmp_scan[ipeak, "ObservedMZ"]
-            self$scan_intensity[which_min, iscan] <- tmp_scan[ipeak, "Intensity"]
-            self$scan[which_min, iscan] <- tmp_scan[ipeak, "peak"]
-          } else {
-            peak_new[ipeak] <- TRUE
+        for (ipeak in seq(1, n_master)) {
+          diff_scan <- abs(self$master[ipeak] - tmp_scan[, "ObservedMZ"])
+
+          if (min(diff_scan, na.rm = TRUE) <= res_from_mz[ipeak]) {
+            which_min <- which.min(diff_scan)
+            self$scan_mz[ipeak, iscan] <- tmp_scan[which_min, "ObservedMZ"]
+            self$scan_intensity[ipeak, iscan] <- tmp_scan[which_min, "Intensity"]
+            self$scan[ipeak, iscan] <- tmp_scan[which_min, "peak"]
+            tmp_scan[which_min, "matched"] <- TRUE
           }
         }
 
-        n_new <- sum(peak_new)
+        n_new <- sum(!tmp_scan$matched)
         #print(n_new)
         self$novel_peaks[iscan] <- n_new
         if (n_new > 0) {
@@ -273,9 +273,9 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
           which_na <- min(which(is.nan(self$master)))
           new_loc <- seq(which_na, which_na + n_new - 1)
 
-          self$scan_mz[new_loc, iscan] <- tmp_scan[peak_new, "ObservedMZ"]
-          self$scan_intensity[new_loc, iscan] <- tmp_scan[peak_new, "Intensity"]
-          self$scan[new_loc, iscan] <- tmp_scan[peak_new, "peak"]
+          self$scan_mz[new_loc, iscan] <- tmp_scan[!tmp_scan$matched, "ObservedMZ"]
+          self$scan_intensity[new_loc, iscan] <- tmp_scan[!tmp_scan$matched, "Intensity"]
+          self$scan[new_loc, iscan] <- tmp_scan[!tmp_scan$matched, "peak"]
           self$create_master()
 
           new_order <- order(self$master, decreasing = FALSE)
