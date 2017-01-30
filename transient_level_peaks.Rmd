@@ -63,13 +63,16 @@ and calculate their squared distance to (the main peak / their own correspondent
 and then divide by (the number of peaks total - the number of corresponding peaks).
 
 
-```{r raw_data}
+```{r raw_data, eval = FALSE}
 raw_92C <- RawMS$new("92Cpos.mzML", "92Cpos_metadata.json")
 ```
 
+```{r load_data}
+load("raw_92C.RData")
+```
+
+
 ```{r digital_resolution}
-
-
 all_scans <- lapply(seq(raw_92C$scan_range), function(in_scan){
   tmp_rawdata <- as.data.frame(xcms::getScan(raw_92C$raw_data, in_scan))
   filter_rawdata <- SIRM.FTMS.peakPickingMethods:::get_scan_nozeros(tmp_rawdata)
