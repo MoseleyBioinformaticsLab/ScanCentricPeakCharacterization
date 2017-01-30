@@ -203,7 +203,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       self$create_master()
     },
 
-    resolution_correspondence = function(multi_scans, calc_type, res_multiplier){
+    peak_correspondence = function(multi_scans, peak_calc_type, resolution_type = "mz_resolution", res_multiplier){
       n_peaks <- multi_scans$n_peaks()
       n_scans <- length(n_peaks)
 
@@ -214,7 +214,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       self$scan_mz <- self$scan_intensity <- self$scan <- matrix(NA, nrow = max(n_peaks) * init_multiplier, ncol = n_scans)
 
       # initialize the master list
-      tmp_scan <- multi_scans$scans[[1]]$get_peak_info(calc_type = calc_type)
+      tmp_scan <- multi_scans$scans[[1]]$get_peak_info(calc_type = peak_calc_type)
       n_in1 <- nrow(tmp_scan)
       self$scan_mz[1:n_in1, 1] <- tmp_scan$ObservedMZ
       self$scan_intensity[1:n_in1, 1] <- tmp_scan$Intensity
@@ -231,14 +231,15 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
       for (iscan in seq(2, n_scans)) {
         #print(iscan)
-        tmp_scan <- multi_scans$scans[[iscan]]$get_peak_info(calc_type = calc_type)
+        tmp_scan <- multi_scans$scans[[iscan]]$get_peak_info(calc_type = peak_calc_type)
         n_master <- sum(self$count_notna() != 0)
 
-        # creating resolution based on
-        res_from_mz <- exponential_predict(res_mz_model, self$master)
-
-        if (!is.null(res_multiplier)) {
-          res_from_mz <- res_from_mz * res_multiplier
+        # creating resolution based on the digital resolution
+        if (resolution_type == "mz_resolution") {
+          res_from_mz <- exponential_predict(res_mz_model, self$master)
+          if (!is.null(res_multiplier)) {
+            res_from_mz <- res_from_mz * res_multiplier
+          }
         }
 
         tmp_scan$matched <- FALSE
@@ -294,10 +295,10 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     },
 
 
-    initialize = function(multi_scans, calc_type = "lm_weighted", res_multiplier = NULL){
+    initialize = function(multi_scans, peak_calc_type = "lm_weighted", res_multiplier = NULL){
       assertthat::assert_that(any(class(multi_scans) %in% "MultiScans"))
 
-      self$resolution_correspondence(multi_scans, calc_type, res_multiplier)
+      self$peak_correspondence(multi_scans, peak_calc_type, resolution_type = "mz_resolution", res_multiplier)
 
     }
   )
