@@ -348,6 +348,8 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 #' @param mpl_2 the second one
 #' @param compare_list which pieces to compare
 #'
+#' @export
+#'
 compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("master", "scan",
                                                                      "scan_intensity", "scan_mz")){
   compare_results <- vapply(compare_list, function(in_obj){
