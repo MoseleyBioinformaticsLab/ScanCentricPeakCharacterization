@@ -203,11 +203,9 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       self$create_master()
     },
 
-    peak_correspondence = function(multi_scans, peak_calc_type, resolution_type = "mz_resolution", res_multiplier){
+    peak_correspondence = function(multi_scans, peak_calc_type, sd_model, multiplier){
       n_peaks <- multi_scans$n_peaks()
       n_scans <- length(n_peaks)
-
-      res_mz_model <- multi_scans$res_mz_model()
 
       init_multiplier <- 20
 
@@ -234,20 +232,15 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
         tmp_scan <- multi_scans$scans[[iscan]]$get_peak_info(calc_type = peak_calc_type)
         n_master <- sum(self$count_notna() != 0)
 
-        # creating resolution based on the digital resolution
-        if (resolution_type == "mz_resolution") {
-          res_from_mz <- exponential_predict(res_mz_model, self$master)
-          if (!is.null(res_multiplier)) {
-            res_from_mz <- res_from_mz * res_multiplier
-          }
-        }
+        # creating match window based on the passed model
+        pred_window <- exponential_predict(sd_model, self$master) * multiplier
 
         tmp_scan$matched <- FALSE
 
         for (ipeak in seq(1, n_master)) {
           diff_scan <- abs(self$master[ipeak] - tmp_scan[, "ObservedMZ"])
 
-          if (min(diff_scan, na.rm = TRUE) <= res_from_mz[ipeak]) {
+          if (min(diff_scan, na.rm = TRUE) <= pred_window[ipeak]) {
             which_min <- which.min(diff_scan)
             self$scan_mz[ipeak, iscan] <- tmp_scan[which_min, "ObservedMZ"]
             self$scan_intensity[ipeak, iscan] <- tmp_scan[which_min, "Intensity"]
@@ -295,11 +288,16 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     },
 
 
-    initialize = function(multi_scans, peak_calc_type = "lm_weighted", res_multiplier = NULL){
+    initialize = function(multi_scans, peak_calc_type = "lm_weighted", sd_model = NULL, multiplier = 1){
       assertthat::assert_that(any(class(multi_scans) %in% "MultiScans"))
 
-      self$peak_correspondence(multi_scans, peak_calc_type, resolution_type = "mz_resolution", res_multiplier)
+      if (is.null(sd_model)) {
+        sd_model = multi_scans$res_mz_model()
+      }
 
+      self$peak_correspondence(multi_scans, peak_calc_type, sd_model = sd_model, multiplier = multiplier)
+      invisible(self)
     }
   )
 )
+
