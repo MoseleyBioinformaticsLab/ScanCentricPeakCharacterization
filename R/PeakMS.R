@@ -301,3 +301,57 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
   )
 )
 
+#' generate correspondent peaks
+#'
+#' @export FindCorrespondenceScans
+
+FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
+   public = list(
+     # this initialization first does correspondence based on the digital resolution,
+     # and then creates a model using the SD of the correspondent peaks themselves,
+     # and uses this model to do correspondence across scans, iterating until
+     # there are no changes in the master peak lists of the objects
+     initialize = function(multi_scans, peak_calc_type = "lm_weighted", multiplier = 1){
+       assertthat::assert_that(any(class(multi_scans) %in% "MultiScans"))
+
+       digital_resolution_master <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = NULL, multiplier = multiplier)
+
+       digital_resolution_master$calculate_sd_model()
+
+       sd_master <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = digital_resolution_master$sd_model, multiplier = multiplier)
+
+       sd_1_2 <- compare_master_peak_lists(sd_master, digital_resolution_master)
+
+       sd_1 <- sd_master
+       n_iter <- 0
+       while (!sd_1_2 || (n_iter < 5)) {
+         n_iter <- n_iter + 1
+         sd_1$calculate_sd_model()
+
+         sd_2 <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = sd_1$sd_model, multiplier = multiplier)
+
+         sd_1_2 <- compare_master_peak_lists(sd_1, sd_2)
+         sd_1 <- sd_2
+       }
+       return(sd_1)
+     }
+   )
+
+)
+
+#' compare two MasterPeakList objects
+#'
+#' Given two MasterPeakList objects, make a determination as to whether they
+#' are the same or different
+#'
+#' @param mpl_1 the first one
+#' @param mpl_2 the second one
+#' @param compare_list which pieces to compare
+#'
+compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("master", "scan",
+                                                                     "scan_intensity", "scan_mz")){
+  compare_results <- vapply(compare_list, function(in_obj){
+    isTRUE(all.equal(mpl_1[[in_obj]], mpl_2[[in_obj]]))
+  }, logical(1))
+  compare_results
+}
