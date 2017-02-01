@@ -184,6 +184,10 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     scan = NULL,
     master = NULL,
     novel_peaks = NULL,
+    sd_model = NULL,
+    calculate_sd_model = function(){
+
+    },
 
     count_notna = function(){
       apply(self$scan_mz, 1, function(x){sum(!is.na(x))})
