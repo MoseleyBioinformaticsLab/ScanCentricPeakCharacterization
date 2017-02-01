@@ -186,7 +186,57 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     novel_peaks = NULL,
     sd_model = NULL,
     calculate_sd_model = function(){
+      # trim to peaks with at least 3 peaks in scans
+      n_notna <- self$count_notna()
+      keep_peaks <- n_notna >= 3
+      master <- self$master[keep_peaks]
+      scan_mz <- self$scan_mz[keep_peaks, ]
+      scan_intensity <- self$scan_intensity[keep_peaks, ]
 
+      master_range <- vapply(seq(1, nrow(scan_mz)), function(x){sd(scan_mz[x, ], na.rm = TRUE)}, numeric(1)) * 3
+
+      master_rmsd <- numeric(length(master))
+
+      for (i_peak in seq_len(length(master))) {
+        if (i_peak == 1) {
+          n_before <- 1
+        } else {
+          n_before <- 2
+        }
+
+        if (i_peak == length(master)) {
+          n_after <- 1
+        } else {
+          n_after <- 2
+        }
+
+        # try to select peaks based on mz sd first
+        is_before <- (master >= (master[i_peak] - master_range[i_peak])) & (master <= master[i_peak])
+        is_after <- (master <= (master[i_peak] + master_range[i_peak])) & (master >= master[i_peak])
+
+        if (!(sum(is_before) >= n_before)) {
+          is_before[(i_peak - 1):i_peak] <- TRUE
+        }
+        if (!(sum(is_after) >= n_after)) {
+          is_after[i_peak:(i_peak + 1)] <- TRUE
+        }
+
+        use_peaks <- is_before | is_after
+
+        tmp_master <- master[use_peaks]
+        tmp_mz <- scan_mz[use_peaks, ]
+        mz_diff <- unlist(lapply(seq(1, length(tmp_master)), function(x){
+          (tmp_mz[x, ] - tmp_master[x])^2
+        }))
+        mz_diff <- mz_diff[!is.na(mz_diff)]
+        n_comp <- length(mz_diff) - length(tmp_master)
+        rmsd <- sqrt(sum(mz_diff) / n_comp)
+
+        master_rmsd[i_peak] <- rmsd
+
+      }
+
+      self$sd_model <- exponential_fit(master, master_rmsd, n_exp = 3)$coefficients
     },
 
     count_notna = function(){
