@@ -364,33 +364,63 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
 FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
    public = list(
+     master_peak_list = NULL, # store the final master peak list
+     sd_models = NULL, # store the coefficients for the models
+     compare_mpl_models = NULL,
+     n_iteration = NULL,
+
      # this initialization first does correspondence based on the digital resolution,
      # and then creates a model using the SD of the correspondent peaks themselves,
      # and uses this model to do correspondence across scans, iterating until
      # there are no changes in the master peak lists of the objects
-     initialize = function(multi_scans, peak_calc_type = "lm_weighted", multiplier = 1){
+     initialize = function(multi_scans, peak_calc_type = "lm_weighted", max_iteration = 20, multiplier = 1, notify_progress = FALSE){
        assertthat::assert_that(any(class(multi_scans) %in% "MultiScans"))
 
-       digital_resolution_master <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = NULL, multiplier = multiplier)
+       mpl_digital_resolution <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = NULL, multiplier = multiplier)
+       ms_dr_model <- multi_scans$res_mz_model()
 
-       digital_resolution_master$calculate_sd_model()
-
-       sd_master <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = digital_resolution_master$sd_model, multiplier = multiplier)
-
-       sd_1_2 <- compare_master_peak_lists(sd_master, digital_resolution_master)
-
-       sd_1 <- sd_master
-       n_iter <- 0
-       while (!sd_1_2 || (n_iter < 5)) {
-         n_iter <- n_iter + 1
-         sd_1$calculate_sd_model()
-
-         sd_2 <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = sd_1$sd_model, multiplier = multiplier)
-
-         sd_1_2 <- compare_master_peak_lists(sd_1, sd_2)
-         sd_1 <- sd_2
+       if (notify_progress) {
+         print("digital resolution done!")
        }
-       return(sd_1)
+
+       all_models = list(ms_dr = ms_dr_model)
+
+       mpl_digital_resolution$calculate_sd_model()
+       dr_sd_model <- mpl_digital_resolution$sd_model_coef
+
+       all_models[[2]] <- dr_sd_model
+
+       mpl_sd_1 <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = mpl_digital_resolution$sd_model, multiplier = multiplier)
+       mpl_sd_1$calculate_sd_model()
+
+       if (notify_progress) {
+         print("first sd done!")
+         save(mpl_digital_resolution, file = "mpl_dr.RData")
+         save(mpl_sd_1, file = "mpl_sd_0.RData")
+       }
+
+       n_iter <- 0
+       sd_1_v_2 <- compare_master_peak_lists(mpl_sd_1, mpl_digital_resolution)
+       while (!all(sd_1_v_2) && (n_iter < max_iteration)) {
+         n_iter <- n_iter + 1
+         mpl_sd_1$calculate_sd_model()
+         all_models[[n_iter + 2]] <- mpl_sd_1$sd_model_coef
+
+         mpl_sd_2 <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = mpl_sd_1$sd_model_coef, multiplier = multiplier)
+
+         sd_1_v_2 <- compare_master_peak_lists(mpl_sd_1, mpl_sd_2)
+         mpl_sd_1 <- mpl_sd_2
+         if (notify_progress) {
+           notify_message <- paste0(as.character(n_iter), " iteration done!")
+           print(notify_message)
+           save(mpl_sd_1, file = paste0("mpl_sd_", as.character(n_iter), ".RData"))
+         }
+       }
+       self$master_peak_list <- mpl_sd_1
+       self$sd_models <- all_models
+       self$compare_mpl_models <- sd_1_v_2
+       self$n_iteration <- n_iter
+
      }
    )
 
