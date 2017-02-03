@@ -50,7 +50,8 @@ PeakMS <- R6::R6Class("PeakMS",
 #' @param rawdata data.frame of mz and intensity
 #' @param cutoff the maximum difference value to consider
 #'
-#' @importfrom dplyr filter, lag
+#' @importFrom dplyr filter mutate lag
+#'
 get_scan_nozeros <- function(rawdata, cutoff = 2.25e-3){
   lag_cutoff <- paste0("!(lag >= ", cutoff, ")")
   rawdata <- dplyr::filter_(rawdata, "!(intensity == 0)")
@@ -184,7 +185,8 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     scan = NULL,
     master = NULL,
     novel_peaks = NULL,
-    sd_model = NULL,
+    sd_model_coef = NULL,
+    sd_model_full = NULL,
     calculate_sd_model = function(){
       # trim to peaks with at least 3 peaks in scans
       n_notna <- self$count_notna()
@@ -236,7 +238,8 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
       }
 
-      self$sd_model <- exponential_fit(master, master_rmsd, n_exp = 3)$coefficients
+      self$sd_model_full <- exponential_fit(master, master_rmsd, n_exp = 3)
+      self$sd_model_coef <- self$sd_model_full$coefficients
     },
 
     count_notna = function(){
@@ -411,3 +414,4 @@ compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("master", "
   }, logical(1))
   compare_results
 }
+
