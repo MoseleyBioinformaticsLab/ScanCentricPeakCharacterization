@@ -187,6 +187,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     novel_peaks = NULL,
     sd_model_coef = NULL,
     sd_model_full = NULL,
+    mz_range = NULL,
     calculate_sd_model = function(){
       # trim to peaks with at least 3 peaks in scans
       n_notna <- self$count_notna()
@@ -260,7 +261,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       self$create_master()
     },
 
-    peak_correspondence = function(multi_scans, peak_calc_type, sd_model, multiplier){
+    peak_correspondence = function(multi_scans, peak_calc_type, sd_model, multiplier, mz_range){
       n_peaks <- multi_scans$n_peaks()
       n_scans <- length(n_peaks)
 
@@ -270,6 +271,9 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
       # initialize the master list
       tmp_scan <- multi_scans$scans[[1]]$get_peak_info(calc_type = peak_calc_type)
+      # filter down to the range we want if desired
+      keep_indx <- (tmp_scan$ObservedMZ >= mz_range[1]) & (tmp_scan$ObservedMZ <= mz_range[2])
+      tmp_scan <- tmp_scan[keep_indx, ]
       n_in1 <- nrow(tmp_scan)
       self$scan_mz[1:n_in1, 1] <- tmp_scan$ObservedMZ
       self$scan_intensity[1:n_in1, 1] <- tmp_scan$Intensity
@@ -345,14 +349,16 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     },
 
 
-    initialize = function(multi_scans, peak_calc_type = "lm_weighted", sd_model = NULL, multiplier = 1){
+    initialize = function(multi_scans, peak_calc_type = "lm_weighted", sd_model = NULL, multiplier = 1,
+                          mz_range = c(-Inf, Inf)){
       assertthat::assert_that(any(class(multi_scans) %in% "MultiScans"))
 
       if (is.null(sd_model)) {
         sd_model = multi_scans$res_mz_model()
       }
 
-      self$peak_correspondence(multi_scans, peak_calc_type, sd_model = sd_model, multiplier = multiplier)
+      self$peak_correspondence(multi_scans, peak_calc_type, sd_model = sd_model, multiplier = multiplier,
+                               mz_range = mz_range)
       invisible(self)
     }
   )
@@ -373,10 +379,11 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
      # and then creates a model using the SD of the correspondent peaks themselves,
      # and uses this model to do correspondence across scans, iterating until
      # there are no changes in the master peak lists of the objects
-     initialize = function(multi_scans, peak_calc_type = "lm_weighted", max_iteration = 20, multiplier = 1, notify_progress = FALSE){
+     initialize = function(multi_scans, peak_calc_type = "lm_weighted", max_iteration = 20, multiplier = 1,
+                           mz_range = c(-Inf, Inf), notify_progress = FALSE){
        assertthat::assert_that(any(class(multi_scans) %in% "MultiScans"))
 
-       mpl_digital_resolution <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = NULL, multiplier = multiplier)
+       mpl_digital_resolution <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = NULL, multiplier = multiplier, mz_range = mz_range)
        ms_dr_model <- multi_scans$res_mz_model()
 
        if (notify_progress) {
@@ -401,7 +408,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
        n_iter <- 0
        sd_1_v_2 <- compare_master_peak_lists(mpl_sd_1, mpl_digital_resolution)
-       while (!all(sd_1_v_2) && (n_iter < max_iteration)) {
+       while ((!all(sd_1_v_2)) && (n_iter < max_iteration)) {
          n_iter <- n_iter + 1
          mpl_sd_1$calculate_sd_model()
          all_models[[n_iter + 2]] <- mpl_sd_1$sd_model_coef
