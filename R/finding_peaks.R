@@ -596,7 +596,8 @@ integrate_sides <- function(peak_mz, peak_int, full_peak_loc, model_peak_loc){
 #' @param n_point how many points to use for integration
 #' @param log_transform what kind of transform was applied
 #'
-#' @export numeric
+#' @export
+#' @return numeric
 integrate_model <- function(model_mz, model_coeff, n_point = 100, log_transform = "log"){
   # setup the model
   model_function <- function(model_coeff){
