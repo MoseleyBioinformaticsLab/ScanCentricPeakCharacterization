@@ -349,7 +349,6 @@ exponential_fit <- function(x, y, w = NULL, n_exp = 1, center = FALSE){
     center_x <- x
     mean_x <- 0
   }
-  center_x <- x# - mean(x, na.rm = TRUE)
 
   x_exp <- lapply(seq(0, n_exp), function(in_exp){
     center_x^in_exp
