@@ -375,6 +375,10 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
      compare_mpl_models = NULL,
      n_iteration = NULL,
 
+     # iterative correspondence first does correspondence based on the digital resolution,
+     # and then creates a model using the SD of the correspondent peaks themselves,
+     # and uses this model to do correspondence across scans, iterating until
+     # there are no changes in the master peak lists of the objects
      iterative_correspondence = function(multi_scans, peak_calc_type = "lm_weighted", max_iteration = 20, multiplier = 1,
                                          mz_range = c(-Inf, Inf), notify_progress = FALSE){
        mpl_digital_resolution <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = NULL, multiplier = multiplier, mz_range = mz_range)
@@ -422,12 +426,9 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        self$compare_mpl_models <- sd_1_v_2
        self$n_iteration <- n_iter
 
-     }
+     },
 
-     # this initialization first does correspondence based on the digital resolution,
-     # and then creates a model using the SD of the correspondent peaks themselves,
-     # and uses this model to do correspondence across scans, iterating until
-     # there are no changes in the master peak lists of the objects
+
      initialize = function(multi_scans, peak_calc_type = "lm_weighted", max_iteration = 20, multiplier = 1,
                            mz_range = c(-Inf, Inf), notify_progress = FALSE){
        assertthat::assert_that(any(class(multi_scans) %in% "MultiScans"))
