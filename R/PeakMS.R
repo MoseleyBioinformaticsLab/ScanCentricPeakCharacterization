@@ -375,14 +375,8 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
      compare_mpl_models = NULL,
      n_iteration = NULL,
 
-     # this initialization first does correspondence based on the digital resolution,
-     # and then creates a model using the SD of the correspondent peaks themselves,
-     # and uses this model to do correspondence across scans, iterating until
-     # there are no changes in the master peak lists of the objects
-     initialize = function(multi_scans, peak_calc_type = "lm_weighted", max_iteration = 20, multiplier = 1,
-                           mz_range = c(-Inf, Inf), notify_progress = FALSE){
-       assertthat::assert_that(any(class(multi_scans) %in% "MultiScans"))
-
+     iterative_correspondence = function(multi_scans, peak_calc_type = "lm_weighted", max_iteration = 20, multiplier = 1,
+                                         mz_range = c(-Inf, Inf), notify_progress = FALSE){
        mpl_digital_resolution <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = NULL, multiplier = multiplier, mz_range = mz_range)
        ms_dr_model <- multi_scans$res_mz_model()
 
@@ -397,7 +391,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
        all_models[[2]] <- dr_sd_model
 
-       mpl_sd_1 <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = mpl_digital_resolution$sd_model, multiplier = multiplier)
+       mpl_sd_1 <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = mpl_digital_resolution$sd_model_coef, multiplier = multiplier)
        mpl_sd_1$calculate_sd_model()
 
        if (notify_progress) {
@@ -427,6 +421,21 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        self$sd_models <- all_models
        self$compare_mpl_models <- sd_1_v_2
        self$n_iteration <- n_iter
+
+     }
+
+     # this initialization first does correspondence based on the digital resolution,
+     # and then creates a model using the SD of the correspondent peaks themselves,
+     # and uses this model to do correspondence across scans, iterating until
+     # there are no changes in the master peak lists of the objects
+     initialize = function(multi_scans, peak_calc_type = "lm_weighted", max_iteration = 20, multiplier = 1,
+                           mz_range = c(-Inf, Inf), notify_progress = FALSE){
+       assertthat::assert_that(any(class(multi_scans) %in% "MultiScans"))
+
+       self$iterative_correspondence(multi_scans, peak_calc_type = peak_calc_type,
+                                     max_iteration = max_iteration, multiplier = multiplier,
+                                     mz_range = mz_range, notify_progress = notify_progress)
+
 
      }
    )
