@@ -272,7 +272,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       # initialize the master list
       tmp_scan <- multi_scans$scans[[1]]$get_peak_info(calc_type = peak_calc_type)
       # filter down to the range we want if desired
-      keep_indx <- (tmp_scan$ObservedMZ >= mz_range[1]) & (tmp_scan$ObservedMZ <= mz_range[2])
+      keep_indx <- (tmp_scan$ObservedMZ >= mz_range[1]) & (tmp_scan$ObservedMZ <= mz_range[2]) & !(is.na(tmp_scan$ObservedMZ))
       tmp_scan <- tmp_scan[keep_indx, ]
       n_in1 <- nrow(tmp_scan)
       self$scan_mz[1:n_in1, 1] <- tmp_scan$ObservedMZ
