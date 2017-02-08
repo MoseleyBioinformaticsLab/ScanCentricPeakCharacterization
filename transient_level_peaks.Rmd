@@ -143,33 +143,21 @@ Lets test various multipliers of the resolution to see where we get diminishing
 returns on widening the resolution.
 
 ```{r correspondence, cache = TRUE, cache.lazy=FALSE}
-thirds <- MasterPeakList$new(multi_scan, multiplier = 1/3)
+use_vals <- list(thirds = list(value = 1/3, name = "thirds"),
+                 seconds = list(value = 1/2, name = "seconds"),
+                 once = list(value = 1, name = "once"),
+                 twice = list(value = 2, name = "twice"),
+                 three = list(value = 3, name = "three"))
 
-seconds <- MasterPeakList$new(multi_scan, multiplier = 1/2)
-
-once <- MasterPeakList$new(multi_scan, multiplier = 1)
-
-twice2 <- MasterPeakList$new(multi_scan, multiplier = 2)
-
-three <- MasterPeakList$new(multi_scan, multiplier = 3)
+all_novel <- mclapply(use_vals, function(in_value){
+  mpl <- MasterPeakList$new(multi_scan, multiplier = in_value$value)
+  data.frame(name = in_value$name,
+             scan = seq(1, length(mpl$novel_peaks)),
+             n_peak = mpl$novel_peaks)
+})
 ```
 
 ```{r all_novel}
-all_novel <- list(thirds = data.frame(name = "thirds",
-                                      n_peak = thirds$novel_peaks,
-                                      scan = seq(1, length(thirds$novel_peaks))),
-                  seconds = data.frame(name = "seconds",
-                                      n_peak = seconds$novel_peaks,
-                                      scan = seq(1, length(seconds$novel_peaks))),
-                  once = data.frame(name = "once",
-                                      n_peak = once$novel_peaks,
-                                      scan = seq(1, length(once$novel_peaks))),
-                  twice = data.frame(name = "twice",
-                                      n_peak = twice$novel_peaks,
-                                      scan = seq(1, length(twice$novel_peaks))),
-                  three = data.frame(name = "three",
-                                      n_peak = three$novel_peaks,
-                                      scan = seq(1, length(three$novel_peaks))))
 all_novel <- do.call(rbind, all_novel)
 ggplot(all_novel, aes(x = scan, y = n_peak, color = name)) + geom_line()
 ```
