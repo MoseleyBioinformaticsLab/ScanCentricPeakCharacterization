@@ -143,15 +143,15 @@ Lets test various multipliers of the resolution to see where we get diminishing
 returns on widening the resolution.
 
 ```{r correspondence, cache = TRUE, cache.lazy=FALSE}
-thirds <- MasterPeakList$new(multi_scan, res_multiplier = 1/3)
+thirds <- MasterPeakList$new(multi_scan, multiplier = 1/3)
 
-seconds <- MasterPeakList$new(multi_scan, res_multiplier = 1/2)
+seconds <- MasterPeakList$new(multi_scan, multiplier = 1/2)
 
-once <- MasterPeakList$new(multi_scan, res_multiplier = 1)
+once <- MasterPeakList$new(multi_scan, multiplier = 1)
 
-twice2 <- MasterPeakList$new(multi_scan, res_multiplier = 2)
+twice2 <- MasterPeakList$new(multi_scan, multiplier = 2)
 
-three <- MasterPeakList$new(multi_scan, res_multiplier = 3)
+three <- MasterPeakList$new(multi_scan, multiplier = 3)
 ```
 
 ```{r all_novel}
