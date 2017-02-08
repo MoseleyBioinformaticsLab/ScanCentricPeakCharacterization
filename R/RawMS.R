@@ -99,17 +99,22 @@ RawMS <- R6::R6Class("RawMS",
      },
 
 
-   initialize = function(raw_file, metadata_file){
+   initialize = function(raw_file, metadata_file = NULL, scan_range = NULL, rt_range = NULL){
      self$raw_data <- import_raw_ms(raw_file)
-     self$raw_metadata <- fromJSON(metadata_file)
+     if (!is.null(metadata_file)) {
+       self$raw_metadata <- fromJSON(metadata_file)
+     }
+
 
      # default is to use the MS1 non-precursor scans
-     if (is.null(self$scan_range)) {
+     if (is.null(scan_range) && is.null(rt_range)) {
        # message("Using MS1 non-precursor scans!")
        ranges <- get_ms1_scans(self$raw_data)
        self$scan_range <- ranges$scan_range
        self$rt_range <- ranges$rt_range
 
+     } else {
+       self$set_scans(scan_range, rt_range)
      }
 
    }

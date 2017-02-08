@@ -374,6 +374,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
      sd_models = NULL, # store the coefficients for the models
      compare_mpl_models = NULL,
      n_iteration = NULL,
+     peak_type = NULL,
 
      # iterative correspondence first does correspondence based on the digital resolution,
      # and then creates a model using the SD of the correspondent peaks themselves,
@@ -425,6 +426,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        self$sd_models <- all_models
        self$compare_mpl_models <- sd_1_v_2
        self$n_iteration <- n_iter
+       self$peak_type <- peak_calc_type
 
      },
 
