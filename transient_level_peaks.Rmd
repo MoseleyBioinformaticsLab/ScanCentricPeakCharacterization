@@ -23,7 +23,7 @@ library(xcms)
 library(dplyr)
 library(ggplot2)
 library(SIRM.FTMS.peakPickingMethods)
-library(ggplot2)
+library(ggforce)
 options(digits = 16)
 library(parallel)
 ```
@@ -190,10 +190,11 @@ After implementing the basic peak correspondence algorithm across scans, lets
 look at how the modeled standard deviation changes over the iterations.
 
 ```{r fcp_models, eval = FALSE}
-load("test_fcp.RData")
-all_models <- lapply(seq(1, length(fcp$sd_models)), function(x){
-  data.frame(mz = fcp$master_peak_list$master,
-             sd = exponential_predict(fcp$sd_models[[x]], fcp$master_peak_list$master),
+use_dir <- "fcs_runs_X2017.02.08.12.36.08"
+load(file.path(use_dir, "fcs_lm_weighted.RData"))
+all_models <- lapply(seq(1, length(fcs$sd_models)), function(x){
+  data.frame(mz = fcs$master_peak_list$master,
+             sd = exponential_predict(fcs$sd_models[[x]], fcs$master_peak_list$master),
              char_which = as.character(x),
              num_which = x)
 })
@@ -243,6 +244,8 @@ invariant to the spikes that are likely from HPD sites
 * Generate HPD regions using average and basic peak finding, re-run correspondence
 with those regions removed
 * From raw, extract the intensity / mz data for all of the scans to give to Josh
+* Plot an average spectrum, and then subtract the intensity from those peaks
+with only, 1, 2, 3, 4 correspondent peaks.
 
 ## RMSD vs MZ, Raw vs Model
 
@@ -262,7 +265,7 @@ mz_rmsd <- rbind(mz_rmsd, mz_rmsd_2)
 
 p <- ggplot(dplyr::filter(mz_rmsd, type == "raw"), aes(x = mz, y = rmsd)) + geom_point(alpha = 0.25) +
   geom_line(data = dplyr::filter(mz_rmsd, type == "model"), color = "blue", size = 1.5, alpha = 0.5) +
-  ggtitle("RMSD vs MZ")
+  ggtitle("RMSD vs MZ") + cowplot:::theme_cowplot()
 p
 ```
 
@@ -272,7 +275,7 @@ We want to see if there is a relationship between the intensity of a peak
 and the number of correspondent peaks.
 
 ```{r compare_peaks, eval = FALSE}
-use_dir <- "fcs_runs_X2017.02.07.12.07.43"
+use_dir <- "fcs_runs_X2017.02.08.12.36.08/"
 peak_types <- c("basic", "area", "rsq_98", "rsq_95", "area_hislope",
                 "lm_weighted", "nls_weighted")
 file_names <- paste0("fcs_", peak_types, ".RData")
@@ -294,10 +297,78 @@ master_intensity <- function(in_master){
 lm_intensity <- master_intensity(fcs$master_peak_list)
 lm_intensity$n_cor <- fcs$master_peak_list$count_notna()
 
-q <- ggplot(lm_intensity, aes(x = as.factor(n_cor), y = log10(intensity))) + geom_sina(bins = 20)
-q
+q <- ggplot(lm_intensity, aes(x = as.factor(n_cor), y = log10(intensity))) + geom_sina(bins = 50, alpha = 0.2) + cowplot:::theme_cowplot() + xlab("Number of Correspondent Peaks") + ylab("log10(mean(intensity))")
+q 
 ```
 
+## RSD of Intensity for Methods
+
+```{r all_intensity}
+all_intensity <- lapply(peak_types, function(in_type){
+  use_names <- paste0("fcs_", in_type, ".RData")
+  use_file <- file.path(use_dir, use_names)
+  
+  use_env <- new.env()
+  load(use_file, envir = use_env)
+  out_intensity <- master_intensity(use_env$fcs$master_peak_list)
+  out_intensity$n_cor <- use_env$fcs$master_peak_list$count_notna()
+  out_intensity$peak_type <- in_type
+  out_intensity
+})
+
+all_intensity <- do.call(rbind, all_intensity)
+
+all_intensity <- dplyr::filter(all_intensity, n_cor >= 4)
+
+r <- ggplot(all_intensity, aes(x = peak_type, y = rsd)) + geom_sina()
+r
+
+s <- ggplot(all_intensity, aes(x = rsd, fill = peak_type)) + geom_density(alpha = 0.5) + cowplot::theme_cowplot()
+s
+
+all_intensity_nonls <- dplyr::filter(all_intensity, peak_type != "nls_weighted")
+
+t <- ggplot(all_intensity_nonls, aes(x = rsd, fill = peak_type)) + geom_density(alpha = 0.5) + cowplot::theme_cowplot()
+t
+
+ggplot(dplyr::filter(all_intensity_nonls, peak_type == "lm_weighted"), aes(x = (rsd))) + geom_histogram(bins = 200)
+```
+
+
+## SD Across MZ
+
+What does the standard deviation of the correspondent peaks across MZ space
+look like for these different methods?
+
+```{r sd_mz}
+master_sd_mz <- function(in_master){
+  tmp_mz <- in_master$scan_mz
+  mz_sd <- vapply(seq(1, nrow(tmp_mz)), function(in_row){
+    sd(tmp_mz[in_row, ], na.rm = TRUE)
+  }, numeric(1))
+  
+  data.frame(mz = in_master$master, sd = mz_sd)
+}
+
+all_sd_mz <- lapply(peak_types, function(in_type){
+  use_names <- paste0("fcs_", in_type, ".RData")
+  use_file <- file.path(use_dir, use_names)
+  
+  use_env <- new.env()
+  load(use_file, envir = use_env)
+  
+  out_sd <- master_sd_mz(use_env$fcs$master_peak_list)
+  out_sd$n_cor <- use_env$fcs$master_peak_list$count_notna()
+  out_sd$peak_type <- in_type
+  out_sd
+})
+
+all_sd_mz <- do.call(rbind, all_sd_mz)
+all_sd_mz <- dplyr::filter(all_sd_mz, n_cor >= 4, mz >= 150, mz <= 1600, peak_type != "nls_weighted")
+
+t <- ggplot(all_sd_mz, aes(x = mz, y = sd, color = peak_type)) + geom_line(alpha = 0.5) + cowplot::theme_cowplot()
+t
+```
 
 
 # Workflow for Transient-Level Peak Finding
