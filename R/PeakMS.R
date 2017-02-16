@@ -139,6 +139,53 @@ ScanMS <- R6::R6Class("ScanMS",
   )
 )
 
+
+#' noise from peaklist
+#'
+#' Given a peak list data.frame object, determines a noise cutoff and classifies
+#' peaks as to whether they are "not_noise".
+#'
+#' @param peaklist the data.frame with at least "Intensity"
+#' @param sd_mean_ratio the ratio of standard deviation to mean to use as a cutoff
+#' @param noise_multiplier how high above the noise should the cutoff be
+#'
+#' @description This calculation is based on the premise that a distribution of
+#'  only noise peaks should have a standard deviation to mean ratio of about 1.
+#'  Therefore, but sorting the list of peak intensities, and incrementally adding
+#'  peaks, when the sd to mean ratio becomes larger than the cutoff, we say
+#'  that we are out of the noise region of the data.
+#'
+#'  The multiplier determines how much higher than the median of the noise do
+#'  we want to consider a peak as \emph{real}, i.e. definitely not noise.
+#'
+#'  The original data.frame is returned, with a new logical column, "not_noise",
+#'  indicating which peaks should not be considered noise and which should.
+#'
+#' @return data.frame
+#' @export
+#'
+noise_sorted_peaklist <- function(peaklist, sd_mean_ratio = 1.2, noise_multiplier = 5){
+  assertthat::assert_that(class(peaklist) == "data.frame")
+
+  intensities <- sort(peaklist$Intensity, decreasing = FALSE)
+  noise_count <- length(intensities) * .25 - 100
+  intensity_sd <- 0
+  intensity_mean <- 1
+  sd_mean_ratio <- 1.2
+
+  while (intensity_sd < (intensity_mean * sd_mean_ratio)) {
+    noise_count <- noise_count + 100
+    select_intensities <- intensities[1:noise_count]
+    intensity_sd <- sd(select_intensities)
+    intensity_mean <- mean(select_intensities)
+    intensity_median <- median(select_intensities)
+  }
+  noise_threshold <- intensity_median * noise_multiplier
+  peaklist$not_noise <- TRUE
+  peaklist[(peaklist$Intensity <= noise_threshold), "not_noise"] <- FALSE
+  peaklist
+}
+
 #' multiple ms scans
 #'
 #' stores the results of peak picking on multiple MS scans
