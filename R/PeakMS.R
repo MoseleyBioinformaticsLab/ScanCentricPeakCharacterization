@@ -372,13 +372,16 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
 
     initialize = function(multi_scans, peak_calc_type = "lm_weighted", sd_model = NULL, multiplier = 1,
-                          mz_range = c(-Inf, Inf)){
+                          mz_range = c(-Inf, Inf), noise_calculator = NULL){
       assertthat::assert_that(any(class(multi_scans) %in% "MultiScans"))
 
       if (is.null(sd_model)) {
         sd_model = multi_scans$res_mz_model()
       }
 
+      if (!is.null(noise_calculator)) {
+        self$noise_calculator = noise_calculator
+      }
       self$peak_correspondence(multi_scans, peak_calc_type, sd_model = sd_model, multiplier = multiplier,
                                mz_range = mz_range)
       invisible(self)
@@ -403,8 +406,11 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
      # and uses this model to do correspondence across scans, iterating until
      # there are no changes in the master peak lists of the objects
      iterative_correspondence = function(multi_scans, peak_calc_type = "lm_weighted", max_iteration = 20, multiplier = 1,
-                                         mz_range = c(-Inf, Inf), notify_progress = FALSE){
-       mpl_digital_resolution <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = NULL, multiplier = multiplier, mz_range = mz_range)
+                                         mz_range = c(-Inf, Inf), notify_progress = FALSE,
+                                         noise_function = NULL){
+       mpl_digital_resolution <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = NULL,
+                                                    multiplier = multiplier, mz_range = mz_range,
+                                                    noise_calculator = noise_function)
        ms_dr_model <- multi_scans$res_mz_model()
 
        if (notify_progress) {
@@ -418,7 +424,10 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
        all_models[[2]] <- dr_sd_model
 
-       mpl_sd_1 <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = mpl_digital_resolution$sd_model_coef, multiplier = multiplier)
+       mpl_sd_1 <- MasterPeakList$new(multi_scans, peak_calc_type,
+                                      sd_model = mpl_digital_resolution$sd_model_coef,
+                                      multiplier = multiplier,
+                                      noise_calculator = noise_function)
        mpl_sd_1$calculate_sd_model()
 
        if (notify_progress) {
@@ -434,7 +443,9 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          mpl_sd_1$calculate_sd_model()
          all_models[[n_iter + 2]] <- mpl_sd_1$sd_model_coef
 
-         mpl_sd_2 <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = mpl_sd_1$sd_model_coef, multiplier = multiplier)
+         mpl_sd_2 <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = mpl_sd_1$sd_model_coef,
+                                        multiplier = multiplier,
+                                        noise_calculator = noise_function)
 
          sd_1_v_2 <- compare_master_peak_lists(mpl_sd_1, mpl_sd_2)
          mpl_sd_1 <- mpl_sd_2
@@ -454,12 +465,13 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
 
      initialize = function(multi_scans, peak_calc_type = "lm_weighted", max_iteration = 20, multiplier = 1,
-                           mz_range = c(-Inf, Inf), notify_progress = FALSE){
+                           mz_range = c(-Inf, Inf), notify_progress = FALSE, noise_function = NULL){
        assertthat::assert_that(any(class(multi_scans) %in% "MultiScans"))
 
        self$iterative_correspondence(multi_scans, peak_calc_type = peak_calc_type,
                                      max_iteration = max_iteration, multiplier = multiplier,
-                                     mz_range = mz_range, notify_progress = notify_progress)
+                                     mz_range = mz_range, notify_progress = notify_progress,
+                                     noise_function = noise_function)
 
 
      }
