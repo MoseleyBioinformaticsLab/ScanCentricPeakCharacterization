@@ -164,17 +164,19 @@ ScanMS <- R6::R6Class("ScanMS",
 #' @return data.frame
 #' @export
 #'
-noise_sorted_peaklist <- function(peaklist, sd_mean_ratio = 1.2, noise_multiplier = 5){
+noise_sorted_peaklist <- function(peaklist, sd_mean_ratio = 1, noise_multiplier = 5){
   assertthat::assert_that(class(peaklist) == "data.frame")
 
-  intensities <- sort(peaklist$Intensity, decreasing = FALSE)
-  noise_count <- length(intensities) * .25 - 100
+  intensities <- peaklist$Intensity
+  intensities <- intensities[!is.na(intensities)]
+  intensities <- sort(intensities, decreasing = FALSE)
+  noise_count <- 1
   intensity_sd <- 0
   intensity_mean <- 1
-  sd_mean_ratio <- 1.2
+  sd_mean_ratio <- sd_mean_ratio
 
   while (intensity_sd < (intensity_mean * sd_mean_ratio)) {
-    noise_count <- noise_count + 100
+    noise_count <- noise_count + 1
     select_intensities <- intensities[1:noise_count]
     intensity_sd <- sd(select_intensities)
     intensity_mean <- mean(select_intensities)
