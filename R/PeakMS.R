@@ -60,6 +60,96 @@ get_scan_nozeros <- function(rawdata, cutoff = 2.25e-3){
   rawdata
 }
 
+#' peaklist
+#'
+#' store a peaklist, which is a data.frame of ObservedMZ and Intensity,
+#' and which scan it is from, and the noise level.
+#'
+#' @export
+"PeakList"
+
+PeakList <- R6::R6Class("PeakList",
+  public = list(
+    peak_list = NULL,
+    scan = NULL,
+    noise = NULL,
+    noise_info = NULL,
+    mz_model = NULL,
+    peak_type = NULL,
+
+    noise_function = NULL,
+
+    initialize = function(scan_ms, peak_type = "lm_weighted", mz_range = NULL, noise_function = NULL, scan = NULL){
+      self$noise_function <- noise_function
+      self$scan = scan
+      self$peak_type = peak_type
+
+      if (is.data.frame(scan_ms)) {
+        assertthat::has_name(scan_ms, "ObservedMZ")
+        assertthat::has_name(scan_ms, "Intensity")
+
+        self$peak_list <- scan_ms
+      } else {
+        if (assertthat::assert_that(any(class(scan_ms) %in% "ScanMS"))) {
+          self$peak_list <- scan_ms$get_peak_info(calc_type = peak_type)
+          self$mz_model <- scan_ms$res_mz_model
+        }
+      }
+
+      if (!is.null(self$noise_function)) {
+        tmp <- self$noise_function(self$peak_list)
+        self$peak_list <- tmp$peaklist
+        self$noise <- tmp$noise
+        self$noise_info <- tmp$info
+      }
+
+      if (!is.null(mz_range)) {
+        keep_peaks <- (self$peak_list$ObservedMZ >= min(mz_range)) & (self$peak_list$ObservedMZ <= max(mz_range))
+        self$peak_list <- self$peak_list[keep_peaks, ]
+      }
+      self
+    }
+
+))
+
+#' multiple scans peak lists
+#'
+#' holds a list of peak lists where each list entry is from a different scan
+#'
+#' @export
+"MultiScansPeakList"
+
+MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
+  public = list(
+    peak_list_by_scans = NULL,
+    peak_type = NULL,
+    mz_model = NULL,
+    noise_function = NULL,
+    noise_info = NULL,
+
+    scans = NULL,
+    scan_peak_lists = NULL,
+
+    initialize = function(multi_scans, peak_type = "lm_weighted", mz_range = NULL, noise_function = NULL){
+      self$noise_function <- noise_function
+      self$peak_type <- peak_type
+
+      assertthat::assert_that(any(class(multi_scans) %in% "MultiScans"))
+
+      self$peak_list_by_scans <- lapply(seq(1, length(multi_scans$scans)), function(in_scan){
+        PeakList$new(multi_scans$scans[[in_scan]], peak_type = peak_type, mz_range = mz_range,
+                     noise_function = self$noise_function, scan = in_scan)
+      })
+
+      self$mz_model <- multi_scans$res_mz_model()
+
+      tmp_noise_info <- lapply(self$peak_list_by_scans, function(x){x$noise_info})
+      self$noise_info <- do.call(rbind, tmp_noise_info)
+      self$noise_info$scan <- seq(1, length(self$peak_list_by_scans))
+      self
+    }
+))
+
 #' Storing all of the peaks associated with a scan
 #'
 #' Reference class to hold the results of peak finding of an entire "scan"
@@ -158,13 +248,13 @@ ScanMS <- R6::R6Class("ScanMS",
 #'  The multiplier determines how much higher than the median of the noise do
 #'  we want to consider a peak as \emph{real}, i.e. definitely not noise.
 #'
-#'  The original data.frame is returned, with a new logical column, "not_noise",
-#'  indicating which peaks should not be considered noise and which should.
+#'  A list is returned, with the original data.frame with a new column "not_noise",
+#'  and the actual noise cutoff that was used to determine whether peaks are noise.
 #'
-#' @return data.frame
+#' @return list
 #' @export
 #'
-noise_sorted_peaklist <- function(peaklist, sd_mean_ratio = 1, noise_multiplier = 5){
+noise_sorted_peaklist <- function(peaklist, sd_mean_ratio = 1.2, noise_multiplier = 1.5){
   assertthat::assert_that(class(peaklist) == "data.frame")
 
   intensities <- peaklist$Intensity
@@ -185,7 +275,15 @@ noise_sorted_peaklist <- function(peaklist, sd_mean_ratio = 1, noise_multiplier 
   noise_threshold <- intensity_median * noise_multiplier
   peaklist$not_noise <- TRUE
   peaklist[(peaklist$Intensity <= noise_threshold), "not_noise"] <- FALSE
-  peaklist
+
+  noise_value <- mean(log10(peaklist$Intensity[!peaklist$not_noise]))
+  signal_value <- mean(log10(peaklist$Intensity[peaklist$not_noise]))
+  signal_noise_ratio <- signal_value - noise_value
+
+  return(list(peaklist = peaklist, noise = noise_threshold,
+              info = data.frame(noise = noise_value,
+                                signal = signal_value,
+                                ratio = signal_noise_ratio)))
 }
 
 #' multiple ms scans
