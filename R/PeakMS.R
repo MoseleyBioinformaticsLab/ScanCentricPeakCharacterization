@@ -130,6 +130,16 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
     scans = NULL,
     scan_peak_lists = NULL,
 
+    n_peaks = function(){
+      vapply(self$peak_list_by_scans, function(x){
+        if (!is.null(x$noise_function)) {
+          return(nrow(x$peak_list[x$peak_list$not_noise, ]))
+        } else {
+          return(nrow(x$peak_list))
+        }
+      }, numeric(1))
+    },
+
     initialize = function(multi_scans, peak_type = "lm_weighted", mz_range = NULL, noise_function = NULL){
       self$noise_function <- noise_function
       self$peak_type <- peak_type
