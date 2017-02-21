@@ -428,19 +428,18 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       na_peaks <- is.na(peak_scan$ObservedMZ)
       peak_scan <- peak_scan[!na_peaks, ]
 
-      if (!is.null(self$noise_calculator)) {
-        peak_scan <- self$noise_calculator(peak_scan)
-        peak_scan <- peak_scan[peak_scan$not_noise, ]
-      }
-
       keep_indx <- (peak_scan$ObservedMZ >= mz_range[1]) & (peak_scan$ObservedMZ <= mz_range[2])
+
+      if (!is.null(peak_scan$not_noise)) {
+        keep_indx <- keep_indx | peak_scan$not_noise
+      }
       peak_scan <- peak_scan[keep_indx, ]
 
       peak_scan
     },
 
-    peak_correspondence = function(multi_scans, peak_calc_type, sd_model, multiplier, mz_range){
-      n_peaks <- multi_scans$n_peaks()
+    peak_correspondence = function(multi_scan_peak_list, peak_calc_type, sd_model, multiplier, mz_range){
+      n_peaks <- multi_scan_peak_list$n_peaks()
       n_scans <- length(n_peaks)
 
       init_multiplier <- 20
@@ -448,7 +447,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       self$scan_mz <- self$scan_intensity <- self$scan <- matrix(NA, nrow = max(n_peaks) * init_multiplier, ncol = n_scans)
 
       # initialize the master list
-      tmp_scan <- multi_scans$scans[[1]]$get_peak_info(calc_type = peak_calc_type)
+      tmp_scan <- multi_scan_peak_list$peak_list_by_scans[[1]]$peak_list
       # filter down to the range we want if desired
       tmp_scan <- self$trim_peaks(tmp_scan, mz_range)
 
@@ -468,7 +467,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
       for (iscan in seq(2, n_scans)) {
         #print(iscan)
-        tmp_scan <- multi_scans$scans[[iscan]]$get_peak_info(calc_type = peak_calc_type)
+        tmp_scan <- multi_scan_peak_list$peak_list_by_scans[[iscan]]$peak_list
         tmp_scan <- self$trim_peaks(tmp_scan, mz_range)
         n_master <- sum(self$count_notna() != 0)
 
@@ -528,18 +527,18 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     },
 
 
-    initialize = function(multi_scans, peak_calc_type = "lm_weighted", sd_model = NULL, multiplier = 1,
+    initialize = function(multi_scan_peak_list, peak_calc_type = "lm_weighted", sd_model = NULL, multiplier = 1,
                           mz_range = c(-Inf, Inf), noise_calculator = NULL){
-      assertthat::assert_that(any(class(multi_scans) %in% "MultiScans"))
+      assertthat::assert_that(any(class(multi_scan_peak_list) %in% "MultiScansPeakList"))
 
       if (is.null(sd_model)) {
-        sd_model = multi_scans$res_mz_model()
+        sd_model = multi_scan_peak_list$mz_model
       }
 
       if (!is.null(noise_calculator)) {
         self$noise_calculator = noise_calculator
       }
-      self$peak_correspondence(multi_scans, peak_calc_type, sd_model = sd_model, multiplier = multiplier,
+      self$peak_correspondence(multi_scan_peak_list, peak_calc_type, sd_model = sd_model, multiplier = multiplier,
                                mz_range = mz_range)
       invisible(self)
     }
@@ -562,13 +561,13 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
      # and then creates a model using the SD of the correspondent peaks themselves,
      # and uses this model to do correspondence across scans, iterating until
      # there are no changes in the master peak lists of the objects
-     iterative_correspondence = function(multi_scans, peak_calc_type = "lm_weighted", max_iteration = 20, multiplier = 1,
+     iterative_correspondence = function(multi_scan_peak_list, peak_calc_type = "lm_weighted", max_iteration = 20,
+                                         multiplier = 1,
                                          mz_range = c(-Inf, Inf), notify_progress = FALSE,
                                          noise_function = NULL){
-       mpl_digital_resolution <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = NULL,
-                                                    multiplier = multiplier, mz_range = mz_range,
-                                                    noise_calculator = noise_function)
-       ms_dr_model <- multi_scans$res_mz_model()
+       mpl_digital_resolution <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type, sd_model = NULL,
+                                                    multiplier = multiplier, mz_range = mz_range)
+       ms_dr_model <- multi_scan_peak_list$mz_model
 
        if (notify_progress) {
          print("digital resolution done!")
@@ -581,10 +580,9 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
        all_models[[2]] <- dr_sd_model
 
-       mpl_sd_1 <- MasterPeakList$new(multi_scans, peak_calc_type,
+       mpl_sd_1 <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type,
                                       sd_model = mpl_digital_resolution$sd_model_coef,
-                                      multiplier = multiplier,
-                                      noise_calculator = noise_function)
+                                      multiplier = multiplier)
        mpl_sd_1$calculate_sd_model()
 
        if (notify_progress) {
@@ -600,7 +598,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          mpl_sd_1$calculate_sd_model()
          all_models[[n_iter + 2]] <- mpl_sd_1$sd_model_coef
 
-         mpl_sd_2 <- MasterPeakList$new(multi_scans, peak_calc_type, sd_model = mpl_sd_1$sd_model_coef,
+         mpl_sd_2 <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type, sd_model = mpl_sd_1$sd_model_coef,
                                         multiplier = multiplier,
                                         noise_calculator = noise_function)
 
@@ -621,14 +619,13 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
      },
 
 
-     initialize = function(multi_scans, peak_calc_type = "lm_weighted", max_iteration = 20, multiplier = 1,
+     initialize = function(multi_scan_peak_list, peak_calc_type = "lm_weighted", max_iteration = 20, multiplier = 1,
                            mz_range = c(-Inf, Inf), notify_progress = FALSE, noise_function = NULL){
-       assertthat::assert_that(any(class(multi_scans) %in% "MultiScans"))
+       assertthat::assert_that(any(class(multi_scan_peak_list) %in% "MultiScansPeakList"))
 
-       self$iterative_correspondence(multi_scans, peak_calc_type = peak_calc_type,
+       self$iterative_correspondence(multi_scan_peak_list, peak_calc_type = peak_calc_type,
                                      max_iteration = max_iteration, multiplier = multiplier,
-                                     mz_range = mz_range, notify_progress = notify_progress,
-                                     noise_function = noise_function)
+                                     mz_range = mz_range, notify_progress = notify_progress)
 
 
      }
