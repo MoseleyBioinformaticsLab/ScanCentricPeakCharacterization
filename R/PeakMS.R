@@ -283,11 +283,15 @@ noise_sorted_peaklist <- function(peaklist, sd_mean_ratio = 1.2, noise_multiplie
     intensity_median <- median(select_intensities)
   }
   noise_threshold <- intensity_median * noise_multiplier
-  peaklist$not_noise <- TRUE
-  peaklist[(peaklist$Intensity <= noise_threshold), "not_noise"] <- FALSE
+  peaklist$not_noise <- FALSE
 
-  noise_value <- mean(log10(peaklist$Intensity[!peaklist$not_noise]))
-  signal_value <- mean(log10(peaklist$Intensity[peaklist$not_noise]))
+  not_na <- which(!is.na(peaklist$Intensity))
+  possible_noise <- peaklist$Intensity[not_na]
+  not_noise <- not_na[possible_noise > noise_threshold]
+  peaklist[not_noise, "not_noise"] <- TRUE
+
+  noise_value <- mean(log10(peaklist$Intensity[!peaklist$not_noise]), na.rm = TRUE)
+  signal_value <- mean(log10(peaklist$Intensity[peaklist$not_noise]), na.rm = TRUE)
   signal_noise_ratio <- signal_value - noise_value
 
   return(list(peaklist = peaklist, noise = noise_threshold,
