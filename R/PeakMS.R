@@ -349,6 +349,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     sd_model_coef = NULL,
     sd_model_full = NULL,
     mz_range = NULL,
+    is_normalized = FALSE,
     calculate_sd_model = function(){
       # trim to peaks with at least 3 peaks in scans
       n_notna <- self$count_notna()
@@ -671,4 +672,42 @@ compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("master", "
 #' @export
 normalize_scans <- function(mpl){
   n_corresponding <- mpl$count_notna()
+
+  normalizing_peaks <- n_corresponding >= quantile(n_corresponding, 0.95)
+
+  n_scan <- ncol(mpl$scan_mz)
+
+  peak_intensities <- log(mpl$scan_intensity[normalizing_peaks, ])
+
+  # this is getting the difference of a scan to all the other scans.
+  # It uses the fact that the peaks are the rows, and the scans are the columns.
+  # Take out the scan you want, make it a matrix that will be same size as the other.
+  # Remove that scan from the full matrix.
+  # Take their differences, this is the difference of that scan to all other scans
+  # for all of the peaks.
+  # Average the difference in each scan across the peaks
+  # Sum them after to find the total difference
+  scan_diffs <- vapply(seq(1, n_scan), function(in_scan){
+    scan_peaks <- peak_intensities[, in_scan, drop = FALSE]
+    scan_peaks_matrix <- matrix(scan_peaks, nrow = nrow(scan_peaks), ncol = n_scan - 1)
+
+    other_matrix <- peak_intensities[, -in_scan, drop = FALSE]
+    scan_other_diff <- scan_peaks_matrix - other_matrix
+    peak_means <- colMeans(scan_other_diff, na.rm = TRUE)
+    sum(peak_means)
+  }, numeric(1))
+
+  normalize_scan <- which.min(abs(scan_diffs))
+
+  scan_norm_matrix <- matrix(peak_intensities[, normalize_scan, drop = FALSE],
+                             nrow = nrow(peak_intensities), ncol = n_scan)
+
+  diff_matrix <- peak_intensities - scan_norm_matrix
+  normalization_factors <- colMeans(diff_matrix, na.rm = TRUE)
+  normalization_matrix <- matrix(normalization_factors, nrow = nrow(mpl$scan_intensity),
+                                 ncol = ncol(mpl$scan_intensity), byrow = TRUE)
+
+  mpl$scan_intensity - normalization_matrix
+  mpl$is_normalized <- TRUE
+  mpl
 }
