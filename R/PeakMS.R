@@ -435,7 +435,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       keep_indx <- (peak_scan$ObservedMZ >= mz_range[1]) & (peak_scan$ObservedMZ <= mz_range[2])
 
       if (!is.null(peak_scan$not_noise)) {
-        keep_indx <- keep_indx | peak_scan$not_noise
+        keep_indx <- keep_indx & peak_scan$not_noise
       }
       peak_scan <- peak_scan[keep_indx, ]
 
@@ -656,3 +656,19 @@ compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("master", "
   compare_results
 }
 
+
+#' normalize scans
+#'
+#' Given a \code{MasterPeakList} object that has the peaks across scans corresponded,
+#' normalize the scans against each other.
+#'
+#' @param mpl the MasterPeakList object
+#'
+#' @details To do the normalization, we find the set of peaks that have a large
+#'   number of corresponding peaks, and using these peaks, for each peak, for each
+#'   scan get the log-ratio of the peak in that scan against all the other scans
+#'
+#' @export
+normalize_scans <- function(mpl){
+  n_corresponding <- mpl$count_notna()
+}
