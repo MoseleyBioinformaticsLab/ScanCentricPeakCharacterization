@@ -707,7 +707,9 @@ normalize_scans <- function(mpl){
   normalization_matrix <- matrix(normalization_factors, nrow = nrow(mpl$scan_intensity),
                                  ncol = ncol(mpl$scan_intensity), byrow = TRUE)
 
-  mpl$scan_intensity - normalization_matrix
+  normed_intensities <- peak_intensities - normalization_matrix
+
+  mpl$scan_intensity <- exp(normed_intensities)
   mpl$is_normalized <- TRUE
   mpl
 }
