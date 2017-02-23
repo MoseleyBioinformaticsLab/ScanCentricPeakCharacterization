@@ -350,6 +350,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     sd_model_full = NULL,
     mz_range = NULL,
     is_normalized = FALSE,
+    normalization_factors = NULL,
     calculate_sd_model = function(){
       # trim to peaks with at least 3 peaks in scans
       n_notna <- self$count_notna()
@@ -707,9 +708,12 @@ normalize_scans <- function(mpl){
   normalization_matrix <- matrix(normalization_factors, nrow = nrow(mpl$scan_intensity),
                                  ncol = ncol(mpl$scan_intensity), byrow = TRUE)
 
-  normed_intensities <- peak_intensities - normalization_matrix
+  # need to log here, because everything previous was done on log scale
+  normed_intensities <- log(mpl$scan_intensity) - normalization_matrix
 
+  # and then transform before putting them back
   mpl$scan_intensity <- exp(normed_intensities)
   mpl$is_normalized <- TRUE
+  mpl$normalization_factors <- normalization_factors
   mpl
 }
