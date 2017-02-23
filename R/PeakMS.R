@@ -290,14 +290,17 @@ noise_sorted_peaklist <- function(peaklist, sd_mean_ratio = 1.2, noise_multiplie
   not_noise <- not_na[possible_noise > noise_threshold]
   peaklist[not_noise, "not_noise"] <- TRUE
 
-  noise_value <- mean(log10(peaklist$Intensity[!peaklist$not_noise]), na.rm = TRUE)
-  signal_value <- mean(log10(peaklist$Intensity[peaklist$not_noise]), na.rm = TRUE)
-  signal_noise_ratio <- signal_value - noise_value
+  mean_noise <- mean(log10(peaklist$Intensity[!peaklist$not_noise]), na.rm = TRUE)
+  mean_signal <- mean(log10(peaklist$Intensity[peaklist$not_noise]), na.rm = TRUE)
+  sum_signal <- sum(log10(peaklist$Intensity[peaklist$not_noise]) - mean_noise, na.rm = TRUE)
+  n_signal <- sum(peaklist$not_noise)
+  #signal_noise_ratio <- signal_value - noise_value
 
   return(list(peaklist = peaklist, noise = noise_threshold,
-              info = data.frame(noise = noise_value,
-                                signal = signal_value,
-                                ratio = signal_noise_ratio)))
+              info = data.frame(noise = mean_noise,
+                                signal = mean_signal,
+                                sum_signal = sum_signal,
+                                n_signal = n_signal)))
 }
 
 #' multiple ms scans

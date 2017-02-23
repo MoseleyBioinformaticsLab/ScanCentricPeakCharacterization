@@ -1,6 +1,6 @@
 Package: SIRM.FTMS.peakPickingMethods
 Title: Functionality for Detecting and Comparing Peaks
-Version: 0.0.14
+Version: 0.0.15
 Date: 2017-02-23
 Authors@R: person(given = c("Robert", "M"), family = c("Flight"), email
         = "rflight79@gmail.com", role = c("aut", "cre"))
