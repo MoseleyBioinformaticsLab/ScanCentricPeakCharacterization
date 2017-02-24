@@ -747,7 +747,7 @@ get_rsq_peak <- function(possible_peak, min_rsq, min_points){
 #'
 #' @return numeric
 #' @export
-peak_info <- function(possible_peak, min_points = 5, min_area = 0.1){
+peak_info <- function(possible_peak, min_points = 4, min_area = 0.1){
   if (nrow(possible_peak) >= min_points) {
     # always do the basic peaks
     peak_area_basic <- area_sum_points(possible_peak$mz, possible_peak$intensity)
@@ -928,7 +928,7 @@ define_peak_type <- function(peak_data, flat_cut = 0.98){
 #'
 #' @export
 #' @return list
-find_peaks <- function(mz_data, min_points = 5, n_peak = Inf, flat_cut = 0.98){
+find_peaks <- function(mz_data, min_points = 4, n_peak = Inf, flat_cut = 0.98){
   peak_locations <- pracma::findpeaks(mz_data$intensity, nups = floor(min_points/2),
                                       ndowns = floor(min_points/2))
   peak_locations <- matrix(peak_locations, ncol = 4, byrow = FALSE)
@@ -944,7 +944,7 @@ find_peaks <- function(mz_data, min_points = 5, n_peak = Inf, flat_cut = 0.98){
     peak_loc <- seq(peak_locations[in_peak, 3], peak_locations[in_peak, 4])
     out_peak <- PeakMS$new(mz_data[peak_loc, ], min_points = min_points, flat_cut = flat_cut)
     out_peak$peak_id <- in_peak
-    out_peak
+    out_peak$n_point <- length(peak_loc)
   })
   #out_peaks <- do.call(rbind, mz_peaks)
   mz_peaks
