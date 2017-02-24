@@ -675,13 +675,14 @@ compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("master", "
 #' normalize the scans against each other.
 #'
 #' @param mpl the MasterPeakList object
+#' @param summary_function which function to use to summarize the differences
 #'
 #' @details To do the normalization, we find the set of peaks that have a large
 #'   number of corresponding peaks, and using these peaks, for each peak, for each
 #'   scan get the log-ratio of the peak in that scan against all the other scans
 #'
 #' @export
-normalize_scans <- function(mpl){
+normalize_scans <- function(mpl, summary_function = mean){
   n_corresponding <- mpl$count_notna()
 
   normalizing_peaks <- n_corresponding >= quantile(n_corresponding, 0.95)
@@ -714,7 +715,7 @@ normalize_scans <- function(mpl){
                              nrow = nrow(peak_intensities), ncol = n_scan)
 
   diff_matrix <- peak_intensities - scan_norm_matrix
-  normalization_factors <- colMeans(diff_matrix, na.rm = TRUE)
+  normalization_factors <- apply(diff_matrix, 2, summary_function, na.rm = TRUE)
   normalization_matrix <- matrix(normalization_factors, nrow = nrow(mpl$scan_intensity),
                                  ncol = ncol(mpl$scan_intensity), byrow = TRUE)
 
