@@ -222,6 +222,8 @@ ScanMS <- R6::R6Class("ScanMS",
         peak_loc <- seq(peak_locations[in_peak, 3], peak_locations[in_peak, 4])
         out_peak <- PeakMS$new(scan_data[peak_loc, ], min_points = min_points, flat_cut = flat_cut)
         out_peak$peak_info$n_point <- length(peak_loc)
+        mz_width <- max(scan_data[peak_loc, "mz"]) - min(scan_data[peak_loc, "mz"])
+        out_peak$peak_info$mz_width <- mz_width
         out_peak$peak_id <- in_peak
         out_peak
       })
