@@ -256,7 +256,7 @@ ScanMS <- R6::R6Class("ScanMS",
 #' peaks as to whether they are "not_noise".
 #'
 #' @param peaklist the data.frame with at least "Height" or "Area"
-#' @param intensity_measure which value of \emph{intensity} should be used? Default is "Area"
+#' @param intensity_measure which value of \emph{intensity} should be used? Default is "Height"
 #' @param sd_mean_ratio the ratio of standard deviation to mean to use as a cutoff
 #' @param noise_multiplier how high above the noise should the cutoff be
 #'
@@ -275,7 +275,7 @@ ScanMS <- R6::R6Class("ScanMS",
 #' @return list
 #' @export
 #'
-noise_sorted_peaklist <- function(peaklist, intensity_measure = "Area", sd_mean_ratio = 1.2, noise_multiplier = 1.5){
+noise_sorted_peaklist <- function(peaklist, intensity_measure = "Height", sd_mean_ratio = 1.2, noise_multiplier = 1.5){
   assertthat::assert_that(class(peaklist) == "data.frame")
 
   intensities <- peaklist[[intensity_measure]]
