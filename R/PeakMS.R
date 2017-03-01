@@ -36,7 +36,7 @@ PeakMS <- R6::R6Class("PeakMS",
   ),
   private = list(
     check_peak_location = function(max_info, peak_info){
-      peak_info <- dplyr::mutate(peak_info, g_int = Intensity >= max_info$max_intensity,
+      peak_info <- dplyr::mutate(peak_info, g_int = Height >= max_info$max_intensity,
                                  is_loc = (ObservedMZ >= max_info$min_loc) && (ObservedMZ <= max_info$max_loc))
       peak_info
     }
@@ -62,7 +62,7 @@ get_scan_nozeros <- function(rawdata, cutoff = 2.25e-3){
 
 #' peaklist
 #'
-#' store a peaklist, which is a data.frame of ObservedMZ and Intensity,
+#' store a peaklist, which is a data.frame of ObservedMZ, Height and Area,
 #' and which scan it is from, and the noise level.
 #'
 #' @export
@@ -86,7 +86,8 @@ PeakList <- R6::R6Class("PeakList",
 
       if (is.data.frame(scan_ms)) {
         assertthat::has_name(scan_ms, "ObservedMZ")
-        assertthat::has_name(scan_ms, "Intensity")
+        assertthat::has_name(scan_ms, "Height")
+        assertthat::has_name(scan_ms, "Area")
 
         self$peak_list <- scan_ms
       } else {
@@ -254,7 +255,8 @@ ScanMS <- R6::R6Class("ScanMS",
 #' Given a peak list data.frame object, determines a noise cutoff and classifies
 #' peaks as to whether they are "not_noise".
 #'
-#' @param peaklist the data.frame with at least "Intensity"
+#' @param peaklist the data.frame with at least "Height" or "Area"
+#' @param intensity_measure which value of \emph{intensity} should be used? Default is "Area"
 #' @param sd_mean_ratio the ratio of standard deviation to mean to use as a cutoff
 #' @param noise_multiplier how high above the noise should the cutoff be
 #'
@@ -273,10 +275,10 @@ ScanMS <- R6::R6Class("ScanMS",
 #' @return list
 #' @export
 #'
-noise_sorted_peaklist <- function(peaklist, sd_mean_ratio = 1.2, noise_multiplier = 1.5){
+noise_sorted_peaklist <- function(peaklist, intensity_measure = "Area", sd_mean_ratio = 1.2, noise_multiplier = 1.5){
   assertthat::assert_that(class(peaklist) == "data.frame")
 
-  intensities <- peaklist$Intensity
+  intensities <- peaklist[[intensity_measure]]
   intensities <- intensities[!is.na(intensities)]
   intensities <- sort(intensities, decreasing = FALSE)
   noise_count <- 1
@@ -294,14 +296,14 @@ noise_sorted_peaklist <- function(peaklist, sd_mean_ratio = 1.2, noise_multiplie
   noise_threshold <- intensity_median * noise_multiplier
   peaklist$not_noise <- FALSE
 
-  not_na <- which(!is.na(peaklist$Intensity))
-  possible_noise <- peaklist$Intensity[not_na]
+  not_na <- which(!is.na(peaklist[[intensity_measure]]))
+  possible_noise <- peaklist[[intensity_measure]][not_na]
   not_noise <- not_na[possible_noise > noise_threshold]
   peaklist[not_noise, "not_noise"] <- TRUE
 
-  mean_noise <- mean(log10(peaklist$Intensity[!peaklist$not_noise]), na.rm = TRUE)
-  mean_signal <- mean(log10(peaklist$Intensity[peaklist$not_noise]), na.rm = TRUE)
-  sum_signal <- sum(log10(peaklist$Intensity[peaklist$not_noise]) - mean_noise, na.rm = TRUE)
+  mean_noise <- mean(log10(peaklist[[intensity_measure]][!peaklist$not_noise]), na.rm = TRUE)
+  mean_signal <- mean(log10(peaklist[[intensity_measure]][peaklist$not_noise]), na.rm = TRUE)
+  sum_signal <- sum(log10(peaklist[[intensity_measure]][peaklist$not_noise]) - mean_noise, na.rm = TRUE)
   n_signal <- sum(peaklist$not_noise)
   #signal_noise_ratio <- signal_value - noise_value
 
@@ -309,7 +311,8 @@ noise_sorted_peaklist <- function(peaklist, sd_mean_ratio = 1.2, noise_multiplie
               info = data.frame(noise = mean_noise,
                                 signal = mean_signal,
                                 sum_signal = sum_signal,
-                                n_signal = n_signal)))
+                                n_signal = n_signal,
+                                intensity_measure = intensity_measure)))
 }
 
 #' multiple ms scans
@@ -354,7 +357,8 @@ MultiScans <- R6::R6Class("MultiScans",
 MasterPeakList <- R6::R6Class("MasterPeakList",
   public = list(
     scan_mz = NULL,
-    scan_intensity = NULL,
+    scan_height = NULL,
+    scan_area = NULL,
     scan = NULL,
     master = NULL,
     novel_peaks = NULL,
@@ -369,7 +373,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       keep_peaks <- n_notna >= 3
       master <- self$master[keep_peaks]
       scan_mz <- self$scan_mz[keep_peaks, ]
-      scan_intensity <- self$scan_intensity[keep_peaks, ]
+      #scan_intensity <- self$scan_intensity[keep_peaks, ]
 
       master_range <- vapply(seq(1, nrow(scan_mz)), function(x){sd(scan_mz[x, ], na.rm = TRUE)}, numeric(1)) * 3
 
@@ -430,7 +434,8 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     cleanup = function(){
       which_nona <- self$count_notna() != 0
       self$scan_mz <- self$scan_mz[which_nona, ]
-      self$scan_intensity <- self$scan_intensity[which_nona, ]
+      self$scan_height <- self$scan_height[which_nona, ]
+      self$scan_area <- self$scan_area[which_nona, ]
       self$scan <- self$scan[which_nona, ]
 
       self$create_master()
@@ -462,7 +467,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
       init_multiplier <- 20
 
-      self$scan_mz <- self$scan_intensity <- self$scan <- matrix(NA, nrow = max(n_peaks) * init_multiplier, ncol = n_scans)
+      self$scan_mz <- self$scan_height <- self$scan_area <- self$scan <- matrix(NA, nrow = max(n_peaks) * init_multiplier, ncol = n_scans)
 
       # initialize the master list
       tmp_scan <- multi_scan_peak_list$peak_list_by_scans[[1]]$peak_list
@@ -471,7 +476,8 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
       n_in1 <- nrow(tmp_scan)
       self$scan_mz[1:n_in1, 1] <- tmp_scan$ObservedMZ
-      self$scan_intensity[1:n_in1, 1] <- tmp_scan$Intensity
+      self$scan_height[1:n_in1, 1] <- tmp_scan$Height
+      self$scan_area[1:n_in1, 1] <- tmp_scan$Area
       self$scan[1:n_in1, 1] <- tmp_scan$peak
 
       self$create_master()
@@ -500,7 +506,8 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
           if (min(diff_scan, na.rm = TRUE) <= pred_window[ipeak]) {
             which_min <- which.min(diff_scan)
             self$scan_mz[ipeak, iscan] <- tmp_scan[which_min, "ObservedMZ"]
-            self$scan_intensity[ipeak, iscan] <- tmp_scan[which_min, "Intensity"]
+            self$scan_height[ipeak, iscan] <- tmp_scan[which_min, "Height"]
+            self$scan_area[ipeak, iscan] <- tmp_scan[which_min, "Area"]
             self$scan[ipeak, iscan] <- tmp_scan[which_min, "peak"]
             tmp_scan[which_min, "matched"] <- TRUE
 
@@ -521,7 +528,8 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
             #master_peaks <- c(master_peaks, rep(NA, n_na))
             na_matrix <- matrix(NA, nrow = n_na, ncol = n_scans)
             self$scan_mz <- rbind(self$scan_mz, na_matrix)
-            self$scan_intensity <- rbind(self$scan_intensity, na_matrix)
+            self$scan_height <- rbind(self$scan_height, na_matrix)
+            self$scan_area <- rbind(self$scan_area, na_matrix)
             self$scan <- rbind(self$scan, na_matrix)
           }
           self$create_master()
@@ -529,13 +537,15 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
           new_loc <- seq(which_na, which_na + n_new - 1)
 
           self$scan_mz[new_loc, iscan] <- tmp_scan[, "ObservedMZ"]
-          self$scan_intensity[new_loc, iscan] <- tmp_scan[, "Intensity"]
+          self$scan_height[new_loc, iscan] <- tmp_scan[, "Height"]
+          self$scan_area[new_loc, iscan] <- tmp_scan[, "Area"]
           self$scan[new_loc, iscan] <- tmp_scan[, "peak"]
           self$create_master()
 
           new_order <- order(self$master, decreasing = FALSE)
           self$scan_mz <- self$scan_mz[new_order, ]
-          self$scan_intensity <- self$scan_intensity[new_order, ]
+          self$scan_height <- self$scan_height[new_order, ]
+          self$scan_area <- self$scan_area[new_order, ]
           self$scan <- self$scan[new_order, ]
           self$create_master()
         }
@@ -663,7 +673,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 #' @export
 #'
 compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("master", "scan",
-                                                                     "scan_intensity", "scan_mz")){
+                                                                     "scan_height", "scan_area", "scan_mz")){
   compare_results <- vapply(compare_list, function(in_obj){
     isTRUE(all.equal(mpl_1[[in_obj]], mpl_2[[in_obj]]))
   }, logical(1))

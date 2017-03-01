@@ -23,7 +23,7 @@ PeakPickingAnalysis <- R6::R6Class("PeakPickingAnalysis",
       } else {
         peakpicking_parameters <- in_parameters
       }
-      assertthat::assert_that(all(c("ObservedMZ", "Intensity") %in% colnames(peak_list)))
+      assertthat::assert_that(all(c("ObservedMZ", "Height", "Area") %in% colnames(peak_list)))
 
       assertthat::assert_that(all(c("package", "version", "sha", "function_called","parameters") %in% names(peakpicking_parameters$picking_description)))
 
