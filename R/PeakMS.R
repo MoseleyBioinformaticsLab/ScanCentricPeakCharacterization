@@ -367,6 +367,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     mz_range = NULL,
     is_normalized = FALSE,
     normalization_factors = NULL,
+    normalized_by = NULL,
     calculate_sd_model = function(){
       # trim to peaks with at least 3 peaks in scans
       n_notna <- self$count_notna()
@@ -687,6 +688,7 @@ compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("master", "
 #' normalize the scans against each other.
 #'
 #' @param mpl the MasterPeakList object
+#' @param intensity_measure which measure of peak intensity to use?
 #' @param summary_function which function to use to summarize the differences
 #'
 #' @details To do the normalization, we find the set of peaks that have a large
@@ -694,14 +696,16 @@ compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("master", "
 #'   scan get the log-ratio of the peak in that scan against all the other scans
 #'
 #' @export
-normalize_scans <- function(mpl, summary_function = mean){
+normalize_scans <- function(mpl, intensity_measure = "Height", summary_function = mean){
+  intensity_options <- c(Height = "scan_height", Area = "scan_area")
+  intensity_internal <- intensity_options[intensity_measure]
   n_corresponding <- mpl$count_notna()
 
   normalizing_peaks <- n_corresponding >= quantile(n_corresponding, 0.95)
 
   n_scan <- ncol(mpl$scan_mz)
 
-  peak_intensities <- log(mpl$scan_intensity[normalizing_peaks, ])
+  peak_intensities <- log(mpl[[intensity_internal]][normalizing_peaks, ])
 
   # this is getting the difference of a scan to all the other scans.
   # It uses the fact that the peaks are the rows, and the scans are the columns.
@@ -729,14 +733,15 @@ normalize_scans <- function(mpl, summary_function = mean){
   diff_matrix <- peak_intensities - scan_norm_matrix
   normalization_factors <- apply(diff_matrix, 2, summary_function, na.rm = TRUE)
   normalization_matrix <- matrix(normalization_factors, nrow = nrow(mpl$scan_intensity),
-                                 ncol = ncol(mpl$scan_intensity), byrow = TRUE)
+                                 ncol = ncol(mpl[[intensity_internal]]), byrow = TRUE)
 
-  # need to log here, because everything previous was done on log scale
-  normed_intensities <- log(mpl$scan_intensity) - normalization_matrix
+  # we normalize both the height and the area with the same factors to see what
+  # makes the biggest difference
+  mpl$scan_height <- exp(log(mpl$scan_height) - normalization_matrix)
+  mpl$scan_area <- exp(log(mpl$scan_area) - normalization_matrix)
 
-  # and then transform before putting them back
-  mpl$scan_intensity <- exp(normed_intensities)
   mpl$is_normalized <- TRUE
   mpl$normalization_factors <- normalization_factors
+  mpl$normalized_by <- intensity_measure
   mpl
 }
