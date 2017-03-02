@@ -732,7 +732,7 @@ normalize_scans <- function(mpl, intensity_measure = "Height", summary_function 
 
   diff_matrix <- peak_intensities - scan_norm_matrix
   normalization_factors <- apply(diff_matrix, 2, summary_function, na.rm = TRUE)
-  normalization_matrix <- matrix(normalization_factors, nrow = nrow(mpl$scan_intensity),
+  normalization_matrix <- matrix(normalization_factors, nrow = nrow(mpl[[intensity_internal]]),
                                  ncol = ncol(mpl[[intensity_internal]]), byrow = TRUE)
 
   # we normalize both the height and the area with the same factors to see what
