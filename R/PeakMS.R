@@ -301,17 +301,18 @@ noise_sorted_peaklist <- function(peaklist, intensity_measure = "Height", sd_mea
   not_noise <- not_na[possible_noise > noise_threshold]
   peaklist[not_noise, "not_noise"] <- TRUE
 
-  mean_noise <- mean(log10(peaklist[[intensity_measure]][!peaklist$not_noise]), na.rm = TRUE)
-  mean_signal <- mean(log10(peaklist[[intensity_measure]][peaklist$not_noise]), na.rm = TRUE)
-  sum_signal <- sum(log10(peaklist[[intensity_measure]][peaklist$not_noise]) - mean_noise, na.rm = TRUE)
+  median_noise <- median(log10(peaklist[[intensity_measure]][!peaklist$not_noise]), na.rm = TRUE)
+  median_signal <- median(log10(peaklist[[intensity_measure]][peaklist$not_noise]), na.rm = TRUE)
+  sum_signal <- sum(log10(peaklist[[intensity_measure]][peaklist$not_noise]) - median_noise, na.rm = TRUE)
   n_signal <- sum(peaklist$not_noise)
-  #signal_noise_ratio <- signal_value - noise_value
+  signal_noise_ratio <- median_signal - median_noise
 
   return(list(peaklist = peaklist, noise = noise_threshold,
-              info = data.frame(noise = mean_noise,
-                                signal = mean_signal,
+              info = data.frame(noise = median_noise,
+                                signal = median_signal,
                                 sum_signal = sum_signal,
                                 n_signal = n_signal,
+                                sn_ratio = signal_noise_ratio,
                                 intensity_measure = intensity_measure)))
 }
 
@@ -744,4 +745,35 @@ normalize_scans <- function(mpl, intensity_measure = "Height", summary_function 
   mpl$normalization_factors <- normalization_factors
   mpl$normalized_by <- intensity_measure
   mpl
+}
+
+#' normalize MultiScanPeakList
+#'
+#' Given a set of normalization factors and a \code{MultiScanPeakList}, normalize
+#' the peaks in each scan of the \code{MultiScanPeakList}
+#'
+#' @param normalization_factors the factors used for normalization
+#' @param mspl the \code{MultiScanPeakList} object that needs normalization
+#'
+#' @return MultiScanPeakList
+#' @export
+#'
+normalize_mspl <- function(normalization_factors, mspl){
+  n_factors <- length(normalization_factors)
+  n_scans <- length(mspl$peak_list_by_scans)
+
+  assertthat::assert_that(n_factors == n_scans)
+
+  normalize_scan <- function(factor, peak_scan){
+    peak_scan$Height <- exp(log(peak_scan$Height) - factor)
+    peak_scan$Area <- exp(log(peak_scan$Area) - factor)
+    peak_scan
+  }
+
+  mspl$peak_list_by_scans <- lapply(seq(1, n_scans), function(in_scan){
+    tmp_scan <- mspl$peak_list_by_scans[[in_scan]]
+    tmp_scan$peak_list <- normalize_scan(normalization_factors[in_scan], tmp_scan$peak_list)
+    tmp_scan
+  })
+  mspl
 }
