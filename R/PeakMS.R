@@ -183,7 +183,18 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
       self$noise_info$scan <- seq(1, length(self$peak_list_by_scans))
       self
     }
-))
+  ),
+  private = list(
+    deep_clone = function(name, value){
+      if (name == "peak_list_by_scans") {
+        value <- lapply(self$peak_list_by_scans, function(in_scan){
+          in_scan$clone(deep = TRUE)
+        })
+        value
+      }
+    }
+  )
+)
 
 #' Storing all of the peaks associated with a scan
 #'
