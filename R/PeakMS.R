@@ -151,7 +151,7 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
     calculate_noise = function(...){
       self_noise <- self$noise_function
       self$peak_list_by_scans <- lapply(self$peak_list_by_scans, function(in_scan){
-        in_scan$noise_function <- self$noise_function
+        #in_scan$noise_function <- self$noise_function
         in_scan$calculate_noise(...)
         in_scan
       })
@@ -188,8 +188,10 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
     deep_clone = function(name, value){
       if (name == "peak_list_by_scans") {
         value <- lapply(self$peak_list_by_scans, function(in_scan){
-          in_scan$clone(deep = TRUE)
+          in_scan$clone()
         })
+        value
+      } else {
         value
       }
     }
