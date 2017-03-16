@@ -79,6 +79,12 @@ PeakList <- R6::R6Class("PeakList",
 
     noise_function = NULL,
 
+    calculate_noise = function(...){
+      tmp_noise <- self$noise_function(self$peak_list, ...)
+      self$noise_info <- tmp_noise$noise_info
+      self$peak_list <- tmp_noise$peak_list
+    },
+
     initialize = function(scan_ms, peak_type = "lm_weighted", mz_range = NULL, noise_function = NULL, scan = NULL){
       self$noise_function <- noise_function
       self$scan = scan
@@ -139,6 +145,10 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
           return(nrow(x$peak_list))
         }
       }, numeric(1))
+    },
+
+    calculate_noise = function(...){
+
     },
 
     initialize = function(multi_scans, peak_type = "lm_weighted", mz_range = NULL, noise_function = NULL){
@@ -307,13 +317,14 @@ noise_sorted_peaklist <- function(peaklist, intensity_measure = "Height", sd_mea
   n_signal <- sum(peaklist$not_noise)
   signal_noise_ratio <- median_signal - median_noise
 
-  return(list(peaklist = peaklist, noise = noise_threshold,
-              info = data.frame(noise = median_noise,
+  return(list(peak_list = peaklist,
+              noise_info = data.frame(noise = median_noise,
                                 signal = median_signal,
                                 sum_signal = sum_signal,
                                 n_signal = n_signal,
                                 sn_ratio = signal_noise_ratio,
-                                intensity_measure = intensity_measure)))
+                                intensity_measure = intensity_measure,
+                                threshold = noise_threshold)))
 }
 
 #' multiple ms scans
@@ -492,7 +503,8 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       #out_scan <- 3
 
       for (iscan in seq(2, n_scans)) {
-        #print(iscan)
+        "!DEBUG scan = `iscan`"
+
         tmp_scan <- multi_scan_peak_list$peak_list_by_scans[[iscan]]$peak_list
         tmp_scan <- self$trim_peaks(tmp_scan, mz_range)
         n_master <- sum(self$count_notna() != 0)
@@ -503,6 +515,8 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
         tmp_scan$matched <- FALSE
 
         for (ipeak in seq(1, n_master)) {
+          "!DEBUG peak = `ipeak`"
+          #print(c(iscan, ": ", ipeak))
           diff_scan <- abs(self$master[ipeak] - tmp_scan[, "ObservedMZ"])
 
           if (min(diff_scan, na.rm = TRUE) <= pred_window[ipeak]) {
@@ -516,6 +530,9 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
             # remove the matched peak, because we don't want to match it to
             # something else, 1 master, 1 scan peak correspondence
             tmp_scan <- tmp_scan[!tmp_scan$matched, ]
+            if (nrow(tmp_scan) == 0) {
+              break()
+            }
           }
         }
 
