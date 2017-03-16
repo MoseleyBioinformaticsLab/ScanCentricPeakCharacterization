@@ -82,6 +82,7 @@ PeakList <- R6::R6Class("PeakList",
     calculate_noise = function(...){
       tmp_noise <- self$noise_function(self$peak_list, ...)
       self$noise_info <- tmp_noise$noise_info
+      self$noise <- tmp_noise$noise_info$threshold
       self$peak_list <- tmp_noise$peak_list
     },
 
@@ -105,9 +106,9 @@ PeakList <- R6::R6Class("PeakList",
 
       if (!is.null(self$noise_function)) {
         tmp <- self$noise_function(self$peak_list)
-        self$peak_list <- tmp$peaklist
-        self$noise <- tmp$noise
-        self$noise_info <- tmp$info
+        self$peak_list <- tmp$peak_list
+        self$noise <- tmp$noise_info$threshold
+        self$noise_info <- tmp$noise_info
       }
 
       if (!is.null(mz_range)) {
