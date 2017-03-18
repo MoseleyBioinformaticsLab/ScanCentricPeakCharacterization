@@ -869,11 +869,7 @@ peak_info2 <- function(possible_peak, min_points = 5, min_area = 0.1){
     weighted_info <- get_fitted_peak_info(possible_peak, w = weights)
     weighted_info$type <- "lm_weighted"
 
-    cauchy_info <- get_cauchy_peak_info(possible_peak, w = weights)
-    cauchy_info$type <- "nls_weighted"
-
     out_peak <- rbind(unweighted_info, weighted_info)
-    out_peak <- rbind(out_peak, cauchy_info)
   } else {
     out_peak <- data.frame(ObservedMZ = NA, Height = NA, Area = NA, type = NA)
   }
