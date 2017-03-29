@@ -4,7 +4,7 @@
 \alias{peak_info}
 \title{peak info}
 \usage{
-peak_info(possible_peak, min_points = 5, min_area = 0.1)
+peak_info(possible_peak, min_points = 4, min_area = 0.1)
 }
 \arguments{
 \item{possible_peak}{data.frame of mz, intensity and log intensity (log_int)}

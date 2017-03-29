@@ -1,0 +1,114 @@
+# How to Use R6 Classes
+
+Ideally I want to use R6 classes for the mzml data and peaks, so lets work
+out how best to actually do that.
+
+## Current Plan
+
+### AnalyzeMS
+
+Class that controls how an analysis is run. Has methods for loading data,
+and peak finding (PeakFinder). The PeakFinder should be set on the generator.
+
+### PeakFinder
+
+Takes as input two pieces from the RawMS data, the raw data and the ranges to 
+use.
+
+### ZipMS
+
+This is the overall data container for a zipped file of mass-spec data.
+
+Initializer should have arguments for which peices are actually loaded, with 
+the default being everything.
+
+**Data slots**:
+
+* metadata: a MetaData data member
+* raw_ms: a RawMS data member
+* peaks: a Peaks data member
+
+**Methods**:
+
+* initialize
+* read
+* write
+
+### RawMS
+
+Data container for the raw mass-spec data, should take two filehandle to read in
+the data, one for the data, and one for metadata.
+
+**Data slots**:
+
+* metadata:
+* data:
+* use_scans:
+
+**Methods**:
+
+* initialize
+* set_scans
+
+
+```{r load_up}
+library(SIRM.FTMS.peakPickingMethods)
+```
+
+```{r set_files}
+mzml_file <- "~/Projects/work/SIRM.FTMS.automatedAssignmentProcessExampleData/UK001N1exoposb.mzML"
+zip_file <- "~/Projects/work/SIRM.FTMS.automatedAssignmentProcessExampleData/UK001N1exoposb.zip"
+```
+
+```{r test_mzml_class}
+test1 <- ZipMS$new(zip_file)
+
+test2 <- ZipMS$new(mzml_file)
+
+test3 <- ZipMS$new(zip_file, out_file = "crap.txt")
+```
+
+```{r find_peaks}
+find_peaks_default <- function(data, scan_range){
+  avg_data <- as.data.frame(xcms::getSpec(data, scanrange = scan_range))
+  avg_data$ObservedMZ <- avg_data$mz
+  avg_data$Intensity <- avg_data$intensity
+  avg_data$mz <- NULL
+  avg_data$intensity <- NULL
+  avg_peaks <- find_peaks_diff(avg_data)
+  
+  function_call <- "find_peaks_diff"
+  function_pkg <- find(function_call)
+  pkg_desc <- utils::packageDescription(substring(function_pkg, 9))
+  if (!is.null(pkg_desc$RemoteSha)) {
+    pkg_sha <- pkg_desc$RemoteSha
+  } else {
+    pkg_sha <- ""
+  }
+  pkg_version <- packageVersion(substring(function_pkg, 9))
+  picking_description <- list(package = function_pkg,
+                             version = pkg_desc$Version,
+                             sha = pkg_sha,
+                             function_called = function_call,
+                             parameters = list(scan_range = force(scan_range))
+                             )
+  PeakPickingAnalysis$new(in_peaks = avg_peaks,
+                          in_parameters = list(scan_range = force(scan_range),
+                                                        picking_description = picking_description))
+}
+```
+
+
+```{r try_it}
+anal_ms <- AnalyzeMS$new(zip_file, file.path(getwd(), "UK001N1exoposb_out.zip"))
+anal_ms$load_file()
+
+anal_ms$set_peak_finder(find_peaks)
+anal_ms$find_peaks()
+
+anal_ms$zip_ms$out_file
+
+anal_ms$zip_ms$save()
+anal_ms$zip_ms$cleanup()
+```
+

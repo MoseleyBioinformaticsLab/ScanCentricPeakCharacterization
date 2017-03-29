@@ -9,7 +9,7 @@
 PeakList
 }
 \description{
-store a peaklist, which is a data.frame of ObservedMZ and Intensity,
+store a peaklist, which is a data.frame of ObservedMZ, Height and Area,
 and which scan it is from, and the noise level.
 }
 \keyword{datasets}

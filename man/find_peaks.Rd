@@ -4,7 +4,7 @@
 \alias{find_peaks}
 \title{find the peaks}
 \usage{
-find_peaks(mz_data, min_points = 5, n_peak = Inf, flat_cut = 0.98)
+find_peaks(mz_data, min_points = 4, n_peak = Inf, flat_cut = 0.98)
 }
 \arguments{
 \item{mz_data}{a data.frame of mz and intensity}

@@ -15,6 +15,9 @@ integrate_model(model_mz, model_coeff, n_point = 100, log_transform = "log")
 
 \item{log_transform}{what kind of transform was applied}
 }
+\value{
+numeric
+}
 \description{
 provides the area integration for the peak that fits the parabolic model
 }

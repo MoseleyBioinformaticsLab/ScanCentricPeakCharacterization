@@ -119,3 +119,21 @@ mzml_out_frame$run$scanPolarity <- get_scan_polarity(other_list$run$spectrumList
 ```
 
 
+```{r listing_arguments}
+tmp_fun <- function(a = NULL, b = 10, c = NULL){
+  arg_list <- as.list(match.call(expand.dots = TRUE))
+  arg_list$a <- force(a)
+  arg_list
+}
+
+crap <- tmp_fun()
+print(crap)
+
+crap2 <- tmp_fun(a = 20)
+print(crap2)
+
+tmp_val <- 10
+crap3 <- tmp_fun(a = tmp_val)
+crap3
+```
+

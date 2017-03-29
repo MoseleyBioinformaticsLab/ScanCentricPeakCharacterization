@@ -5,7 +5,7 @@
 \title{compare two MasterPeakList objects}
 \usage{
 compare_master_peak_lists(mpl_1, mpl_2, compare_list = c("master", "scan",
-  "scan_intensity", "scan_mz"))
+  "scan_height", "scan_area", "scan_mz"))
 }
 \arguments{
 \item{mpl_1}{the first one}

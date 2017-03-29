@@ -4,10 +4,13 @@
 \alias{noise_sorted_peaklist}
 \title{noise from peaklist}
 \usage{
-noise_sorted_peaklist(peaklist, sd_mean_ratio = 1.2, noise_multiplier = 1.5)
+noise_sorted_peaklist(peaklist, intensity_measure = "Height",
+  sd_mean_ratio = 1.2, noise_multiplier = 1.5)
 }
 \arguments{
-\item{peaklist}{the data.frame with at least "Intensity"}
+\item{peaklist}{the data.frame with at least "Height" or "Area"}
+
+\item{intensity_measure}{which value of \emph{intensity} should be used? Default is "Height"}
 
 \item{sd_mean_ratio}{the ratio of standard deviation to mean to use as a cutoff}
 
