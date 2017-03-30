@@ -19,18 +19,28 @@ PeakMS <- R6::R6Class("PeakMS",
     peak_type = NULL,
     peak_info = NULL,
     peak_id = NULL,
+    peak_method = NULL,
+    min_points = NULL,
+    flat_cut = NULL,
+    get_peak_info = function(){
+      use_methods <- self$peak_method
+      peak_stats <- lapply(use_methods, function(in_method){
+        get_peak_info(self$peak_data, self$peak_method, self$min_points)
+      })
+      peak_stats <- do.call(rbind, peak_stats)
 
-    initialize = function(peak_data, min_points = 4, flat_cut = 0.98){
-      peak_stats1 <- peak_info(peak_data, min_points = min_points)
-      peak_stats2 <- peak_info2(peak_data, min_points = min_points)
+      self$peak_type <- define_peak_type(self$peak_data, self$flat_cut)
 
-      tmp_stats <- rbind(peak_stats1, peak_stats2)
-      rownames(tmp_stats) <- NULL
+      self$peak_info <- private$check_peak_location(self$peak_type, peak_stats)
+    },
 
-      self$peak_type <- define_peak_type(peak_data, flat_cut)
-
-      self$peak_info <- private$check_peak_location(self$peak_type, tmp_stats)
+    initialize = function(peak_data, peak_method = "lm_weighted", min_points = 4, flat_cut = 0.98){
       self$peak_data <- peak_data
+      self$peak_method <- peak_method
+      self$min_points <- min_points
+      self$flat_cut <- flat_cut
+
+      self$get_peak_info()
       invisible(self)
     }
   ),
