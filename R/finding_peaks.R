@@ -759,7 +759,7 @@ get_rsq_peak <- function(possible_peak, min_rsq, min_points){
 #' }
 #'
 get_peak_info <- function(peak_data, peak_method = "lm_weighted", min_points = 4){
-  assertthat::assert_that(isTRUE(c("mz", "intensity", "log_int") %in% names(peak_data)))
+  assertthat::assert_that(all(c("mz", "intensity", "log_int") %in% names(peak_data)))
 
   peak_info <- switch(peak_method,
                       lm_weighted = {
