@@ -768,6 +768,15 @@ get_peak_info <- function(peak_data, peak_method = "lm_weighted", min_points = 4
                       },
                       lm_unweighted = {
                         get_fitted_peak_info(peak_data)
+                      },
+                      basic = {
+                        peak_area_basic <- area_sum_points(peak_data$mz, peak_data$intensity)
+                        peak_center_basic <- basic_peak_center_intensity(peak_data$mz, peak_data$intensity)
+
+                        data.frame(ObservedMZ = peak_center_basic["ObservedMZ"],
+                                   Height = peak_center_basic["Height"],
+                                   Area = peak_area_basic,
+                                   SSR = NA)
                       })
 
   peak_info$type <- peak_method
