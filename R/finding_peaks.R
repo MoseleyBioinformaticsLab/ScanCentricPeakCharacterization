@@ -736,6 +736,44 @@ get_rsq_peak <- function(possible_peak, min_rsq, min_points){
 }
 
 
+
+#' get peak info
+#'
+#' Given a set of points that make up a peak, use the provided method to find
+#' the center, intensity and area of the peak.
+#'
+#' @param peak_data data.frame with \code{mz}, \code{intensity}, and log intensity \code{log_int}
+#' @param peak_method which method to use to get information about the peak (see Details)
+#' @param min_points how many points have to still be in a peak to return something useful?
+#'
+#' @export
+#' @return data.frame
+#'
+#' @details This function can choose from several methods to get information
+#' about the peak. Currently available methods include:
+#'
+#' \describe{
+#'   \item{lm_weighted}{quadratic linear fit to log-intensities, with weights for
+#'      each point relative to the maximum intensity point (current default)}
+#'   \item{lm_unweighted}{quadratic linear fit to log-intensities}
+#' }
+#'
+get_peak_info <- function(peak_data, peak_method = "lm_weighted", min_points = 4){
+  assertthat::assert_that(isTRUE(c("mz", "intensity", "log_int") %in% names(peak_data)))
+
+  peak_info <- switch(peak_method,
+                      lm_weighted = {
+                        weights <- peak_data[, "intensity"] / max(peak_data[, "intensity"])
+                        get_fitted_peak_info(peak_data, w = weights)
+                      },
+                      lm_unweighted = {
+                        get_fitted_peak_info(peak_data)
+                      })
+
+  peak_info$type <- peak_method
+  peak_info
+}
+
 #' peak info
 #'
 #' given a peak found, try to fit a parabolic model and return the center,
