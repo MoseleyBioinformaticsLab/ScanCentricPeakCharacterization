@@ -32,6 +32,7 @@ PeakMS <- R6::R6Class("PeakMS",
       self$peak_type <- define_peak_type(self$peak_data, self$flat_cut)
 
       self$peak_info <- private$check_peak_location(self$peak_type, peak_stats)
+      invisible(self)
     },
 
     initialize = function(peak_data, peak_method = "lm_weighted", min_points = 4, flat_cut = 0.98){
@@ -252,7 +253,7 @@ ScanMS <- R6::R6Class("ScanMS",
       length(self$peaks)
     },
 
-    generate_peaks = function(scan_data, min_points = 4, n_peak = 4, flat_cut = 0.98){
+    generate_peaks = function(scan_data, peak_method = "lm_weighted", min_points = 4, n_peak = 4, flat_cut = 0.98){
       peak_locations <- pracma::findpeaks(scan_data$intensity, nups = floor(min_points/2),
                                           ndowns = floor(min_points/2))
       peak_locations <- matrix(peak_locations, ncol = 4, byrow = FALSE)
@@ -268,7 +269,7 @@ ScanMS <- R6::R6Class("ScanMS",
         #print(in_peak)
         "!DEBUG Peak `in_peak`"
         peak_loc <- seq(peak_locations[in_peak, 3], peak_locations[in_peak, 4])
-        out_peak <- PeakMS$new(scan_data[peak_loc, ], min_points = min_points, flat_cut = flat_cut)
+        out_peak <- PeakMS$new(scan_data[peak_loc, ], peak_method = peak_method, min_points = min_points, flat_cut = flat_cut)
         out_peak$peak_info$n_point <- length(peak_loc)
         mz_width <- max(scan_data[peak_loc, "mz"]) - min(scan_data[peak_loc, "mz"])
         out_peak$peak_info$mz_width <- mz_width
@@ -280,9 +281,9 @@ ScanMS <- R6::R6Class("ScanMS",
 
     },
 
-    initialize = function(scan_data, min_points = 4, n_peak = Inf, flat_cut = 0.98){
+    initialize = function(scan_data, peak_method = "lm_weighted", min_points = 4, n_peak = Inf, flat_cut = 0.98){
 
-      self$generate_peaks(scan_data, min_points = min_points, n_peak = n_peak, flat_cut = flat_cut)
+      self$generate_peaks(scan_data, peak_method = peak_method, min_points = min_points, n_peak = n_peak, flat_cut = flat_cut)
 
       invisible(self)
     }
