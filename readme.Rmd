@@ -111,7 +111,12 @@ analyze$load_file()
 ```
 
 
+## Example Data Source
 
+For completeness, the raw file that was converted to mzML for testing of this
+package had an id of:
+
+X.Archive.Fahrenholz.Tim.data.backup.April.27.2016.2015.runs.Fusion.2.runs.July.29.2015.runs.positive.mode.breast.cancer.samples.from.breast.cancer.reproducibility.test.UK001N1exoposb
 
 
 ```{r runit, eval = FALSE, echo = FALSE}
