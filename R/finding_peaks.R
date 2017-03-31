@@ -776,7 +776,8 @@ get_peak_info <- function(peak_data, peak_method = "lm_weighted", min_points = 4
                         data.frame(ObservedMZ = peak_center_basic["ObservedMZ"],
                                    Height = peak_center_basic["Height"],
                                    Area = peak_area_basic,
-                                   SSR = NA)
+                                   SSR = NA,
+                                   stringsAsFactors = FALSE)
                       })
 
   peak_info$type <- peak_method
@@ -851,7 +852,8 @@ get_fitted_peak_info <- function(possible_peak, w = NULL){
   data.frame(ObservedMZ = peak_center_model["ObservedMZ"],
              Height = peak_center_model["Height"],
              Area = peak_area_model,
-             SSR = peak_ssr)
+             SSR = peak_ssr,
+             stringsAsFactors = FALSE)
 
 }
 
