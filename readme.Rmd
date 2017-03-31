@@ -7,19 +7,19 @@ output:
     preserve_yaml: TRUE
 ---
 
-# SIRM.FTMS.peakPickingMethods
+# SIRM.FTMS.peakCharacterization
 
 ## About
 
-This package is for implementing and testing various peak picking methods,
+This package is for implementing peak picking and correspondence across scans,
 as well as providing classes and methods for working with the raw mass-spec
 data and the picked peaks.
 
 ## Installation
 
 ```r
-git clone https://gitlab.cesb.uky.edu/rmflight/SIRM.FTMS.peakPickingMethods.git
-cd SIRM.FTMS.peakPickingMethods.git
+git clone https://gitlab.cesb.uky.edu/rmflight/SIRM.FTMS.peakCharacterization.git
+cd SIRM.FTMS.peakCharacterization
 R
 devtools::install()
 ```
@@ -53,11 +53,9 @@ overall analysis workflow.
 
 ### Finding Peaks
 
-One of the major plusses of using this package, is the ability to change the
-**peak finding** method used. However, this does create some overhead for you
-if you want to use a custom peak finding function. This is due to wrapping the 
-**peak finding** function in another function that documents the function that
-was used. Below is an example (this is actually the current default in the package):
+One of the major plusses of using this package, is the ability to choose different
+peak picking methods, and do peak picking at the scan level, followed by peak
+correspondence across the scans, followed by normalization.
 
 ```{r}
 find_peaks_default <- function(data, scan_range){
