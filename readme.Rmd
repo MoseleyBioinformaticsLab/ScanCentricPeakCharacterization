@@ -101,7 +101,7 @@ this package.
 
 ```{r analyze_it}
 # get the file location
-mzml_file <- system.file("extdata/mztest_big.mzML", package = "SIRM.FTMS.peakPickingMethods")
+mzml_file <- system.file("extdata/mz_example.mzML", package = "SIRM.FTMS.peakPickingMethods")
 
 # initialize the AnalyzeMS object
 analyze <- AnalyzeMS$new(mzml_file)
