@@ -11,9 +11,8 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
    },
    found_peaks = NULL,
 
-   find_peaks = function(){
-     self$found_peaks <- self$peak_finder(self$zip_ms$raw_ms$raw_data,
-                                          self$zip_ms$raw_ms$scan_range)
+   find_peaks = function(...){
+     self$found_peaks <- self$peak_finder(self$zip_ms$raw_ms, ...)
      self$zip_ms$add_peak_list(self$found_peaks)
    },
 
