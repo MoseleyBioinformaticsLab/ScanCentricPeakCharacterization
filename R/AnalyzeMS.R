@@ -17,7 +17,11 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
    },
 
    write_zip = function(){
-     self$zip_ms$write_zip()
+     if (!is.null(self$out_file)) {
+       self$zip_ms$write_zip(out_file = self$out_file)
+     } else {
+       self$zip_ms$write_zip()
+     }
    },
 
    set_peak_finder = function(in_function){
