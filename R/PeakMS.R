@@ -385,11 +385,11 @@ MultiScans <- R6::R6Class("MultiScans",
       colMeans(set_model)
     },
 
-    initialize = function(raw_ms, min_points = 5, n_peak = Inf, flat_cut = 0.98){
+    initialize = function(raw_ms, peak_method = "lm_weighted", min_points = 4, n_peak = Inf, flat_cut = 0.98){
       assertthat::assert_that(any(class(raw_ms) %in% "RawMS"))
 
       self$scans <- l_or_mclapply(raw_ms$scan_range, function(in_scan){
-        ScanMS$new(as.data.frame(xcms::getScan(raw_ms$raw_data, in_scan)), min_points = min_points, n_peak = n_peak, flat_cut = flat_cut)
+        ScanMS$new(as.data.frame(xcms::getScan(raw_ms$raw_data, in_scan)), peak_method = peak_method, min_points = min_points, n_peak = n_peak, flat_cut = flat_cut)
       })
       invisible(self)
 
