@@ -25,9 +25,9 @@ PeakPickingAnalysis <- R6::R6Class("PeakPickingAnalysis",
       }
       assertthat::assert_that(all(c("ObservedMZ", "Height", "Area") %in% names(peak_list[[1]])))
 
-      assertthat::assert_that(all(c("Package", "Version", "Sha", "FunctionCalled","Parameters") %in% names(peakpicking_parameters$picking_description)))
+      assertthat::assert_that(all(c("Package", "Version", "Sha", "FunctionCalled","Parameters") %in% names(peakpicking_parameters)))
 
-      self$peak_list <- as_tibble(peak_list)
+      self$peak_list <- peak_list
       self$peakpicking_parameters <- peakpicking_parameters
 
     }
@@ -64,6 +64,5 @@ peak_list_2_json <- function(peak_list){
 json_2_peak_list <- function(json_string, in_var = "Peaks"){
 
   peak_list <- jsonlite::fromJSON(json_string)[[in_var]]
-  tibble::as_tibble(peak_list)
 
 }

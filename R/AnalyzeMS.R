@@ -135,11 +135,10 @@ peak_finder <- function(raw_data, method = "lm_weighted", noise_function = noise
   processing_meta <- list(Package = function_pkg,
                           Version = pkg_description$Version,
                           Sha = pkg_sha,
-                          CalledFunction = peak_finder,
+                          FunctionCalled = peak_finder,
                           Parameters = list(Method = method,
                                             Scans = raw_data$scan_range)
   )
 
-  list(Processing = processing_meta,
-       Peaks = peak_data)
+  PeakPickingAnalysis$new(peak_data, processing_meta)
 }
