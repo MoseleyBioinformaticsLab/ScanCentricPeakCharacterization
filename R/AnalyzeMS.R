@@ -57,7 +57,7 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
 #'
 #' @return list
 #' @export
-peak_finder <- function(raw_data, scan_range, method = "lm_weighted", noise_function = noise_sorted_peaklist){
+peak_finder <- function(raw_data, method = "lm_weighted", noise_function = noise_sorted_peaklist){
   # example data:
   # load("zip_ms_example.RData")
   # raw_data <- zip_ms$raw_ms
@@ -132,11 +132,14 @@ peak_finder <- function(raw_data, scan_range, method = "lm_weighted", noise_func
     pkg_sha <- ""
   }
 
-  processing_meta <- list(CalledFunction = peak_finder,
-                          Method = method,
-                          NScan = length(multi_scan$scans))
+  processing_meta <- list(Package = function_pkg,
+                          Version = pkg_description$Version,
+                          Sha = pkg_sha,
+                          CalledFunction = peak_finder,
+                          Parameters = list(Method = method,
+                                            Scans = raw_data$scan_range)
+  )
 
-  list(Sample = sample_meta,
-       Processing = processing_meta,
+  list(Processing = processing_meta,
        Peaks = peak_data)
 }
