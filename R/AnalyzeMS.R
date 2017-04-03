@@ -122,12 +122,6 @@ peak_finder <- function(raw_data, scan_range, method = "lm_weighted", noise_func
 
   peak_data <- create_peak_data(correspondent_peaks)
 
-  sample_meta <- list(Id = raw_data$raw_metadata$run$id,
-                      StartTime = raw_data$raw_metadata$run$startTimeStamp,
-                      Polarity = raw_data$raw_metadata$run$scanPolarity,
-                      Instrument = raw_data$raw_metadata$referenceableParamGroupList$referenceableParamGroup$cvParam.1$value,
-                      Sha1 = raw_data$raw_metadata$fileDescription$sourceFileList$sourceFile$cvParam.2$value)
-
   function_call <- "peak_finder"
   function_pkg <- find(function_call)
   pkg_description <- utils::packageDescription(substring(function_pkg, 9))
