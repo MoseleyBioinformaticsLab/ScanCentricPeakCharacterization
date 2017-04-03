@@ -112,7 +112,7 @@ peak_finder <- function(raw_data, method = "lm_weighted", noise_function = noise
       mz <- get_mz(master_peaks$scan_mz[in_peak, tmp_index], sd_model)
       height <- get_height_area(master_peaks$scan_height[in_peak, tmp_index])
       area <- get_height_area(master_peaks$scan_area[in_peak, tmp_index])
-      norm_area <- lapply(area, function(x){x / mz$model_sd})
+      norm_area <- lapply(area, function(x){x / mz$ModelSD})
 
       list(N = sum(tmp_index),
            ObservedMZ = mz,
