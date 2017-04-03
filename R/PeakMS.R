@@ -323,7 +323,7 @@ ScanMS <- R6::R6Class("ScanMS",
 #' @return list
 #' @export
 #'
-noise_sorted_peaklist <- function(peaklist, intensity_measure = "Height", sd_mean_ratio = 1.2, noise_multiplier = 1.5){
+noise_sorted_peaklist <- function(peaklist, intensity_measure = "Height", sd_mean_ratio = 1.2, noise_multiplier = 2.0){
   assertthat::assert_that(class(peaklist) == "data.frame")
 
   intensities <- peaklist[[intensity_measure]]
