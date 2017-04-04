@@ -80,7 +80,17 @@ PeakFinder <- R6::R6Class("PeakFinder",
     peak_method = NULL,
     noise_function = NULL,
     raw_filter = NULL,
-    create_report = NULL,
+    apply_raw_filter = function(){
+      if (!is.null(raw_filter)) {
+        self$raw_data <- self$raw_filter(self$raw_data)
+      }
+    },
+    report_function = NULL,
+    create_report = function(){
+      if (!is.null(report_function)) {
+        self$report_function(raw_data, correspondent_peaks)
+      }
+    }
 
 
     multi_scan = NULL,
@@ -177,15 +187,13 @@ PeakFinder <- R6::R6Class("PeakFinder",
     },
 
     run_correspondence = function(){
-      if (!is.null(self$scan_filter)) {
-        self$scan_filter()
-      }
+      self$apply_raw_filter()
       self$create_multi_scan()
       self$create_multi_scan_peaklist()
       self$create_correspondent_peaks()
       self$normalize_correspondent_peaks()
       if (!is.null(self$create_report)) {
-        self$create_report()
+        self$create_report(raw_data, correspondent_peaks)
       }
       self$create_peak_data()
       self$create_processing_info()
@@ -196,7 +204,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
     },
 
     initialize = function(peak_method = "lm_weighted", noise_function = noise_sorted_peaklist, raw_filter = NULL,
-                          create_report = NULL){
+                          report_function = NULL){
       if (!is.null(peak_method)) {
         self$peak_method <- peak_method
       }
@@ -205,12 +213,12 @@ PeakFinder <- R6::R6Class("PeakFinder",
         self$noise_function = noise_function
       }
 
-      if (!is.null(scan_filter)) {
+      if (!is.null(raw_filter)) {
         self$raw_filter <- raw_filter
       }
 
-      if (!is.null(create_report)) {
-        self$create_report <- create_report
+      if (!is.null(report_function)) {
+        self$report_function <- report_function
       }
 
       invisible(self)
