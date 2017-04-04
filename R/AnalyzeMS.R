@@ -35,6 +35,13 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
    out_file = NULL,
    temp_loc = NULL,
 
+   run_all = function(){
+     self$load_file()
+     self$find_peaks()
+     self$write_zip()
+     self$zip_ms$cleanup()
+   }
+
    initialize = function(in_file, out_file = NULL, peak_finder = NULL, temp_loc = NULL){
      self$in_file <- in_file
      if (!is.null(out_file)) {
