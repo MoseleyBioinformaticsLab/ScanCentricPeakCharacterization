@@ -140,7 +140,9 @@ peak_finder <- function(raw_data, method = "lm_weighted", noise_function = noise
                           Sha = pkg_sha,
                           FunctionCalled = peak_finder,
                           Parameters = list(Method = method,
-                                            Scans = raw_data$scan_range)
+                                            Scans = raw_data$scan_range),
+                          Models = list(DigitalResolutionModel = correspondent_peaks$sd_models[[1]],
+                                        SDModel = correspondent_peaks$sd_models[[length(correspondent_peaks$sd_models)]])
   )
 
   PeakPickingAnalysis$new(peak_data, processing_meta)
