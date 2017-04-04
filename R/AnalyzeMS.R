@@ -79,7 +79,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
     raw_data = NULL,
     peak_method = NULL,
     noise_function = NULL,
-    scan_filter = NULL,
+    raw_filter = NULL,
     create_report = NULL,
 
 
@@ -160,7 +160,8 @@ PeakFinder <- R6::R6Class("PeakFinder",
         pkg_sha <- ""
       }
 
-      document_peakfinder <- as.list(PeakFinder$new(self$peak_method, self$noise_function))
+      document_peakfinder <- as.list(PeakFinder$new(self$peak_method, self$noise_function,
+                                                    self$raw_filter, self$create_report))
       document_peakfinder[[".__enclos_env__"]] <- NULL
       document_peakfinder$clone <- NULL
 
@@ -194,7 +195,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
       PeakPickingAnalysis$new(self$peak_data, self$processing_info)
     },
 
-    initialize = function(peak_method = "lm_weighted", noise_function = noise_sorted_peaklist, scan_filter = NULL,
+    initialize = function(peak_method = "lm_weighted", noise_function = noise_sorted_peaklist, raw_filter = NULL,
                           create_report = NULL){
       if (!is.null(peak_method)) {
         self$peak_method <- peak_method
@@ -205,7 +206,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
       }
 
       if (!is.null(scan_filter)) {
-        self$scan_filter <- scan_filter
+        self$raw_filter <- raw_filter
       }
 
       if (!is.null(create_report)) {
