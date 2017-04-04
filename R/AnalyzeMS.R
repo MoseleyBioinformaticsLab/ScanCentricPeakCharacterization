@@ -40,7 +40,7 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
      self$find_peaks()
      self$write_zip()
      self$zip_ms$cleanup()
-   }
+   },
 
    initialize = function(in_file, out_file = NULL, peak_finder = NULL, temp_loc = NULL){
      self$in_file <- in_file
@@ -68,16 +68,16 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
 #' intermediate outputs when and if desired.
 #'
 #' @export
-peak_finder2 <- R6::R6Class("PeakFinder"){
+PeakFinder <- R6::R6Class("PeakFinder",
   public = list(
     raw_data = NULL,
-    method = NULL,
+    peak_method = NULL,
     noise_function = NULL,
 
 
     multi_scan = NULL,
     create_multi_scan = function(){
-      self$multi_scan <- SIRM.FTMS.peakCharacterization::MultiScans$new(self$raw_data, method = self$method)
+      self$multi_scan <- SIRM.FTMS.peakCharacterization::MultiScans$new(self$raw_data, peak_method = self$peak_method)
       invisible(self)
     },
     multi_scan_peaklist = NULL,
@@ -107,7 +107,7 @@ peak_finder2 <- R6::R6Class("PeakFinder"){
            ModelSD = model_sd,
            Values = values)
     },
-    get_height_area <- function(scan_height_area){
+    get_height_area = function(scan_height_area){
       mean_h <- mean(scan_height_area)
       median_h <- median(scan_height_area)
       sd_h <- sd(scan_height_area)
@@ -120,7 +120,7 @@ peak_finder2 <- R6::R6Class("PeakFinder"){
            RSD = rsd_h,
            Values = values)
     },
-    create_peak_data <- function(){
+    create_peak_data = function(){
       sd_model <- self$correspondent_peaks$sd_models[[1]] # grab the digital resolution model
       master_peaks <- self$correspondent_peaks$master_peak_list
       n_peak <- length(master_peaks$master)
@@ -156,7 +156,7 @@ peak_finder2 <- R6::R6Class("PeakFinder"){
       self$processing_info <- list(Package = function_pkg,
                                    Version = pkg_description$Version,
                                    Sha = pkg_sha,
-                                   FunctionCalled = peak_finder2,
+                                   FunctionCalled = PeakFinder,
                                    Parameters = list(Method = self$method,
                                                      Scans = self$raw_data$scan_range),
                                    Models = list(DigitalResolutionModel = self$correspondent_peaks$sd_models[[1]],
@@ -177,9 +177,9 @@ peak_finder2 <- R6::R6Class("PeakFinder"){
       PeakPickingAnalysis$new(self$peak_data, self$processing_info)
     },
 
-    initialize = function(method = "lm_weighted", noise_function = noise_sorted_peaklist){
-      if (!is.null(method)) {
-        self$method <- method
+    initialize = function(peak_method = "lm_weighted", noise_function = noise_sorted_peaklist){
+      if (!is.null(peak_method)) {
+        self$peak_method <- peak_method
       }
 
       if (!is.null(noise_function)) {
@@ -188,7 +188,7 @@ peak_finder2 <- R6::R6Class("PeakFinder"){
       invisible(self)
     }
   )
-}
+)
 
 #' peak finding and reporting
 #'
