@@ -79,6 +79,8 @@ PeakFinder <- R6::R6Class("PeakFinder",
     raw_data = NULL,
     peak_method = NULL,
     noise_function = NULL,
+    scan_filter = NULL,
+    create_report = NULL,
 
 
     multi_scan = NULL,
@@ -149,7 +151,6 @@ PeakFinder <- R6::R6Class("PeakFinder",
     },
     processing_info = NULL,
     create_processing_info = function(){
-      function_call <- "peak_finder"
       function_pkg <- "package:SIRM.FTMS.peakCharacterization"
       pkg_description <- utils::packageDescription(substring(function_pkg, 9))
 
@@ -159,11 +160,15 @@ PeakFinder <- R6::R6Class("PeakFinder",
         pkg_sha <- ""
       }
 
+      document_peakfinder <- as.list(PeakFinder$new(self$peak_method, self$noise_function))
+      document_peakfinder[[".__enclos_env__"]] <- NULL
+      document_peakfinder$clone <- NULL
+
       self$processing_info <- list(Package = function_pkg,
                                    Version = pkg_description$Version,
                                    Sha = pkg_sha,
-                                   FunctionCalled = PeakFinder,
-                                   Parameters = list(Method = self$method,
+                                   FunctionCalled = document_peakfinder,
+                                   Parameters = list(Method = self$peak_method,
                                                      Scans = self$raw_data$scan_range),
                                    Models = list(DigitalResolutionModel = self$correspondent_peaks$sd_models[[1]],
                                                  SDModel = self$correspondent_peaks$sd_models[[length(self$correspondent_peaks$sd_models)]])
@@ -171,10 +176,16 @@ PeakFinder <- R6::R6Class("PeakFinder",
     },
 
     run_correspondence = function(){
+      if (!is.null(self$scan_filter)) {
+        self$scan_filter()
+      }
       self$create_multi_scan()
       self$create_multi_scan_peaklist()
       self$create_correspondent_peaks()
       self$normalize_correspondent_peaks()
+      if (!is.null(self$create_report)) {
+        self$create_report()
+      }
       self$create_peak_data()
       self$create_processing_info()
     },
@@ -183,7 +194,8 @@ PeakFinder <- R6::R6Class("PeakFinder",
       PeakPickingAnalysis$new(self$peak_data, self$processing_info)
     },
 
-    initialize = function(peak_method = "lm_weighted", noise_function = noise_sorted_peaklist){
+    initialize = function(peak_method = "lm_weighted", noise_function = noise_sorted_peaklist, scan_filter = NULL,
+                          create_report = NULL){
       if (!is.null(peak_method)) {
         self$peak_method <- peak_method
       }
@@ -191,6 +203,15 @@ PeakFinder <- R6::R6Class("PeakFinder",
       if (!is.null(noise_function)) {
         self$noise_function = noise_function
       }
+
+      if (!is.null(scan_filter)) {
+        self$scan_filter <- scan_filter
+      }
+
+      if (!is.null(create_report)) {
+        self$create_report <- create_report
+      }
+
       invisible(self)
     }
   )
