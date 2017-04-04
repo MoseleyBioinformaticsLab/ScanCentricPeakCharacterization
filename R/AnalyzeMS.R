@@ -81,7 +81,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
     noise_function = NULL,
     raw_filter = NULL,
     apply_raw_filter = function(){
-      if (!is.null(raw_filter)) {
+      if (!is.null(self$raw_filter)) {
         self$raw_data <- self$raw_filter(self$raw_data)
       }
     },
@@ -90,7 +90,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
       if (!is.null(report_function)) {
         self$report_function(raw_data, correspondent_peaks)
       }
-    }
+    },
 
 
     multi_scan = NULL,
