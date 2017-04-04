@@ -60,6 +60,136 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
   )
 )
 
+
+#' R6 peak_finder
+#'
+#' an R6 based peak_finder class that controls execution in a more fine grained
+#' manner, and allows the possibility of easily checking each step and saving
+#' intermediate outputs when and if desired.
+#'
+#' @export
+peak_finder2 <- R6::R6Class("PeakFinder"){
+  public = list(
+    raw_data = NULL,
+    method = NULL,
+    noise_function = NULL,
+
+
+    multi_scan = NULL,
+    create_multi_scan = function(){
+      self$multi_scan <- SIRM.FTMS.peakCharacterization::MultiScans$new(self$raw_data, method = self$method)
+      invisible(self)
+    },
+    multi_scan_peaklist = NULL,
+    create_multi_scan_peaklist = function(){
+      self$multi_scan_peaklist <- MultiScansPeakList$new(self$multi_scan, noise_function = self$noise_function)
+    },
+    correspondent_peaks = NULL,
+    create_correspondent_peaks = function(){
+      self$correspondent_peaks <- FindCorrespondenceScans$new(self$multi_scan_peaklist, multiplier = 3)
+    },
+    normalize_correspondent_peaks = function(){
+      self$correspondent_peaks$master_peak_list <- normalize_scans(self$correspondent_peaks$master_peak_list)
+    },
+
+    peak_data = NULL,
+    get_mz = function(scan_mz, sd_model){
+      mean_mz <- mean(scan_mz)
+      median_mz <- median(scan_mz)
+      sd_mz <- sd(scan_mz)
+
+      model_sd = exponential_predict(sd_model, mean_mz)[1]
+      values = scan_mz
+
+      list(Mean = mean_mz,
+           Median = median_mz,
+           SD = sd_mz,
+           ModelSD = model_sd,
+           Values = values)
+    },
+    get_height_area <- function(scan_height_area){
+      mean_h <- mean(scan_height_area)
+      median_h <- median(scan_height_area)
+      sd_h <- sd(scan_height_area)
+      rsd_h <- sd_h / mean_h
+      values <- scan_height_area
+
+      list(Mean = mean_h,
+           Median = median_h,
+           SD = sd_h,
+           RSD = rsd_h,
+           Values = values)
+    },
+    create_peak_data <- function(){
+      sd_model <- self$correspondent_peaks$sd_models[[1]] # grab the digital resolution model
+      master_peaks <- self$correspondent_peaks$master_peak_list
+      n_peak <- length(master_peaks$master)
+
+      peak_data <- lapply(seq(1, n_peak), function(in_peak){
+        tmp_index <- !is.na(master_peaks$scan_mz[in_peak, ])
+
+        mz <- self$get_mz(master_peaks$scan_mz[in_peak, tmp_index], sd_model)
+        height <- self$get_height_area(master_peaks$scan_height[in_peak, tmp_index])
+        area <- self$get_height_area(master_peaks$scan_area[in_peak, tmp_index])
+        norm_area <- self$get_height_area(master_peaks$scan_area[in_peak, tmp_index] / mz$ModelSD)
+
+        list(N = sum(tmp_index),
+             ObservedMZ = mz,
+             Height = height,
+             Area = area,
+             NormalizedArea = norm_area)
+      })
+      self$peak_data <- peak_data
+    },
+    processing_info = NULL,
+    create_processing_info = function(){
+      function_call <- "peak_finder"
+      function_pkg <- "package:SIRM.FTMS.peakCharacterization"
+      pkg_description <- utils::packageDescription(substring(function_pkg, 9))
+
+      if (!is.null(pkg_description$RemoteSha)) {
+        pkg_sha <- pkg_description$RemoteSha
+      } else {
+        pkg_sha <- ""
+      }
+
+      self$processing_info <- list(Package = function_pkg,
+                                   Version = pkg_description$Version,
+                                   Sha = pkg_sha,
+                                   FunctionCalled = peak_finder2,
+                                   Parameters = list(Method = self$method,
+                                                     Scans = self$raw_data$scan_range),
+                                   Models = list(DigitalResolutionModel = self$correspondent_peaks$sd_models[[1]],
+                                                 SDModel = self$correspondent_peaks$sd_models[[length(self$correspondent_peaks$sd_models)]])
+      )
+    },
+
+    run_correspondence = function(){
+      self$create_multi_scan()
+      self$create_multi_scan_peaklist()
+      self$create_correspondent_peaks()
+      self$normalize_correspondent_peaks()
+      self$create_peak_data()
+      self$create_processing_info()
+    },
+
+    export_data = function(){
+      PeakPickingAnalysis$new(self$peak_data, self$processing_info)
+    },
+
+    initialize = function(method = "lm_weighted", noise_function = noise_sorted_peaklist){
+      if (!is.null(method)) {
+        self$method <- method
+      }
+
+      if (!is.null(noise_function)) {
+        self$noise_function = noise_function
+      }
+      invisible(self)
+    }
+  )
+}
+
 #' peak finding and reporting
 #'
 #' Given a RawMS object, actually does peak finding at the scan level and then
