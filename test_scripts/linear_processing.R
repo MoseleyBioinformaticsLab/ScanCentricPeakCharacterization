@@ -15,6 +15,7 @@ filter_scans <- function(raw_data){
 use_files <- dir("~/Projects/work/josh/seldon_testing/mzml_files", pattern = "mzML", full.names = TRUE)[1:4]
 
 zip_save <- "zip_files_linear"
+dir.create(zip_save)
 
 start_time <- Sys.time()
 
