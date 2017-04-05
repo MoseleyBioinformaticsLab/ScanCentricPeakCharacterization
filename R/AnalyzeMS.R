@@ -192,9 +192,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
       self$create_multi_scan_peaklist()
       self$create_correspondent_peaks()
       self$normalize_correspondent_peaks()
-      if (!is.null(self$create_report)) {
-        self$create_report(raw_data, correspondent_peaks)
-      }
+      self$create_report()
       self$create_peak_data()
       self$create_processing_info()
     },
