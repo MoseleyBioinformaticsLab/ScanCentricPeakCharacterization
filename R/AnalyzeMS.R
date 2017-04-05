@@ -95,7 +95,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
 
     multi_scan = NULL,
     create_multi_scan = function(){
-      self$multi_scan <- SIRM.FTMS.peakCharacterization::MultiScans$new(self$raw_data, peak_method = self$peak_method)
+      self$multi_scan <- SIRM.FTMS.peakCharacterization.NOMC::MultiScans$new(self$raw_data, peak_method = self$peak_method)
       invisible(self)
     },
     multi_scan_peaklist = NULL,
@@ -235,7 +235,7 @@ peak_finder <- function(raw_data, method = "lm_weighted", noise_function = noise
   # example data:
   # load("zip_ms_example.RData")
   # raw_data <- zip_ms$raw_ms
-  multi_scan <- SIRM.FTMS.peakCharacterization::MultiScans$new(raw_data, peak_method = method)
+  multi_scan <- SIRM.FTMS.peakCharacterization.NOMC::MultiScans$new(raw_data, peak_method = method)
   multi_scan_peak_list <- MultiScansPeakList$new(multi_scan, noise_function = noise_function)
 
   correspondent_peaks <- FindCorrespondenceScans$new(multi_scan_peak_list, multiplier = 3)
