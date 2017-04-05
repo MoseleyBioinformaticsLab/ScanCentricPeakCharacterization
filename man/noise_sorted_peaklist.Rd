@@ -5,7 +5,7 @@
 \title{noise from peaklist}
 \usage{
 noise_sorted_peaklist(peaklist, intensity_measure = "Height",
-  sd_mean_ratio = 1.2, noise_multiplier = 1.5)
+  sd_mean_ratio = 1.2, noise_multiplier = 2)
 }
 \arguments{
 \item{peaklist}{the data.frame with at least "Height" or "Area"}
