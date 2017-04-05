@@ -1,6 +1,6 @@
 Package: SIRM.FTMS.peakCharacterization.NOMC
 Title: Functionality for Detecting and Characterizing Peaks
-Version: 0.0.77
+Version: 0.0.78
 Date: 2017-04-05
 Authors@R: person(given = c("Robert", "M"), family = c("Flight"), email
         = "rflight79@gmail.com", role = c("aut", "cre"))
