@@ -22,7 +22,7 @@ start_time <- Sys.time()
 for (ifile in use_files) {
   print(ifile)
   out_file <- file.path(zip_save, gsub("mzML$", "zip", basename(ifile)))
-  anal_ms <- AnalyzeMS$new(ifile, out_file = out_file, peak_finder = SIRM.FTMS.peakCharacterization::PeakFinder$new(raw_filter = filter_scans))
+  anal_ms <- AnalyzeMS$new(ifile, out_file = out_file, peak_finder = SIRM.FTMS.peakCharacterization.NOMC::PeakFinder$new(raw_filter = filter_scans))
   try(anal_ms$run_all())
 }
 

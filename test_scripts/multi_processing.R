@@ -23,10 +23,10 @@ start_time <- Sys.time()
 
 tmp_files <- mclapply(use_files, function(ifile){
   out_file <- file.path(zip_save, gsub("mzML$", "zip", basename(ifile)))
-  anal_ms <- AnalyzeMS$new(ifile, out_file = out_file, peak_finder = SIRM.FTMS.peakCharacterization::PeakFinder$new(raw_filter = filter_scans))
+  anal_ms <- AnalyzeMS$new(ifile, out_file = out_file, peak_finder = SIRM.FTMS.peakCharacterization.NOMC::PeakFinder$new(raw_filter = filter_scans))
   try(anal_ms$run_all())
   out_file
-}, mc.cores = 4)
+})
 
 stop_time <- Sys.time()
 
