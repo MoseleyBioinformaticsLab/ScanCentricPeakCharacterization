@@ -149,7 +149,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
         mz <- self$get_mz(master_peaks$scan_mz[in_peak, tmp_index], sd_model)
         height <- self$get_height_area(master_peaks$scan_height[in_peak, tmp_index])
         area <- self$get_height_area(master_peaks$scan_area[in_peak, tmp_index])
-        norm_area <- self$get_height_area(master_peaks$scan_area[in_peak, tmp_index] / mz$ModelSD)
+        norm_area <- self$get_height_area(master_peaks$scan_normalizedarea[in_peak, tmp_index])
 
         list(N = sum(tmp_index),
              ObservedMZ = mz,
