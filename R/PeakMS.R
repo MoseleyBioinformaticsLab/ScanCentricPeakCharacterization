@@ -115,6 +115,11 @@ PeakList <- R6::R6Class("PeakList",
         }
       }
 
+      if ("Area" %in% names(self$peak_list)) {
+        model_values <- exponential_predict(self$mz_model, self$peak_list$ObservedMZ)
+        self$peak_list$NormalizedArea <- self$peak_list$Area / model_values
+      }
+
       if (!is.null(self$noise_function)) {
         tmp <- self$noise_function(self$peak_list)
         self$peak_list <- tmp$peak_list
