@@ -765,7 +765,7 @@ compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("master", "
 #'
 #' @export
 normalize_scans <- function(mpl, intensity_measure = "Height", summary_function = mean){
-  intensity_options <- c(Height = "scan_height", Area = "scan_area")
+  intensity_options <- c(Height = "scan_height", Area = "scan_area", NormalizedArea = "scan_normalizedarea")
   intensity_internal <- intensity_options[intensity_measure]
   n_corresponding <- mpl$count_notna()
 
@@ -807,6 +807,7 @@ normalize_scans <- function(mpl, intensity_measure = "Height", summary_function 
   # makes the biggest difference
   mpl$scan_height <- exp(log(mpl$scan_height) - normalization_matrix)
   mpl$scan_area <- exp(log(mpl$scan_area) - normalization_matrix)
+  mpl$scan_normalizedarea <- exp(log(mpl$scan_normalizedarea) - normalization_matrix)
 
   mpl$is_normalized <- TRUE
   mpl$normalization_factors <- normalization_factors
