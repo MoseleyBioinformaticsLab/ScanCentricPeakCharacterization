@@ -493,6 +493,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       self$scan_mz <- self$scan_mz[which_nona, ]
       self$scan_height <- self$scan_height[which_nona, ]
       self$scan_area <- self$scan_area[which_nona, ]
+      self$scan_normalizedarea <- self$scan_normalizedarea[which_nona, ]
       self$scan <- self$scan[which_nona, ]
 
       self$create_master()
