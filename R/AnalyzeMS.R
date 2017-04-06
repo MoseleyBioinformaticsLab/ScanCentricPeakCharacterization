@@ -110,6 +110,18 @@ PeakFinder <- R6::R6Class("PeakFinder",
       self$correspondent_peaks$master_peak_list <- SIRM.FTMS.peakCharacterization::normalize_scans(self$correspondent_peaks$master_peak_list)
     },
 
+    intermediates = FALSE,
+    save_intermediates = function(filename = NULL){
+      if (intermediates) {
+        if (is.null(filename)) {
+          filename <- paste0(self$raw_data$raw_metadata$run$id, ".RData")
+        }
+        peakfinder <- self
+        save(peakfinder, file = filename)
+      }
+
+    },
+
     peak_data = NULL,
     get_mz = function(scan_mz, sd_model){
       mean_mz <- mean(scan_mz)
@@ -192,6 +204,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
       self$create_multi_scan_peaklist()
       self$create_correspondent_peaks()
       self$normalize_correspondent_peaks()
+      self$save_intermediates()
       self$create_report()
       self$create_peak_data()
       self$create_processing_info()
@@ -202,7 +215,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
     },
 
     initialize = function(peak_method = "lm_weighted", noise_function = noise_sorted_peaklist, raw_filter = NULL,
-                          report_function = NULL){
+                          report_function = NULL, intermediates = FALSE){
       if (!is.null(peak_method)) {
         self$peak_method <- peak_method
       }
@@ -218,6 +231,8 @@ PeakFinder <- R6::R6Class("PeakFinder",
       if (!is.null(report_function)) {
         self$report_function <- report_function
       }
+
+      self$intermediates <- intermediates
 
       invisible(self)
     }
