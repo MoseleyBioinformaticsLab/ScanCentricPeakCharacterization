@@ -414,6 +414,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     scan_mz = NULL,
     scan_height = NULL,
     scan_area = NULL,
+    scan_normalizedarea = NULL,
     scan = NULL,
     master = NULL,
     novel_peaks = NULL,
@@ -523,7 +524,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
       init_multiplier <- 20
 
-      self$scan_mz <- self$scan_height <- self$scan_area <- self$scan <- matrix(NA, nrow = max(n_peaks) * init_multiplier, ncol = n_scans)
+      self$scan_mz <- self$scan_height <- self$scan_area <- self$scan <- self$scan_normalizedarea <- matrix(NA, nrow = max(n_peaks) * init_multiplier, ncol = n_scans)
 
       # initialize the master list
       tmp_scan <- multi_scan_peak_list$peak_list_by_scans[[1]]$peak_list
@@ -534,6 +535,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       self$scan_mz[1:n_in1, 1] <- tmp_scan$ObservedMZ
       self$scan_height[1:n_in1, 1] <- tmp_scan$Height
       self$scan_area[1:n_in1, 1] <- tmp_scan$Area
+      self$scan_normalizedarea[1:n_in1, 1] <- tmp_scan$NormalizedArea
       self$scan[1:n_in1, 1] <- tmp_scan$peak
 
       self$create_master()
@@ -567,6 +569,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
             self$scan_mz[ipeak, iscan] <- tmp_scan[which_min, "ObservedMZ"]
             self$scan_height[ipeak, iscan] <- tmp_scan[which_min, "Height"]
             self$scan_area[ipeak, iscan] <- tmp_scan[which_min, "Area"]
+            self$scan_normalized_area[ipeak, iscan] <- tmp_scan[which_min, "NormalizedArea"]
             self$scan[ipeak, iscan] <- tmp_scan[which_min, "peak"]
             tmp_scan[which_min, "matched"] <- TRUE
 
@@ -592,6 +595,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
             self$scan_mz <- rbind(self$scan_mz, na_matrix)
             self$scan_height <- rbind(self$scan_height, na_matrix)
             self$scan_area <- rbind(self$scan_area, na_matrix)
+            self$scan_normalizedarea <- rbind(self$scan_normalized_area, na_matrix)
             self$scan <- rbind(self$scan, na_matrix)
           }
           self$create_master()
@@ -601,6 +605,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
           self$scan_mz[new_loc, iscan] <- tmp_scan[, "ObservedMZ"]
           self$scan_height[new_loc, iscan] <- tmp_scan[, "Height"]
           self$scan_area[new_loc, iscan] <- tmp_scan[, "Area"]
+          self$scan_normalizedarea[new_loc, iscan] <- tmp_scan[, "NormalizedArea"]
           self$scan[new_loc, iscan] <- tmp_scan[, "peak"]
           self$create_master()
 
@@ -608,6 +613,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
           self$scan_mz <- self$scan_mz[new_order, ]
           self$scan_height <- self$scan_height[new_order, ]
           self$scan_area <- self$scan_area[new_order, ]
+          self$scan_normalizedarea <- self$scan_normalizedarea[new_order, ]
           self$scan <- self$scan[new_order, ]
           self$create_master()
         }
