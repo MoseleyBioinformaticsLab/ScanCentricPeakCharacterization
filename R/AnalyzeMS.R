@@ -112,12 +112,12 @@ PeakFinder <- R6::R6Class("PeakFinder",
 
     intermediates = FALSE,
     save_intermediates = function(filename = NULL){
-      if (intermediates) {
+      if (self$intermediates) {
         if (is.null(filename)) {
           filename <- paste0(self$raw_data$raw_metadata$run$id, ".RData")
         }
         peakfinder <- self
-        save(peakfinder, file = filename)
+        save(peakfinder, file = filename, compress = FALSE)
       }
 
     },
