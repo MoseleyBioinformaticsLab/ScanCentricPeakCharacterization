@@ -147,12 +147,46 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
   public = list(
     peak_list_by_scans = NULL,
     peak_type = NULL,
-    mz_model = NULL,
+    scan_mz_models = function(){
+      all_models <- lapply(self$peak_list_by_scans, function(in_scan){
+        in_scan$mz_model
+      })
+      do.call(rbind, all_models)
+    },
+    mz_model = function(){
+      colMeans(self$scan_mz_models())
+    },
+
+    diff_mean_model = function(){
+      mz_ranges <- lapply(self$peak_list_by_scans, function(in_scan){
+        range(in_scan$peak_list$ObservedMZ)
+      })
+
+      mz_ranges <- do.call(rbind, mz_ranges)
+      mz_values <- seq(round(min(mz_ranges)), round(max(mz_ranges)), 2)
+
+      mean_mz_sd <- data.frame(mz = mz_values,
+                               sd = exponential_predict(self$mz_model, mz_values))
+      scan_models <- self$scan_mz_models()
+      scan_mz_sd <- lapply(seq(1, nrow(scan_models)), function(in_scan){
+        scan_sd <- exponential_predict(scan_models[in_scan, ], mz_values)
+        data.frame(mz = mz_values,
+                   sd = scan_sd,
+                   diff = scan_sd - mean_mz_sd$sd,
+                   scan = in_scan)
+      })
+      scan_mz_sd <- do.call(rbind, scan_mz_sd)
+
+      dplyr::group_by(scan_mz_sd, scan) %>%
+        dplyr::summarise(., sum_diff = sum(abs(diff)), median_diff = median(diff)) %>%
+        dplyr::ungroup() -> scan_mz_summaries
+
+      scan_mz_summaries
+
+    },
+
     noise_function = NULL,
     noise_info = NULL,
-
-    scans = NULL,
-    scan_peak_lists = NULL,
 
     n_peaks = function(){
       vapply(self$peak_list_by_scans, function(x){
@@ -191,8 +225,6 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
         PeakList$new(multi_scans$scans[[in_scan]], peak_type = peak_type, mz_range = mz_range,
                      noise_function = self$noise_function, scan = in_scan)
       })
-
-      self$mz_model <- multi_scans$res_mz_model()
 
       tmp_noise_info <- lapply(self$peak_list_by_scans, function(x){x$noise_info})
       self$noise_info <- do.call(rbind, tmp_noise_info)
