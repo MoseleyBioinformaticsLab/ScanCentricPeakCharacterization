@@ -166,7 +166,7 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
       mz_values <- seq(round(min(mz_ranges)), round(max(mz_ranges)), 2)
 
       mean_mz_sd <- data.frame(mz = mz_values,
-                               sd = exponential_predict(self$mz_model, mz_values))
+                               sd = exponential_predict(self$mz_model(), mz_values))
       scan_models <- self$scan_mz_models()
       scan_mz_sd <- lapply(seq(1, nrow(scan_models)), function(in_scan){
         scan_sd <- exponential_predict(scan_models[in_scan, ], mz_values)
@@ -183,6 +183,16 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
 
       scan_mz_summaries
 
+    },
+
+    remove_bad_resolution_scans = function(){
+      diff_model <- self$diff_mean_model()
+      min_out <- min(grDevices::boxplot.stats(diff_model$sum_diff)$out)
+      keep_scans <- diff_model$scan[diff_model$sum_diff < min_out]
+
+      self$peak_list_by_scans <- self$peak_list_by_scans[keep_scans]
+      self$noise_info <- self$noise_info[keep_scans, ]
+      invisible(self)
     },
 
     noise_function = NULL,
