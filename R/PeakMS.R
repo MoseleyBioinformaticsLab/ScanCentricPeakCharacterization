@@ -274,6 +274,7 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
 ScanMS <- R6::R6Class("ScanMS",
   public = list(
     peaks = NULL,
+    scan = NULL,
     get_peak_info = function(which_peak = NULL, calc_type = NULL){
       n_peak <- self$n_peaks()
       if (is.null(which_peak)) {
@@ -328,9 +329,10 @@ ScanMS <- R6::R6Class("ScanMS",
 
     },
 
-    initialize = function(scan_data, peak_method = "lm_weighted", min_points = 4, n_peak = Inf, flat_cut = 0.98){
+    initialize = function(scan_data, scan = NULL, peak_method = "lm_weighted", min_points = 4, n_peak = Inf, flat_cut = 0.98){
 
       self$generate_peaks(scan_data, peak_method = peak_method, min_points = min_points, n_peak = n_peak, flat_cut = flat_cut)
+      self$scan <- scan
 
       invisible(self)
     }
@@ -436,7 +438,7 @@ MultiScans <- R6::R6Class("MultiScans",
       assertthat::assert_that(any(class(raw_ms) %in% "RawMS"))
 
       self$scans <- lapply(raw_ms$scan_range, function(in_scan){
-        ScanMS$new(as.data.frame(xcms::getScan(raw_ms$raw_data, in_scan)), peak_method = peak_method, min_points = min_points, n_peak = n_peak, flat_cut = flat_cut)
+        ScanMS$new(as.data.frame(xcms::getScan(raw_ms$raw_data, in_scan)), scan = in_scan, peak_method = peak_method, min_points = min_points, n_peak = n_peak, flat_cut = flat_cut)
       })
       invisible(self)
 
