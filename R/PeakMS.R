@@ -175,12 +175,13 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
       mean_mz_sd <- data.frame(mz = mz_values,
                                sd = exponential_predict(self$mz_model(), mz_values))
       scan_models <- self$scan_mz_models()
+      scan_nums <- self$scan_numbers()
       scan_mz_sd <- lapply(seq(1, nrow(scan_models)), function(in_scan){
         scan_sd <- exponential_predict(scan_models[in_scan, ], mz_values)
         data.frame(mz = mz_values,
                    sd = scan_sd,
                    diff = scan_sd - mean_mz_sd$sd,
-                   scan = in_scan)
+                   scan = scan_nums[in_scan])
       })
       scan_mz_sd <- do.call(rbind, scan_mz_sd)
 
