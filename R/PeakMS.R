@@ -233,7 +233,7 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
 
       self$peak_list_by_scans <- lapply(seq(1, length(multi_scans$scans)), function(in_scan){
         PeakList$new(multi_scans$scans[[in_scan]], peak_type = peak_type, mz_range = mz_range,
-                     noise_function = self$noise_function, scan = in_scan)
+                     noise_function = self$noise_function, scan = multi_Scans$scans[[in_scan]]$scan)
       })
 
       tmp_noise_info <- lapply(self$peak_list_by_scans, function(x){x$noise_info})
