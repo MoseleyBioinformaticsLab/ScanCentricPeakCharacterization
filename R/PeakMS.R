@@ -682,7 +682,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       assertthat::assert_that(any(class(multi_scan_peak_list) %in% "MultiScansPeakList"))
 
       if (is.null(sd_model)) {
-        sd_model = multi_scan_peak_list$mz_model
+        sd_model = multi_scan_peak_list$mz_model()
       }
 
       if (!is.null(noise_calculator)) {
@@ -717,7 +717,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
                                          noise_function = NULL){
        mpl_digital_resolution <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type, sd_model = NULL,
                                                     multiplier = multiplier, mz_range = mz_range)
-       ms_dr_model <- multi_scan_peak_list$mz_model
+       ms_dr_model <- multi_scan_peak_list$mz_model()
 
        if (notify_progress) {
          print("digital resolution done!")
