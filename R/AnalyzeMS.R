@@ -102,6 +102,15 @@ PeakFinder <- R6::R6Class("PeakFinder",
     create_multi_scan_peaklist = function(){
       self$multi_scan_peaklist <- SIRM.FTMS.peakCharacterization::MultiScansPeakList$new(self$multi_scan, noise_function = self$noise_function)
     },
+
+    scan_start = NULL,
+    scan_dr_filter = NULL,
+    filter_dr_models = function(){
+      self$scan_start <- self$multi_scan_peaklist$scan_numbers()
+      self$multi_scan_peaklist <- self$multi_scan_peaklist$remove_bad_resolution_scans()
+      self$scan_dr_filter <- self$multi_scan_peaklist$scan_numbers()
+    },
+
     correspondent_peaks = NULL,
     create_correspondent_peaks = function(){
       self$correspondent_peaks <- SIRM.FTMS.peakCharacterization::FindCorrespondenceScans$new(self$multi_scan_peaklist, multiplier = 3)
@@ -202,6 +211,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
       self$apply_raw_filter()
       self$create_multi_scan()
       self$create_multi_scan_peaklist()
+      self$filter_dr_models()
       self$create_correspondent_peaks()
       self$normalize_correspondent_peaks()
       self$save_intermediates()
