@@ -14,6 +14,7 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
    find_peaks = function(...){
      if ("R6" %in% class(self$peak_finder)) {
        self$peak_finder$raw_data <- self$zip_ms$raw_ms
+       self$peak_finder$out_file <- self$zip_ms$out_file
        self$peak_finder$run_correspondence()
        self$found_peaks <- self$peak_finder$export_data()
      } else if ("function" %in% class(self$peak_finder)) {
@@ -85,6 +86,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
         self$raw_data <- self$raw_filter(self$raw_data)
       }
     },
+    out_file = NULL,
     report_function = NULL,
     create_report = function(){
       if (!is.null(self$report_function)) {
