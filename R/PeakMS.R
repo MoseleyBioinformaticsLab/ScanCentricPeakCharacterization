@@ -147,6 +147,13 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
   public = list(
     peak_list_by_scans = NULL,
     peak_type = NULL,
+
+    scan_numbers = function(){
+      vapply(self$peak_list_by_scans, function(in_scan){
+        in_scan$scan
+      }, numeric(1))
+    },
+
     scan_mz_models = function(){
       all_models <- lapply(self$peak_list_by_scans, function(in_scan){
         in_scan$mz_model
