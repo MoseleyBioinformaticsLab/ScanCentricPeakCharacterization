@@ -196,7 +196,7 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
     remove_bad_resolution_scans = function(){
       diff_model <- self$diff_mean_model()
       min_out <- min(grDevices::boxplot.stats(diff_model$sum_diff)$out)
-      keep_scans <- diff_model$scan[diff_model$sum_diff < min_out]
+      keep_scans <- self$scan_numbers() %in% diff_model$scan[diff_model$sum_diff < min_out]
 
       self$peak_list_by_scans <- self$peak_list_by_scans[keep_scans]
       self$noise_info <- self$noise_info[keep_scans, ]
@@ -228,6 +228,7 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
         in_scan$noise_info
       })
       noise_info <- do.call(rbind, noise_info)
+      noise_info$scan <- self$scan_numbers()
       self$noise_info <- noise_info
       invisible(self)
 
@@ -246,8 +247,8 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
 
       tmp_noise_info <- lapply(self$peak_list_by_scans, function(x){x$noise_info})
       self$noise_info <- do.call(rbind, tmp_noise_info)
-      self$noise_info$scan <- seq(1, length(self$peak_list_by_scans))
-      self
+      self$noise_info$scan <- self$scan_numbers()
+      invisible(self)
     }
   ),
   private = list(
