@@ -88,7 +88,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
     report_function = NULL,
     create_report = function(){
       if (!is.null(self$report_function)) {
-        self$report_function(self$raw_data, self$correspondent_peaks)
+        self$report_function(self)
       }
     },
 
