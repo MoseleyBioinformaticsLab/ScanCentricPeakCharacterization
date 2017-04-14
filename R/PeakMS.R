@@ -468,6 +468,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     scan_height = NULL,
     scan_area = NULL,
     scan_normalizedarea = NULL,
+    scan_peak = NULL,
     scan = NULL,
     master = NULL,
     novel_peaks = NULL,
@@ -565,7 +566,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       self$scan_height <- self$scan_height[which_nona, ]
       self$scan_area <- self$scan_area[which_nona, ]
       self$scan_normalizedarea <- self$scan_normalizedarea[which_nona, ]
-      self$scan <- self$scan[which_nona, ]
+      self$scan_peak <- self$scan_peak[which_nona, ]
 
       self$create_master()
     },
@@ -594,9 +595,11 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       n_peaks <- multi_scan_peak_list$n_peaks()
       n_scans <- length(n_peaks)
 
+      self$scan <- multi_scan_peak_list$scan_numbers()
+
       init_multiplier <- 20
 
-      self$scan_mz <- self$scan_height <- self$scan_area <- self$scan <- self$scan_normalizedarea <- matrix(NA, nrow = max(n_peaks) * init_multiplier, ncol = n_scans)
+      self$scan_mz <- self$scan_height <- self$scan_area <- self$scan_peak <- self$scan_normalizedarea <- matrix(NA, nrow = max(n_peaks) * init_multiplier, ncol = n_scans)
 
       # initialize the master list
       tmp_scan <- multi_scan_peak_list$peak_list_by_scans[[1]]$peak_list
@@ -608,7 +611,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       self$scan_height[1:n_in1, 1] <- tmp_scan$Height
       self$scan_area[1:n_in1, 1] <- tmp_scan$Area
       self$scan_normalizedarea[1:n_in1, 1] <- tmp_scan$NormalizedArea
-      self$scan[1:n_in1, 1] <- tmp_scan$peak
+      self$scan_peak[1:n_in1, 1] <- tmp_scan$peak
 
       self$create_master()
 
@@ -642,7 +645,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
             self$scan_height[ipeak, iscan] <- tmp_scan[which_min, "Height"]
             self$scan_area[ipeak, iscan] <- tmp_scan[which_min, "Area"]
             self$scan_normalizedarea[ipeak, iscan] <- tmp_scan[which_min, "NormalizedArea"]
-            self$scan[ipeak, iscan] <- tmp_scan[which_min, "peak"]
+            self$scan_peak[ipeak, iscan] <- tmp_scan[which_min, "peak"]
             tmp_scan[which_min, "matched"] <- TRUE
 
             # remove the matched peak, because we don't want to match it to
@@ -668,7 +671,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
             self$scan_height <- rbind(self$scan_height, na_matrix)
             self$scan_area <- rbind(self$scan_area, na_matrix)
             self$scan_normalizedarea <- rbind(self$scan_normalizedarea, na_matrix)
-            self$scan <- rbind(self$scan, na_matrix)
+            self$scan_peak <- rbind(self$scan_peak, na_matrix)
           }
           self$create_master()
           which_na <- min(which(is.nan(self$master)))
@@ -678,7 +681,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
           self$scan_height[new_loc, iscan] <- tmp_scan[, "Height"]
           self$scan_area[new_loc, iscan] <- tmp_scan[, "Area"]
           self$scan_normalizedarea[new_loc, iscan] <- tmp_scan[, "NormalizedArea"]
-          self$scan[new_loc, iscan] <- tmp_scan[, "peak"]
+          self$scan_peak[new_loc, iscan] <- tmp_scan[, "peak"]
           self$create_master()
 
           new_order <- order(self$master, decreasing = FALSE)
@@ -686,7 +689,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
           self$scan_height <- self$scan_height[new_order, ]
           self$scan_area <- self$scan_area[new_order, ]
           self$scan_normalizedarea <- self$scan_normalizedarea[new_order, ]
-          self$scan <- self$scan[new_order, ]
+          self$scan_peak <- self$scan_peak[new_order, ]
           self$create_master()
         }
 
