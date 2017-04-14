@@ -778,14 +778,13 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
        n_iter <- 0
        sd_1_v_2 <- compare_master_peak_lists(mpl_sd_1, mpl_digital_resolution)
+       mpl_sd_1$calculate_scan_information_content()
+       mpl_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
+       multi_scan_peak_list$reorder(mpl_order)
        while ((!all(sd_1_v_2)) && (n_iter < max_iteration)) {
          n_iter <- n_iter + 1
          mpl_sd_1$calculate_sd_model()
          all_models[[n_iter + 2]] <- mpl_sd_1$sd_model_coef
-
-         mpl_sd_1$calculate_scan_information_content()
-         mpl_sd_1_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
-         multi_scan_peak_list$reorder(mpl_sd_1_order)
 
          mpl_sd_2 <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type, sd_model = mpl_sd_1$sd_model_coef,
                                         multiplier = multiplier,
@@ -793,6 +792,10 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
          sd_1_v_2 <- compare_master_peak_lists(mpl_sd_1, mpl_sd_2)
          mpl_sd_1 <- mpl_sd_2
+         mpl_sd_1$calculate_scan_information_content()
+         mpl_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
+         multi_scan_peak_list$reorder(mpl_order)
+
          if (notify_progress) {
            notify_message <- paste0(as.character(n_iter), " iteration done!")
            print(notify_message)
