@@ -216,6 +216,12 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
       }, numeric(1))
     },
 
+    reorder = function(new_order){
+      self$peak_list_by_scans <- self$peak_list_by_scans[new_order]
+      self$noise_info <- self$noise_info[new_order, ]
+      invisible(self)
+    },
+
     calculate_noise = function(...){
       self_noise <- self$noise_function
       self$peak_list_by_scans <- lapply(self$peak_list_by_scans, function(in_scan){
