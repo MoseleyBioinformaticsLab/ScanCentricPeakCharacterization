@@ -537,7 +537,10 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       apply(self$scan_mz, 1, function(x){sum(!is.na(x))})
     },
 
-    calculate_scan_information_content = function(use_peaks){
+    calculate_scan_information_content = function(use_peaks = NULL){
+      if (is.null(use_peaks)) {
+        use_peaks <- rep(TRUE, length(self$master))
+      }
       n_peak <- sum(use_peaks)
       n_scan <- ncol(self$scan_mz)
 
