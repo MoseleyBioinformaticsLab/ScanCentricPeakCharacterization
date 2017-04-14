@@ -747,6 +747,11 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
                                          noise_function = NULL){
        mpl_digital_resolution <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type, sd_model = NULL,
                                                     multiplier = multiplier, mz_range = mz_range)
+
+       mpl_digital_resolution$calculate_scan_information_content()
+       mpl_order <- order(mpl_digital_resolution$scan_information_content$information_content, decreasing = TRUE)
+       multi_scan_peak_list$reorder(mpl_order)
+
        ms_dr_model <- multi_scan_peak_list$mz_model()
 
        if (notify_progress) {
@@ -777,6 +782,10 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          n_iter <- n_iter + 1
          mpl_sd_1$calculate_sd_model()
          all_models[[n_iter + 2]] <- mpl_sd_1$sd_model_coef
+
+         mpl_sd_1$calculate_scan_information_content()
+         mpl_sd_1_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
+         multi_scan_peak_list$reorder(mpl_sd_1_order)
 
          mpl_sd_2 <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type, sd_model = mpl_sd_1$sd_model_coef,
                                         multiplier = multiplier,
