@@ -117,6 +117,61 @@ PeakFinder <- R6::R6Class("PeakFinder",
     create_correspondent_peaks = function(){
       self$correspondent_peaks <- SIRM.FTMS.peakCharacterization::FindCorrespondenceScans$new(self$multi_scan_peaklist, multiplier = 3)
     },
+
+    scan_information_content = NULL,
+    filter_information_content = function(){
+      # this function removes scans by outlier information content values, and
+      # then subsequently re-orders the remaining scans by information content values
+      self$correspondent_peaks$master_peak_list$calculate_scan_information_content()
+      tmp_information <- self$correspondent_peaks$master_peak_list$scan_information_content
+
+      tmp_information$scan_order <- seq(1, nrow(tmp_information))
+
+      # find outliers
+      outlier_values <- grDevices::boxplot.stats(tmp_information$information_content)
+      # remove them
+      tmp_information <- tmp_information[!(tmp_information$information_content %in% outlier_values), ]
+
+      # order by information content so we can reorder everything else
+      tmp_information <- tmp_information[order(tmp_information$information_content, decreasing = TRUE), ]
+
+      self$multi_scan_peaklist <- self$multi_scan_peaklist$reorder(tmp_information$scan_order)
+      self$scan_information_content <- self$multi_scan_peaklist$scan_numbers()
+
+      self$correspondent_peaks$master_peak_list$reorder(tmp_information$scan_order)
+    },
+
+    calculate_median_mz_offset = function(){
+      mpl <- self$correspondent_peaks$master_peak_list
+
+      n_col <- ncol(mpl$scan_mz)
+
+      n_min_scan <- round(min_scan_perc * n_col)
+
+      correspond_peaks <- mpl$count_notna() >= n_min_scan
+
+      scan_numbers <- mpl$scan
+
+      scan_diff <- lapply(seq(1, n_col), function(in_scan){
+        mz_diffs <- mpl$scan_mz[correspond_peaks, in_scan] -
+          mpl$master[correspond_peaks]
+        mz_diffs <- mz_diffs[!is.na(mz_diffs)]
+
+        data.frame(median = median(mz_diffs),
+                   scan = scan_numbers[in_scan])
+      })
+      do.call(rbind, scan_diff)
+    }
+
+    median_correct_multiscan_peaklist = function(){
+      median_offsets <- self$calculate_median_mz_offset()
+      for (iscan in seq(1, nrow(median_offsets))) {
+        self$multi_scan_peaklist$peak_list_by_scans[[iscan]]$peak_list$ObservedMZ <-
+          self$multi_scan_peaklist$peak_list_by_scans[[iscan]]$peak_list$ObservedMZ - median_offsets[iscan, "median"]
+      }
+    },
+
+
     normalize_correspondent_peaks = function(){
       self$correspondent_peaks$master_peak_list <- SIRM.FTMS.peakCharacterization::normalize_scans(self$correspondent_peaks$master_peak_list)
     },
