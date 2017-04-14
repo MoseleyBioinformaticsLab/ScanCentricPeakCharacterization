@@ -536,6 +536,24 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       apply(self$scan_mz, 1, function(x){sum(!is.na(x))})
     },
 
+    calculate_scan_information_content = function(use_peaks){
+      n_peak <- sum(use_peaks)
+      n_scan <- ncol(self$scan_mz)
+
+      peak_contribution <- self$count_notna()[use_peaks] / n_scan
+      sum_contribution <- sum(peak_contribution)
+
+      scan_ic <- vapply(seq(1, n_scan), function(in_scan){
+        scan_notna <- !is.na(self$scan_mz[use_peaks, in_scan])
+        sum(peak_contribution[scan_notna]) / sum_contribution
+      }, numeric(1))
+
+      self$scan_information_content <- data.frame(information_content = scan_ic, scan = self$scan)
+      invisible(self)
+    },
+
+    scan_information_content = NULL,
+
     create_master = function(){
       self$master <- rowMeans(self$scan_mz, na.rm = TRUE)
       invisible(self)
