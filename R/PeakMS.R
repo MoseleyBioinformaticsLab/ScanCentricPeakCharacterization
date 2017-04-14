@@ -748,9 +748,9 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        mpl_digital_resolution <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type, sd_model = NULL,
                                                     multiplier = multiplier, mz_range = mz_range)
 
-       mpl_digital_resolution$calculate_scan_information_content()
-       mpl_order <- order(mpl_digital_resolution$scan_information_content$information_content, decreasing = TRUE)
-       multi_scan_peak_list$reorder(mpl_order)
+       # mpl_digital_resolution$calculate_scan_information_content()
+       # mpl_order <- order(mpl_digital_resolution$scan_information_content$information_content, decreasing = TRUE)
+       # multi_scan_peak_list$reorder(mpl_order)
 
        ms_dr_model <- multi_scan_peak_list$mz_model()
 
@@ -778,9 +778,9 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
        n_iter <- 0
        sd_1_v_2 <- compare_master_peak_lists(mpl_sd_1, mpl_digital_resolution)
-       mpl_sd_1$calculate_scan_information_content()
-       mpl_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
-       multi_scan_peak_list$reorder(mpl_order)
+       # mpl_sd_1$calculate_scan_information_content()
+       # mpl_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
+       # multi_scan_peak_list$reorder(mpl_order)
        while ((!all(sd_1_v_2)) && (n_iter < max_iteration)) {
          n_iter <- n_iter + 1
          mpl_sd_1$calculate_sd_model()
@@ -792,9 +792,9 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
          sd_1_v_2 <- compare_master_peak_lists(mpl_sd_1, mpl_sd_2)
          mpl_sd_1 <- mpl_sd_2
-         mpl_sd_1$calculate_scan_information_content()
-         mpl_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
-         multi_scan_peak_list$reorder(mpl_order)
+         # mpl_sd_1$calculate_scan_information_content()
+         # mpl_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
+         # multi_scan_peak_list$reorder(mpl_order)
 
          if (notify_progress) {
            notify_message <- paste0(as.character(n_iter), " iteration done!")
