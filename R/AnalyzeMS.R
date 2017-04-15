@@ -128,7 +128,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
       tmp_information$scan_order <- seq(1, nrow(tmp_information))
 
       # find outliers
-      outlier_values <- grDevices::boxplot.stats(tmp_information$information_content)
+      outlier_values <- grDevices::boxplot.stats(tmp_information$information_content)$out
       # remove them
       tmp_information <- tmp_information[!(tmp_information$information_content %in% outlier_values), ]
 
