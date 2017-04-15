@@ -484,6 +484,24 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     is_normalized = FALSE,
     normalization_factors = NULL,
     normalized_by = NULL,
+
+    reorder = function(new_order){
+      self$scan_mz <- self$scan_mz[, new_order]
+      self$scan_height <- self$scan_height[, new_order]
+      self$scan_area <- self$scan_area[, new_order]
+      self$scan_normalizedarea <- self$scan_normalized_area[, new_order]
+      self$scan_peak <- self$scan_peak[, new_order]
+      self$scan <- self$scan[new_order]
+
+      if (!is.null(self$normalization_factors)) {
+        self$normalization_factors <- self$normalization_factors[new_order]
+      }
+
+      self$cleanup()
+
+      invisible(self)
+    },
+
     calculate_sd_model = function(){
       # trim to peaks with at least 3 peaks in scans
       n_notna <- self$count_notna()
