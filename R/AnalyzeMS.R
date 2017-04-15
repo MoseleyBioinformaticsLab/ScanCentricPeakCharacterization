@@ -161,7 +161,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
                    scan = scan_numbers[in_scan])
       })
       do.call(rbind, scan_diff)
-    }
+    },
 
     median_correct_multiscan_peaklist = function(){
       median_offsets <- self$calculate_median_mz_offset()
