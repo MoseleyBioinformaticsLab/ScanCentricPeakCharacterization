@@ -141,7 +141,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
       self$correspondent_peaks$master_peak_list$reorder(tmp_information$scan_order)
     },
 
-    calculate_median_mz_offset = function(){
+    calculate_median_mz_offset = function(min_scan_perc = 0.05){
       mpl <- self$correspondent_peaks$master_peak_list
 
       n_col <- ncol(mpl$scan_mz)
@@ -163,7 +163,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
       do.call(rbind, scan_diff)
     },
 
-    median_correct_multiscan_peaklist = function(){
+    median_correct_multi_scan_peaklist = function(){
       median_offsets <- self$calculate_median_mz_offset()
       for (iscan in seq(1, nrow(median_offsets))) {
         self$multi_scan_peaklist$peak_list_by_scans[[iscan]]$peak_list$ObservedMZ <-
@@ -172,8 +172,76 @@ PeakFinder <- R6::R6Class("PeakFinder",
     },
 
 
-    normalize_correspondent_peaks = function(){
-      self$correspondent_peaks$master_peak_list <- SIRM.FTMS.peakCharacterization::normalize_scans(self$correspondent_peaks$master_peak_list)
+    scan_normalized = NULL,
+    normalize_scans_by_correspondent_peaks = function(intensity_measure = "Height", summary_function = mean){
+      mpl <- self$correspondent_peaks$master_peak_list
+
+      intensity_options <- c(Height = "scan_height", Area = "scan_area", NormalizedArea = "scan_normalizedarea")
+      intensity_internal <- intensity_options[intensity_measure]
+      n_corresponding <- mpl$count_notna()
+
+      normalizing_peaks <- n_corresponding >= quantile(n_corresponding, 0.95)
+
+      n_scan <- ncol(mpl$scan_mz)
+
+      peak_intensities <- log(mpl[[intensity_internal]][normalizing_peaks, ])
+
+      # need to check that there are at least 25 correspondent peaks in each of
+      # the scans, if not we will drop the scan and not bother to normalize it
+      n_peak_scan <- vapply(seq(1, ncol(peak_intensities)), function(in_scan){
+        sum(!is.na(peak_intensities[, in_scan]))
+      }, numeric(1))
+
+      keep_scans <- n_peak_scan >= 25
+
+      if (sum(keep_scans) != n_scan){
+        self$multi_scan_peaklist <- self$multi_scan_peaklist$reorder(keep_scans)
+        mpl <- mpl$reorder(keep_scans)
+        peak_intensities <- peak_intensities[, keep_scans]
+        n_scan <- sum(keep_scans)
+      }
+
+      self$scan_normalized <- self$multi_scan_peaklist$scan_numbers()
+
+      # this is getting the difference of a scan to all the other scans.
+      # It uses the fact that the peaks are the rows, and the scans are the columns.
+      # Take out the scan you want, make it a matrix that will be same size as the other.
+      # Remove that scan from the full matrix.
+      # Take their differences, this is the difference of that scan to all other scans
+      # for all of the peaks.
+      # Average the difference in each scan across the peaks
+      # Sum them after to find the total difference
+      scan_diffs <- vapply(seq(1, n_scan), function(in_scan){
+        scan_peaks <- peak_intensities[, in_scan, drop = FALSE]
+        scan_peaks_matrix <- matrix(scan_peaks, nrow = nrow(scan_peaks), ncol = n_scan - 1)
+
+        other_matrix <- peak_intensities[, -in_scan, drop = FALSE]
+        scan_other_diff <- scan_peaks_matrix - other_matrix
+        peak_means <- colMeans(scan_other_diff, na.rm = TRUE)
+        sum(peak_means)
+      }, numeric(1))
+
+      normalize_scan <- which.min(abs(scan_diffs))
+
+      scan_norm_matrix <- matrix(peak_intensities[, normalize_scan, drop = FALSE],
+                                 nrow = nrow(peak_intensities), ncol = n_scan)
+
+      diff_matrix <- peak_intensities - scan_norm_matrix
+      normalization_factors <- apply(diff_matrix, 2, summary_function, na.rm = TRUE)
+      normalization_matrix <- matrix(normalization_factors, nrow = nrow(mpl[[intensity_internal]]),
+                                     ncol = ncol(mpl[[intensity_internal]]), byrow = TRUE)
+
+      # we normalize both the height and the area with the same factors to see what
+      # makes the biggest difference
+      mpl$scan_height <- exp(log(mpl$scan_height) - normalization_matrix)
+      mpl$scan_area <- exp(log(mpl$scan_area) - normalization_matrix)
+      mpl$scan_normalizedarea <- exp(log(mpl$scan_normalizedarea) - normalization_matrix)
+
+      mpl$is_normalized <- TRUE
+      mpl$normalization_factors <- normalization_factors
+      mpl$normalized_by <- intensity_measure
+      self$correspondent_peaks$master_peak_list <- mpl
+      invisible(self)
     },
 
     intermediates = FALSE,
@@ -269,6 +337,9 @@ PeakFinder <- R6::R6Class("PeakFinder",
       self$create_multi_scan()
       self$create_multi_scan_peaklist()
       self$filter_dr_models()
+      self$create_correspondent_peaks()
+      self$filter_information_content()
+      self$median_correct_multi_scan_peaklist()
       self$create_correspondent_peaks()
       self$normalize_correspondent_peaks()
       self$save_intermediates()
