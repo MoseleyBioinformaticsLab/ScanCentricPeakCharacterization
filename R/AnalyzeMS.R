@@ -341,7 +341,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
       self$filter_information_content()
       self$median_correct_multi_scan_peaklist()
       self$create_correspondent_peaks()
-      self$normalize_correspondent_peaks()
+      self$normalize_scans_by_correspondent_peaks()
       self$save_intermediates()
       self$create_report()
       self$create_peak_data()
