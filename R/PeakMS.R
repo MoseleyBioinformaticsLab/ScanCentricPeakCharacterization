@@ -657,7 +657,10 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
         n_master <- sum(self$count_notna() != 0)
 
         # creating match window based on the passed model
+        # but have to be careful, because some predictions on a cubic fit may
+        # end up being negative, so trim to smallest positive value
         pred_window <- exponential_predict(sd_model, self$master) * multiplier
+        pred_window[pred_window <= min(abs(pred_window))] <- min(abs(pred_window))
 
         tmp_scan$matched <- FALSE
 
