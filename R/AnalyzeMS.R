@@ -298,6 +298,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
         norm_area <- self$get_height_area(master_peaks$scan_normalizedarea[in_peak, tmp_index])
 
         list(N = sum(tmp_index),
+             Scans = master_peaks$scan[tmp_index],
              ObservedMZ = mz,
              Height = height,
              Area = area,
