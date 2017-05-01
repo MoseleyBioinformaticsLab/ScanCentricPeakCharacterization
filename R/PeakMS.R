@@ -553,7 +553,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
       }
 
-      self$sd_model_full <- exponential_fit(master, master_rmsd, n_exp = 3)
+      self$sd_model_full <- exponential_fit(master, master_rmsd, n_exp = 4)
       self$sd_model_coef <- self$sd_model_full$coefficients
     },
 
