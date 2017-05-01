@@ -285,7 +285,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
            Values = values)
     },
     create_peak_data = function(){
-      sd_model <- self$correspondent_peaks$sd_models[[1]] # grab the digital resolution model
+      sd_model <- self$correspondent_peaks$sd_models[[length(self$correspondent_peaks$sd_models)]] # grab the last model generated from peak correspondence
       master_peaks <- self$correspondent_peaks$master_peak_list
       n_peak <- length(master_peaks$master)
 
