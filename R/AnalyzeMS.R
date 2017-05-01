@@ -251,6 +251,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
           filename <- paste0(self$raw_data$raw_metadata$run$id, ".RData")
         }
         peakfinder <- self
+        peakfinder$multi_scan <- NULL
         save(peakfinder, file = filename, compress = FALSE)
       }
 
