@@ -69,7 +69,7 @@ zip_files <- mclapply(use_files, function(ifile) {
     raw_filter = filter_scans, sd_fit_function = sd_fit_3
   ))
   anal_ms$load_file()
-  anal_ms$peak_finder$raw_data <- self$zip_ms$raw_ms
+  anal_ms$peak_finder$raw_data <- anal_ms$zip_ms$raw_ms
   anal_ms$peak_finder$out_file <- anal_ms$zip_ms$out_file
   anal_ms$peak_finder$apply_raw_filter()
   anal_ms$peak_finder$create_multi_scan()
