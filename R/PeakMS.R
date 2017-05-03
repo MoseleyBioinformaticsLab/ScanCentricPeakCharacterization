@@ -740,11 +740,17 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
 
     initialize = function(multi_scan_peak_list, peak_calc_type = "lm_weighted", sd_model = NULL, multiplier = 1,
-                          mz_range = c(-Inf, Inf), noise_calculator = NULL){
+                          mz_range = c(-Inf, Inf), noise_calculator = NULL, sd_fit_function = NULL){
       assertthat::assert_that(any(class(multi_scan_peak_list) %in% "MultiScansPeakList"))
 
       if (is.null(sd_model)) {
         sd_model = multi_scan_peak_list$mz_model()
+      }
+
+      if (!is.null(sd_fit_function)) {
+        self$sd_fit_function <- sd_fit_function
+      } else {
+        self$sd_fit_function <- default_sd_fit_function
       }
 
       if (!is.null(noise_calculator)) {
