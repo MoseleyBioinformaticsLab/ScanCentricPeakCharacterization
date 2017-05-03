@@ -290,6 +290,7 @@ ScanMS <- R6::R6Class("ScanMS",
   public = list(
     peaks = NULL,
     scan = NULL,
+    sd_fit_function = NULL,
     get_peak_info = function(which_peak = NULL, calc_type = NULL){
       n_peak <- self$n_peaks()
       if (is.null(which_peak)) {
@@ -344,7 +345,13 @@ ScanMS <- R6::R6Class("ScanMS",
 
     },
 
-    initialize = function(scan_data, scan = NULL, peak_method = "lm_weighted", min_points = 4, n_peak = Inf, flat_cut = 0.98){
+    initialize = function(scan_data, scan = NULL, peak_method = "lm_weighted", min_points = 4, n_peak = Inf, flat_cut = 0.98, sd_fit_function = NULL){
+
+      if (!is.null(sd_fit_function)) {
+        self$sd_fit_function <- sd_fit_function
+      } else {
+        self$sd_fit_function <- default_sd_fit_function
+      }
 
       self$generate_peaks(scan_data, peak_method = peak_method, min_points = min_points, n_peak = n_peak, flat_cut = flat_cut)
       self$scan <- scan
@@ -355,7 +362,7 @@ ScanMS <- R6::R6Class("ScanMS",
   private = list(
     create_mz_model = function(scan_data){
       scan_data <- get_scan_nozeros(scan_data)
-      mz_model <- exponential_fit(scan_data$mz, scan_data$lag, n_exp = 3)
+      mz_model <- self$sd_fit_function(scan_data$mz, scan_data$lag)
       mz_model$coefficients
     }
   )
@@ -747,6 +754,31 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     }
   )
 )
+
+#' collapse correspondent peaks
+#'
+#' Given a \code{MasterPeakList} object, examines the m/z values for subsequent
+#' peaks to find peaks within tolerances, and checks to see if two peaks should
+#' be collapsed based on some simple heuristics.
+#'
+#' @param mpl the \code{MasterPeakList} object
+#'
+#' @export
+#' @import dplyr
+collapse_correspondent_peaks <- function(mpl){
+  mpl$calculate_sd_model()
+
+  sd_model <- exponential_predict(mpl$sd_model_coef, mpl$master)
+  sd_model[sd_model <= min(abs(sd_model))] <- min(abs(sd_model))
+
+  mz_info <- data.frame(mz = mpl$master, sd = sd_model,
+                        n_point = mpl$count_notna(),
+                        peak = seq(1, length(mpl$master)))
+
+  which_scans <- lapply(seq(1, nrow(mpl$scan_mz)), function(in_row){
+    mpl$scan[!is.na(mpl$scan_mz[in_row, ])]
+  })
+}
 
 #' generate correspondent peaks
 #'
