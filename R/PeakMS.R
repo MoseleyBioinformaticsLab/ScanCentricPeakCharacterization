@@ -486,6 +486,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     scan = NULL,
     master = NULL,
     novel_peaks = NULL,
+    sd_fit_function = NULL,
     sd_model_coef = NULL,
     sd_model_full = NULL,
     mz_range = NULL,
@@ -561,7 +562,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
       }
 
-      self$sd_model_full <- exponential_fit(master, master_rmsd, n_exp = 4)
+      self$sd_model_full <- self$sd_fit_function(master, master_rmsd)
       self$sd_model_full$x <- master
       self$sd_model_full$y <- master_rmsd
       self$sd_model_coef <- self$sd_model_full$coefficients
@@ -788,6 +789,7 @@ collapse_correspondent_peaks <- function(mpl){
 FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
    public = list(
      master_peak_list = NULL, # store the final master peak list
+     sd_fit_function = NULL,
      sd_models = NULL, # store the coefficients for the models
      compare_mpl_models = NULL,
      n_iteration = NULL,
@@ -799,10 +801,11 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
      # there are no changes in the master peak lists of the objects
      iterative_correspondence = function(multi_scan_peak_list, peak_calc_type = "lm_weighted", max_iteration = 20,
                                          multiplier = 1,
-                                         mz_range = c(-Inf, Inf), notify_progress = FALSE,
+                                         mz_range = c(-Inf, Inf), sd_fit_function = NULL, notify_progress = FALSE,
                                          noise_function = NULL){
        mpl_digital_resolution <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type, sd_model = NULL,
-                                                    multiplier = multiplier, mz_range = mz_range)
+                                                    multiplier = multiplier, mz_range = mz_range,
+                                                    sd_fit_function = sd_fit_function)
 
        # mpl_digital_resolution$calculate_scan_information_content()
        # mpl_order <- order(mpl_digital_resolution$scan_information_content$information_content, decreasing = TRUE)
@@ -868,12 +871,20 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
 
      initialize = function(multi_scan_peak_list, peak_calc_type = "lm_weighted", max_iteration = 20, multiplier = 1,
-                           mz_range = c(-Inf, Inf), notify_progress = FALSE, noise_function = NULL){
+                           mz_range = c(-Inf, Inf), notify_progress = FALSE, noise_function = NULL,
+                           sd_fit_function = NULL){
        assertthat::assert_that(any(class(multi_scan_peak_list) %in% "MultiScansPeakList"))
+
+       if (!is.null(sd_fit_function)) {
+         self$sd_fit_function <- sd_fit_function
+       } else {
+         self$sd_fit_function <- default_sd_fit_function
+       }
 
        self$iterative_correspondence(multi_scan_peak_list, peak_calc_type = peak_calc_type,
                                      max_iteration = max_iteration, multiplier = multiplier,
-                                     mz_range = mz_range, notify_progress = notify_progress)
+                                     mz_range = mz_range, sd_fit_function = self$sd_fit_function,
+                                     notify_progress = notify_progress)
 
 
      }
