@@ -7,6 +7,9 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(SIRM.FTMS.peakCharacterization)
+library(parallel)
+options(mc.cores = 12)
 ```
 
 ## Functions
@@ -40,7 +43,6 @@ sd_fit_4 <- function(x, y){
 ## Run Data
 
 ```{r}
-library(parallel)
 use_files <- dir("test_files", full.names = TRUE, pattern = "mzML")
 zip_save <- "test_files/zip_files"
 
