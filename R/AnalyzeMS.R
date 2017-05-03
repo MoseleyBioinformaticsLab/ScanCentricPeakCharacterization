@@ -373,6 +373,12 @@ PeakFinder <- R6::R6Class("PeakFinder",
         self$report_function <- report_function
       }
 
+      if (!is.null(sd_fit_function)) {
+        self$sd_fit_function <- sd_fit_function
+      } else {
+        self$sd_fit_function <- default_sd_fit_function
+      }
+
       self$intermediates <- intermediates
 
       invisible(self)
@@ -380,7 +386,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
   )
 )
 
-sd_fit_function <- function(x, y){
+default_sd_fit_function <- function(x, y){
   exponential_fit(x, y, n_exp = 4)
 }
 
