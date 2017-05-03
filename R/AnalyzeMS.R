@@ -80,6 +80,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
     raw_data = NULL,
     peak_method = NULL,
     noise_function = NULL,
+    sd_fit_function = NULL,
     raw_filter = NULL,
     apply_raw_filter = function(){
       if (!is.null(self$raw_filter)) {
@@ -355,7 +356,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
     },
 
     initialize = function(peak_method = "lm_weighted", noise_function = noise_sorted_peaklist, raw_filter = NULL,
-                          report_function = NULL, intermediates = FALSE){
+                          report_function = NULL, intermediates = FALSE, sd_fit_function = NULL){
       if (!is.null(peak_method)) {
         self$peak_method <- peak_method
       }
@@ -378,6 +379,10 @@ PeakFinder <- R6::R6Class("PeakFinder",
     }
   )
 )
+
+sd_fit_function <- function(x, y){
+  exponential_fit(x, y, n_exp = 4)
+}
 
 #' peak finding and reporting
 #'
