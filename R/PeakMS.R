@@ -290,6 +290,7 @@ ScanMS <- R6::R6Class("ScanMS",
   public = list(
     peaks = NULL,
     scan = NULL,
+    sd_fit_function = NULL,
     get_peak_info = function(which_peak = NULL, calc_type = NULL){
       n_peak <- self$n_peaks()
       if (is.null(which_peak)) {
@@ -344,7 +345,13 @@ ScanMS <- R6::R6Class("ScanMS",
 
     },
 
-    initialize = function(scan_data, scan = NULL, peak_method = "lm_weighted", min_points = 4, n_peak = Inf, flat_cut = 0.98){
+    initialize = function(scan_data, scan = NULL, peak_method = "lm_weighted", min_points = 4, n_peak = Inf, flat_cut = 0.98, sd_fit_function = NULL){
+
+      if (!is.null(sd_fit_function)) {
+        self$sd_fit_function <- sd_fit_function
+      } else {
+        self$sd_fit_function <- default_sd_fit_function
+      }
 
       self$generate_peaks(scan_data, peak_method = peak_method, min_points = min_points, n_peak = n_peak, flat_cut = flat_cut)
       self$scan <- scan
@@ -355,7 +362,7 @@ ScanMS <- R6::R6Class("ScanMS",
   private = list(
     create_mz_model = function(scan_data){
       scan_data <- get_scan_nozeros(scan_data)
-      mz_model <- exponential_fit(scan_data$mz, scan_data$lag, n_exp = 3)
+      mz_model <- self$sd_fit_function(scan_data$mz, scan_data$lag)
       mz_model$coefficients
     }
   )
@@ -449,11 +456,12 @@ MultiScans <- R6::R6Class("MultiScans",
       colMeans(set_model)
     },
 
-    initialize = function(raw_ms, peak_method = "lm_weighted", min_points = 4, n_peak = Inf, flat_cut = 0.98){
+    initialize = function(raw_ms, peak_method = "lm_weighted", min_points = 4, n_peak = Inf, flat_cut = 0.98,
+                          sd_fit_function = NULL){
       assertthat::assert_that(any(class(raw_ms) %in% "RawMS"))
 
       self$scans <- lapply(raw_ms$scan_range, function(in_scan){
-        ScanMS$new(as.data.frame(xcms::getScan(raw_ms$raw_data, in_scan)), scan = in_scan, peak_method = peak_method, min_points = min_points, n_peak = n_peak, flat_cut = flat_cut)
+        ScanMS$new(as.data.frame(xcms::getScan(raw_ms$raw_data, in_scan)), scan = in_scan, peak_method = peak_method, min_points = min_points, n_peak = n_peak, flat_cut = flat_cut, sd_fit_function = sd_fit_function)
       })
       invisible(self)
 
@@ -478,6 +486,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     scan = NULL,
     master = NULL,
     novel_peaks = NULL,
+    sd_fit_function = NULL,
     sd_model_coef = NULL,
     sd_model_full = NULL,
     mz_range = NULL,
@@ -553,7 +562,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
       }
 
-      self$sd_model_full <- exponential_fit(master, master_rmsd, n_exp = 4)
+      self$sd_model_full <- self$sd_fit_function(master, master_rmsd)
       self$sd_model_full$x <- master
       self$sd_model_full$y <- master_rmsd
       self$sd_model_coef <- self$sd_model_full$coefficients
@@ -731,11 +740,17 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
 
     initialize = function(multi_scan_peak_list, peak_calc_type = "lm_weighted", sd_model = NULL, multiplier = 1,
-                          mz_range = c(-Inf, Inf), noise_calculator = NULL){
+                          mz_range = c(-Inf, Inf), noise_calculator = NULL, sd_fit_function = NULL){
       assertthat::assert_that(any(class(multi_scan_peak_list) %in% "MultiScansPeakList"))
 
       if (is.null(sd_model)) {
         sd_model = multi_scan_peak_list$mz_model()
+      }
+
+      if (!is.null(sd_fit_function)) {
+        self$sd_fit_function <- sd_fit_function
+      } else {
+        self$sd_fit_function <- default_sd_fit_function
       }
 
       if (!is.null(noise_calculator)) {
@@ -748,6 +763,31 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
   )
 )
 
+#' collapse correspondent peaks
+#'
+#' Given a \code{MasterPeakList} object, examines the m/z values for subsequent
+#' peaks to find peaks within tolerances, and checks to see if two peaks should
+#' be collapsed based on some simple heuristics.
+#'
+#' @param mpl the \code{MasterPeakList} object
+#'
+#' @export
+#' @import dplyr
+collapse_correspondent_peaks <- function(mpl){
+  mpl$calculate_sd_model()
+
+  sd_model <- exponential_predict(mpl$sd_model_coef, mpl$master)
+  sd_model[sd_model <= min(abs(sd_model))] <- min(abs(sd_model))
+
+  mz_info <- data.frame(mz = mpl$master, sd = sd_model,
+                        n_point = mpl$count_notna(),
+                        peak = seq(1, length(mpl$master)))
+
+  which_scans <- lapply(seq(1, nrow(mpl$scan_mz)), function(in_row){
+    mpl$scan[!is.na(mpl$scan_mz[in_row, ])]
+  })
+}
+
 #' generate correspondent peaks
 #'
 #' @export FindCorrespondenceScans
@@ -755,6 +795,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
    public = list(
      master_peak_list = NULL, # store the final master peak list
+     sd_fit_function = NULL,
      sd_models = NULL, # store the coefficients for the models
      compare_mpl_models = NULL,
      n_iteration = NULL,
@@ -766,10 +807,11 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
      # there are no changes in the master peak lists of the objects
      iterative_correspondence = function(multi_scan_peak_list, peak_calc_type = "lm_weighted", max_iteration = 20,
                                          multiplier = 1,
-                                         mz_range = c(-Inf, Inf), notify_progress = FALSE,
+                                         mz_range = c(-Inf, Inf), sd_fit_function = NULL, notify_progress = FALSE,
                                          noise_function = NULL){
        mpl_digital_resolution <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type, sd_model = NULL,
-                                                    multiplier = multiplier, mz_range = mz_range)
+                                                    multiplier = multiplier, mz_range = mz_range,
+                                                    sd_fit_function = sd_fit_function)
 
        # mpl_digital_resolution$calculate_scan_information_content()
        # mpl_order <- order(mpl_digital_resolution$scan_information_content$information_content, decreasing = TRUE)
@@ -835,12 +877,20 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
 
      initialize = function(multi_scan_peak_list, peak_calc_type = "lm_weighted", max_iteration = 20, multiplier = 1,
-                           mz_range = c(-Inf, Inf), notify_progress = FALSE, noise_function = NULL){
+                           mz_range = c(-Inf, Inf), notify_progress = FALSE, noise_function = NULL,
+                           sd_fit_function = NULL){
        assertthat::assert_that(any(class(multi_scan_peak_list) %in% "MultiScansPeakList"))
+
+       if (!is.null(sd_fit_function)) {
+         self$sd_fit_function <- sd_fit_function
+       } else {
+         self$sd_fit_function <- default_sd_fit_function
+       }
 
        self$iterative_correspondence(multi_scan_peak_list, peak_calc_type = peak_calc_type,
                                      max_iteration = max_iteration, multiplier = multiplier,
-                                     mz_range = mz_range, notify_progress = notify_progress)
+                                     mz_range = mz_range, sd_fit_function = self$sd_fit_function,
+                                     notify_progress = notify_progress)
 
 
      }

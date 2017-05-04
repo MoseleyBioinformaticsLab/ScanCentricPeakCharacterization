@@ -1,0 +1,83 @@
+---
+title: "Process Test Files, fit 4"
+author: "Robert M Flight"
+date: "`r Sys.time()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(SIRM.FTMS.peakCharacterization)
+library(parallel)
+options(mc.cores = 12)
+```
+
+## Functions
+
+### Filtering
+
+```{r filtering_scans}
+filter_scans <- function(raw_data){
+  scan_times <- data.frame(scan = raw_data$scan_range, 
+                           time = raw_data$raw_data@scantime[raw_data$scan_range])
+  scan_times <- dplyr::mutate(scan_times, lag = time - lag(time), lead = lead(time) - time)
+  scan_times <- dplyr::filter(scan_times, lag >= 4, lead >= 4)
+  
+  raw_data$set_scans(scan_range = scan_times$scan)
+  raw_data
+}
+```
+
+### SD Models
+
+```{r sd_model}
+sd_fit_3 <- function(x, y){
+  SIRM.FTMS.peakCharacterization::exponential_fit(x, y, n_exp = 3)
+}
+
+sd_fit_4 <- function(x, y){
+  SIRM.FTMS.peakCharacterization::exponential_fit(x, y, n_exp = 4)
+}
+```
+
+## Run Data
+
+```{r}
+use_files <- dir("test_files", full.names = TRUE, pattern = "mzML")
+zip_save <- "test_files/zip_files"
+
+if (!dir.exists(zip_save)) {
+  dir.create(zip_save)
+}
+
+rdata_save <- "test_files/mspl_files_fit4"
+if (!dir.exists(rdata_save)) {
+  dir.create(rdata_save)
+}
+
+zip_files <- mclapply(use_files, function(ifile) {
+  out_file <- file.path(zip_save, gsub("mzML$", "zip", basename(ifile)))
+  mspl_file <- file.path(rdata_save, gsub(".mzML$", "_mspl.RData", basename(ifile)))
+  
+  if (grepl("^qj", basename(ifile))) {
+    filter_fun <- filter_scans
+  } else {
+    filter_fun <- NULL
+  }
+  
+  anal_ms <- AnalyzeMS$new(ifile, out_file = out_file, peak_finder = PeakFinder$new(
+    raw_filter = filter_scans, sd_fit_function = sd_fit_3
+  ))
+  anal_ms$load_file()
+  anal_ms$peak_finder$raw_data <- anal_ms$zip_ms$raw_ms
+  anal_ms$peak_finder$out_file <- anal_ms$zip_ms$out_file
+  anal_ms$peak_finder$apply_raw_filter()
+  anal_ms$peak_finder$create_multi_scan()
+  anal_ms$peak_finder$create_multi_scan_peaklist()
+  anal_ms$peak_finder$multi_scan <- NULL
+  peak_finder <- anal_ms$peak_finder
+  save(peak_finder, file = mspl_file)
+  mspl_file
+})
+```
+

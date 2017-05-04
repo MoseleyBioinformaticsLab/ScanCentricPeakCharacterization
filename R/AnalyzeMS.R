@@ -80,6 +80,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
     raw_data = NULL,
     peak_method = NULL,
     noise_function = NULL,
+    sd_fit_function = NULL,
     raw_filter = NULL,
     apply_raw_filter = function(){
       if (!is.null(self$raw_filter)) {
@@ -97,7 +98,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
 
     multi_scan = NULL,
     create_multi_scan = function(){
-      self$multi_scan <- SIRM.FTMS.peakCharacterization::MultiScans$new(self$raw_data, peak_method = self$peak_method)
+      self$multi_scan <- SIRM.FTMS.peakCharacterization::MultiScans$new(self$raw_data, peak_method = self$peak_method, sd_fit_function = self$sd_fit_function)
       invisible(self)
     },
     multi_scan_peaklist = NULL,
@@ -115,7 +116,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
 
     correspondent_peaks = NULL,
     create_correspondent_peaks = function(){
-      self$correspondent_peaks <- SIRM.FTMS.peakCharacterization::FindCorrespondenceScans$new(self$multi_scan_peaklist, multiplier = 3)
+      self$correspondent_peaks <- SIRM.FTMS.peakCharacterization::FindCorrespondenceScans$new(self$multi_scan_peaklist, multiplier = 3, sd_fit_function = self$sd_fit_function)
     },
 
     scan_information_content = NULL,
@@ -355,7 +356,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
     },
 
     initialize = function(peak_method = "lm_weighted", noise_function = noise_sorted_peaklist, raw_filter = NULL,
-                          report_function = NULL, intermediates = FALSE){
+                          report_function = NULL, intermediates = FALSE, sd_fit_function = NULL){
       if (!is.null(peak_method)) {
         self$peak_method <- peak_method
       }
@@ -372,12 +373,22 @@ PeakFinder <- R6::R6Class("PeakFinder",
         self$report_function <- report_function
       }
 
+      if (!is.null(sd_fit_function)) {
+        self$sd_fit_function <- sd_fit_function
+      } else {
+        self$sd_fit_function <- default_sd_fit_function
+      }
+
       self$intermediates <- intermediates
 
       invisible(self)
     }
   )
 )
+
+default_sd_fit_function <- function(x, y){
+  exponential_fit(x, y, n_exp = 4)
+}
 
 #' peak finding and reporting
 #'
