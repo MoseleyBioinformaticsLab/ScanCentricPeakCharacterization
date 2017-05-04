@@ -776,16 +776,110 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 collapse_correspondent_peaks <- function(mpl){
   mpl$calculate_sd_model()
 
-  sd_model <- exponential_predict(mpl$sd_model_coef, mpl$master)
-  sd_model[sd_model <= min(abs(sd_model))] <- min(abs(sd_model))
-
-  mz_info <- data.frame(mz = mpl$master, sd = sd_model,
-                        n_point = mpl$count_notna(),
-                        peak = seq(1, length(mpl$master)))
-
-  which_scans <- lapply(seq(1, nrow(mpl$scan_mz)), function(in_row){
-    mpl$scan[!is.na(mpl$scan_mz[in_row, ])]
+  mpl_scans <- lapply(seq(1, length(mpl$master)), function(in_peak){
+    mpl$scan[!is.na(mpl$scan_mz[in_peak, ])]
   })
+
+  mpl_diffs <- data.frame(mz = mpl$master)
+
+  mpl_diffs <- dplyr::mutate(mpl_diffs, mz_lag = mz - lag(mz), mz_lead = lead(mz) - mz)
+  mpl_diffs$peak <- seq(1, nrow(mpl_diffs))
+  mpl_diffs$n_scan <- correspondent_peaks$master_peak_list$count_notna()
+  mpl_diffs <- dplyr::mutate(mpl_diffs, peak_lag = peak - lag(peak), peak_lead = lead(peak) - peak)
+  mpl_diffs$scans <- mpl_scans
+  mpl_diffs$sd <- 4 * exponential_predict(mpl$sd_model_coef, mpl_diffs$mz)[,1]
+
+  mpl_diffs <- dplyr::filter(mpl_diffs, (mz_lead <= sd | mz_lag <= sd), n_scan >= 3)
+  mpl_diffs <- dplyr::mutate(mpl_diffs, peak_lag = peak - lag(peak), peak_lead = lead(peak) - peak)
+  mpl_diffs[is.na(mpl_diffs$peak_lag), "peak_lag"] <- 2
+  mpl_diffs[is.na(mpl_diffs$peak_lead), "peak_lead"] <- 2
+  mpl_diffs <- dplyr::filter(mpl_diffs, (peak_lag == 1 | peak_lead == 1))
+
+  peak_group_start <- which((mpl_diffs$mz_lag > mpl_diffs$sd) | (mpl_diffs$peak_lag > 1))
+  peak_group_end <- which((mpl_diffs$mz_lead > mpl_diffs$sd) | (mpl_diffs$peak_lead > 1))
+  n_group <- min(c(length(peak_group_start), length(peak_group_end)))
+  peak_groups <- lapply(seq(1, n_group), function(in_group){
+    seq(peak_group_start[in_group], peak_group_end[in_group])
+  })
+  peak_groups <- peak_groups[vapply(peak_groups, length, numeric(1)) > 1]
+
+  mpl_blobs <- lapply(peak_groups, function(in_group){
+    blob_scans <- mpl_diffs$scans[in_group]
+
+    set_intersect <- numeric(0)
+    use_set <- blob_scans[[1]]
+
+    blob_start <- list(in_group[1])
+
+    for (i_peak in seq(2, length(in_group))) {
+      set_intersect <- intersect(use_set, blob_scans[[i_peak]])
+
+      if (length(set_intersect) != 0) {
+        blob_start <- c(blob_start, in_group[i_peak])
+        use_set <- blob_scans[[i_peak]]
+      } else {
+        use_set <- c(use_set, blob_scans[[i_peak]])
+      }
+    }
+
+
+    if (length(blob_start) > 1) {
+      blobs <- lapply(seq(1, length(blob_start) - 1), function(in_blob){
+        seq(blob_start[[in_blob]], blob_start[[in_blob]] - 1)
+      })
+    } else {
+      blobs <- list(seq(blob_start[[1]], in_group[length(in_group)]))
+    }
+    blobs
+  })
+
+  # go out one single layer
+  mpl_blobs <- unlist(mpl_blobs, recursive = FALSE)
+
+  na_replace <- rep(NA, ncol(mpl$scan_mz))
+  not_na <- !is.na(mpl$scan_mz)
+
+  peaks <- mpl_diffs$peak
+
+  for (iblob in seq_len(length(mpl_blobs))) {
+    use_rows <- peaks[mpl_blobs[[iblob]]]
+
+    use_set <- which(not_na[use_rows[1], ])
+
+    for (irow in use_rows[seq(2, length(use_rows))]) {
+      set_intersect <- intersect(use_set, which(not_na[irow, ]))
+
+      if (length(set_intersect) != 0) {
+        stop("There is an intersection of scans, stopping!")
+      } else {
+        use_set <- c(use_set, which(not_na[irow, ]))
+      }
+    }
+
+    for (irow in use_rows[seq(2, length(use_rows))]) {
+      tmp_not_na <- not_na[irow, ]
+      copy_loc <- use_rows[1]
+
+      mpl$scan_mz[copy_loc, tmp_not_na] <- mpl$scan_mz[irow, tmp_not_na]
+      mpl$scan_mz[irow, ] <- na_replace
+
+      mpl$scan_area[copy_loc, tmp_not_na] <- mpl$scan_area[irow, tmp_not_na]
+      mpl$scan_area[irow, ] <- na_replace
+
+      mpl$scan_height[copy_loc, tmp_not_na] <- mpl$scan_height[irow, tmp_not_na]
+      mpl$scan_height[irow, ] <- na_replace
+
+      mpl$scan_normalizedarea[copy_loc, tmp_not_na] <- mpl$scan_normalizedarea[irow, tmp_not_na]
+      mpl$scan_normalizedarea[irow, ] <- na_replace
+
+      mpl$scan_peak[copy_loc, tmp_not_na] <- mpl$scan_peak[irow, tmp_not_na]
+      mpl$scan_peak[irow, ] <- na_replace
+    }
+  }
+
+  mpl$cleanup()
+  mpl
+
 }
 
 #' generate correspondent peaks
