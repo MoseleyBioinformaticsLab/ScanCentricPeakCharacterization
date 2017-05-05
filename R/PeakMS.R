@@ -784,7 +784,7 @@ collapse_correspondent_peaks <- function(mpl){
 
   mpl_diffs <- dplyr::mutate(mpl_diffs, mz_lag = mz - lag(mz), mz_lead = lead(mz) - mz)
   mpl_diffs$peak <- seq(1, nrow(mpl_diffs))
-  mpl_diffs$n_scan <- correspondent_peaks$master_peak_list$count_notna()
+  mpl_diffs$n_scan <- mpl$count_notna()
   mpl_diffs <- dplyr::mutate(mpl_diffs, peak_lag = peak - lag(peak), peak_lead = lead(peak) - peak)
   mpl_diffs$scans <- mpl_scans
   mpl_diffs$sd <- 4 * exponential_predict(mpl$sd_model_coef, mpl_diffs$mz)[,1]
