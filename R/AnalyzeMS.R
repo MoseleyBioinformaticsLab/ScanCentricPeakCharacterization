@@ -142,6 +142,10 @@ PeakFinder <- R6::R6Class("PeakFinder",
       self$correspondent_peaks$master_peak_list$reorder(tmp_information$scan_order)
     },
 
+    collapse_correspondent_peaks = function(){
+      self$correspondent_peaks$master_peak_list <- collapse_correspondent_peaks(self$correspondent_peaks$master_peak_list)
+    },
+
     calculate_median_mz_offset = function(min_scan_perc = 0.05){
       mpl <- self$correspondent_peaks$master_peak_list
 
@@ -341,9 +345,11 @@ PeakFinder <- R6::R6Class("PeakFinder",
       self$create_multi_scan_peaklist()
       self$filter_dr_models()
       self$create_correspondent_peaks()
+      self$collapse_correspondent_peaks()
       self$filter_information_content()
       self$median_correct_multi_scan_peaklist()
       self$create_correspondent_peaks()
+      self$collapse_correspondent_peaks()
       self$normalize_scans_by_correspondent_peaks()
       self$save_intermediates()
       self$create_report()
