@@ -405,7 +405,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
 )
 
 default_sd_fit_function <- function(x, y){
-  exponential_fit_noint(x, y, n_exp = 4)
+  exponential_fit_zeroint(x, y, n_exp = 4)
 }
 
 default_sd_predict_function <- function(coef, x){
