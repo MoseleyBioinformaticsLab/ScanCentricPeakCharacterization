@@ -81,6 +81,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
     peak_method = NULL,
     noise_function = NULL,
     sd_fit_function = NULL,
+    sd_predict_function = NULL,
     raw_filter = NULL,
     apply_raw_filter = function(){
       if (!is.null(self$raw_filter)) {
@@ -98,12 +99,14 @@ PeakFinder <- R6::R6Class("PeakFinder",
 
     multi_scan = NULL,
     create_multi_scan = function(){
-      self$multi_scan <- SIRM.FTMS.peakCharacterization::MultiScans$new(self$raw_data, peak_method = self$peak_method, sd_fit_function = self$sd_fit_function)
+      self$multi_scan <- SIRM.FTMS.peakCharacterization::MultiScans$new(self$raw_data, peak_method = self$peak_method, sd_fit_function = self$sd_fit_function,
+                                                                        sd_predict_function = self$sd_predict_function)
       invisible(self)
     },
     multi_scan_peaklist = NULL,
     create_multi_scan_peaklist = function(){
-      self$multi_scan_peaklist <- SIRM.FTMS.peakCharacterization::MultiScansPeakList$new(self$multi_scan, noise_function = self$noise_function)
+      self$multi_scan_peaklist <- SIRM.FTMS.peakCharacterization::MultiScansPeakList$new(self$multi_scan, noise_function = self$noise_function,
+                                                                                         sd_predict_function = self$sd_predict_function)
     },
 
     scan_start = NULL,
@@ -116,7 +119,9 @@ PeakFinder <- R6::R6Class("PeakFinder",
 
     correspondent_peaks = NULL,
     create_correspondent_peaks = function(){
-      self$correspondent_peaks <- SIRM.FTMS.peakCharacterization::FindCorrespondenceScans$new(self$multi_scan_peaklist, multiplier = 3, sd_fit_function = self$sd_fit_function)
+      self$correspondent_peaks <- SIRM.FTMS.peakCharacterization::FindCorrespondenceScans$new(self$multi_scan_peaklist, multiplier = 3,
+                                                                                              sd_fit_function = self$sd_fit_function,
+                                                                                              sd_predict_function = self$sd_predict_function)
     },
 
     scan_information_content = NULL,
@@ -268,7 +273,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
       median_mz <- median(scan_mz)
       sd_mz <- sd(scan_mz)
 
-      model_sd = SIRM.FTMS.peakCharacterization::exponential_predict(sd_model, mean_mz)[1]
+      model_sd = self$sd_predict_function(sd_model, mean_mz)[1]
       values = scan_mz
 
       list(Mean = mean_mz,
@@ -362,7 +367,8 @@ PeakFinder <- R6::R6Class("PeakFinder",
     },
 
     initialize = function(peak_method = "lm_weighted", noise_function = noise_sorted_peaklist, raw_filter = NULL,
-                          report_function = NULL, intermediates = FALSE, sd_fit_function = NULL){
+                          report_function = NULL, intermediates = FALSE, sd_fit_function = NULL,
+                          sd_predict_function = NULL){
       if (!is.null(peak_method)) {
         self$peak_method <- peak_method
       }
@@ -385,6 +391,12 @@ PeakFinder <- R6::R6Class("PeakFinder",
         self$sd_fit_function <- default_sd_fit_function
       }
 
+      if (!is.null(sd_predict_function)) {
+        self$sd_predict_function <- sd_predict_function
+      } else {
+        self$sd_predict_function <- default_sd_predict_function
+      }
+
       self$intermediates <- intermediates
 
       invisible(self)
@@ -393,7 +405,11 @@ PeakFinder <- R6::R6Class("PeakFinder",
 )
 
 default_sd_fit_function <- function(x, y){
-  exponential_fit(x, y, n_exp = 4)
+  exponential_fit_noint(x, y, n_exp = 4)
+}
+
+default_sd_predict_function <- function(coef, x){
+  exponential_predict_zeroint(coef, x)
 }
 
 #' peak finding and reporting
