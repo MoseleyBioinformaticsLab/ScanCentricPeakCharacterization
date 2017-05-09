@@ -1,10 +1,8 @@
 ---
 title: "checking exponents"
 author: "Robert M Flight"
-date: "`r Sys.time`"
-output:
-  pdf_document:
-    toc: yes
+date: "`r Sys.time()`"
+output: pdf_document
 ---
 
 ```{r setup, message=FALSE, warning=FALSE}
@@ -28,7 +26,12 @@ the residuals aren't going to get completely messed up.
 
 ## Executive Summary
 
-....
+Outside of cubic with no intercept, appears to be a mixed bag, really. None seems
+to be qualitatively better than another for this part, although in all cases the
+actual residuals are really quite low. 
+
+So, overall, the quartic with an intercept of 0 (`q4_noint`) seems to be our best
+bet, so we will go with that at this time.
 
 
 ## New Functions
@@ -101,7 +104,7 @@ three.
 
 ## Do It
 
-```{r run_analysis}
+```{r run_analysis, results='hide', message=FALSE, warning=FALSE}
 predict_sd <- lapply(data_files, function(in_file){
   tmp_env <- new.env()
   load(in_file, envir = tmp_env)
@@ -162,5 +165,95 @@ predict_sd <- lapply(data_files, function(in_file){
 lapply(predict_sd, function(in_sd){
   ggplot(in_sd$summary, aes(x = mean, fill = type)) + geom_histogram(alpha = 0.5, position = "identity", bins = 100)
 })
+```
+
+## Examine Subsets
+
+Lets also actually plot some subsets of the scans in each of the data. 
+
+### File 1
+
+```{r file1, dev='CairoPNG', dpi = 200}
+file1 <- predict_sd[[1]]
+use_scans <- sample(length(file1$all), 10)
+
+for (iscan in use_scans) {
+  point_data <- filter(file1$all[[iscan]]$fit, type == "org")
+  other_data <- filter(file1$all[[iscan]]$fit, type != "org")
+  p <- ggplot(point_data, aes(x = mz, y = sd, color = type)) + geom_point(alpha = 0.5) + geom_line(data = other_data)
+  print(p)
+  q <- ggplot(file1$all[[iscan]]$resid, aes(x = mz, y = resid, color = type)) + geom_point(alpha = 0.5) +
+    ylim(c(-2.5e-5, 2.5e-5))
+  print(q)
+}
+```
+
+### File 2
+
+```{r file2, dev='CairoPNG', dpi = 200}
+file2 <- predict_sd[[2]]
+use_scans <- sample(length(file2$all), 10)
+
+for (iscan in use_scans) {
+  point_data <- filter(file2$all[[iscan]]$fit, type == "org")
+  other_data <- filter(file2$all[[iscan]]$fit, type != "org")
+  p <- ggplot(point_data, aes(x = mz, y = sd, color = type)) + geom_point(alpha = 0.5) + geom_line(data = other_data)
+  print(p)
+  q <- ggplot(file2$all[[iscan]]$resid, aes(x = mz, y = resid, color = type)) + geom_point(alpha = 0.5) +
+    ylim(c(-2.5e-5, 2.5e-5))
+  print(q)
+}
+```
+
+### File 3
+
+```{r file3, dev='CairoPNG', dpi = 200}
+file3 <- predict_sd[[3]]
+use_scans <- sample(length(file3$all), 10)
+
+for (iscan in use_scans) {
+  point_data <- filter(file3$all[[iscan]]$fit, type == "org")
+  other_data <- filter(file3$all[[iscan]]$fit, type != "org")
+  p <- ggplot(point_data, aes(x = mz, y = sd, color = type)) + geom_point(alpha = 0.5) + geom_line(data = other_data)
+  print(p)
+  q <- ggplot(file3$all[[iscan]]$resid, aes(x = mz, y = resid, color = type)) + geom_point(alpha = 0.5) +
+    ylim(c(-2.5e-5, 2.5e-5))
+  print(q)
+}
+```
+
+### File 4
+
+```{r file4, dev='CairoPNG', dpi = 200}
+file4 <- predict_sd[[4]]
+use_scans <- sample(length(file4$all), 10)
+
+for (iscan in use_scans) {
+  point_data <- filter(file4$all[[iscan]]$fit, type == "org")
+  other_data <- filter(file4$all[[iscan]]$fit, type != "org")
+  p <- ggplot(point_data, aes(x = mz, y = sd, color = type)) + geom_point(alpha = 0.5) + geom_line(data = other_data)
+  print(p)
+  q <- ggplot(file4$all[[iscan]]$resid, aes(x = mz, y = resid, color = type)) + geom_point(alpha = 0.5) +
+    ylim(c(-2.5e-5, 2.5e-5))
+  print(q)
+}
+```
+
+
+### File 5
+
+```{r file5, dev='CairoPNG', dpi = 200}
+file5 <- predict_sd[[5]]
+use_scans <- sample(length(file5$all), 10)
+
+for (iscan in use_scans) {
+  point_data <- filter(file5$all[[iscan]]$fit, type == "org")
+  other_data <- filter(file5$all[[iscan]]$fit, type != "org")
+  p <- ggplot(point_data, aes(x = mz, y = sd, color = type)) + geom_point(alpha = 0.5) + geom_line(data = other_data)
+  print(p)
+  q <- ggplot(file5$all[[iscan]]$resid, aes(x = mz, y = resid, color = type)) + geom_point(alpha = 0.5) +
+    ylim(c(-2.5e-5, 2.5e-5))
+  print(q)
+}
 ```
 
