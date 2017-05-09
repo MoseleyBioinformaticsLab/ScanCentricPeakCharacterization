@@ -390,6 +390,43 @@ exponential_predict <- function(coef, x){
   Y
 }
 
+exponential_fit_zeroint <- function(x, y, w = NULL, n_exp = 1, center = FALSE){
+  if (center) {
+    mean_x <- mean(x, na.rm = TRUE)
+    center_x <- x - mean_x
+  } else {
+    center_x <- x
+    mean_x <- 0
+  }
+  x_exp <- lapply(seq(1, n_exp), function(in_exp){
+    center_x^in_exp
+  })
+  X <- do.call(cbind, x_exp)
+
+  if (is.null(w)) {
+    out_fit <- stats::lm.fit(X, y)
+  } else {
+    out_fit <- stats::lm.wfit(X, y, w)
+  }
+  names(out_fit$coefficients) <- NULL
+
+  out_fit$mean_x <- mean_x
+  out_fit
+}
+
+exponential_predict_zeroint <- function(coef, x){
+  n_exp <- seq(0, length(coef))
+
+  x_exp <- lapply(n_exp, function(in_exp){
+    x^in_exp
+  })
+  X <- do.call(cbind, x_exp)
+
+  Y <- X %*% c(0, coef)
+  Y
+}
+
+
 #' parabolic fit
 #'
 #' calculates the coefficients of a parabolic fit (y = x + x^2) of x to y
