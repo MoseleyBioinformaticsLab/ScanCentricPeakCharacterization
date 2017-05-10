@@ -391,7 +391,7 @@ ScanMS <- R6::R6Class("ScanMS",
     create_mz_model = function(scan_data){
       scan_data <- get_scan_nozeros(scan_data)
       mz_model <- self$sd_fit_function(scan_data$mz, scan_data$lag)
-      mz_model$coefficients
+      mz_model
     }
   )
 )
