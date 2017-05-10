@@ -50,7 +50,7 @@ if (!dir.exists(zip_save)) {
   dir.create(zip_save)
 }
 
-rdata_save <- "test_files/mspl_files_fit4"
+rdata_save <- "test_files/mspl_files_defaults"
 if (!dir.exists(rdata_save)) {
   dir.create(rdata_save)
 }
