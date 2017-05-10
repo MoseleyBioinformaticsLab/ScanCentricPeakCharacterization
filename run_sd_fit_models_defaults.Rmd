@@ -36,7 +36,7 @@ sd_fit_function <- function(x, y){
 }
 
 sd_predict_function <- function(coef, x){
-  SIRM.FTMS.peakCharacterization:::exponential_predict_zeroint(ceof, x)
+  SIRM.FTMS.peakCharacterization:::exponential_predict_zeroint(coef, x)
 }
 ```
 
