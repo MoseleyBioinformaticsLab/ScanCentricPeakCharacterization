@@ -167,7 +167,7 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
       all_models <- lapply(self$peak_list_by_scans, function(in_scan){
         in_scan$mz_model
       })
-      do.call(rbind, all_models)
+
     },
     mz_model = function(){
       colMeans(self$scan_mz_models())
