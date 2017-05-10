@@ -1,0 +1,97 @@
+---
+title: "Check Test Files and Default Fit Functions"
+author: "Robert M Flight"
+date: "`r Sys.time()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(SIRM.FTMS.peakCharacterization)
+library(parallel)
+library(cowplot)
+options(mc.cores = 12)
+```
+
+```{r load_data}
+load("test_files/mspl_files_defaults_X2017.05.10.12.51.24/aspear_2061205_pos_lipid32_mspl.RData")
+```
+
+
+```{r}
+sd_model <- peak_finder$multi_scan_peaklist$mz_model()
+
+sd_fit_function <- function(x, y){
+  SIRM.FTMS.peakCharacterization:::exponential_fit_zeroint(x, y, n_exp = 3)
+}
+
+sd_predict_function <- function(coef, x){
+  SIRM.FTMS.peakCharacterization:::exponential_predict_zeroint(coef, x)
+}
+
+mpl <- MasterPeakList$new(peak_finder$multi_scan_peaklist, sd_model = sd_model, multiplier = 3,
+                          sd_fit_function = sd_fit_function, sd_predict_function = sd_predict_function)
+
+```
+
+```{r}
+mpl$calculate_sd_model()
+mpl_model <- rbind(data.frame(mz = mpl$sd_model_full$x, sd = mpl$sd_model_full$y, type = "rmsd"),
+                   data.frame(mz = mpl$sd_model_full$x, sd = mpl$sd_model_full$fitted.values, type = "fit"))
+
+ggplot(mpl_model, aes(x = mz, y = sd, color = type)) + geom_point()
+```
+
+```{r}
+fcp <- FindCorrespondenceScans$new(peak_finder$multi_scan_peaklist, sd_fit_function = sd_fit_function, sd_predict_function = sd_predict_function, collapse_peaks = FALSE, multiplier = 3)
+```
+
+```{r}
+mpl2 <- fcp$master_peak_list
+mpl2$calculate_sd_model()
+
+mpl2_model <- rbind(data.frame(mz = mpl2$sd_model_full$x, sd = mpl2$sd_model_full$y, type = "rmsd2"),
+                   data.frame(mz = mpl2$sd_model_full$x, sd = mpl2$sd_model_full$fitted.values, type = "fit2"))
+
+ggplot(mpl2_model, aes(x = mz, y = sd, color = type)) + geom_point()
+```
+
+OK, that is like, really, really bad. 
+
+What models fix this type of behavior? I don't recall seeing this before.
+
+```{r}
+mz_rmsd <- data.frame(mz = mpl$sd_model_full$x, sd = mpl$sd_model_full$y, type = "iter1")
+
+fit2 <- function(x, y){exponential_fit(x, y, n_exp = 3)}
+pred2 <- function(coef, x){exponential_predict(coef, x)}
+
+fcp2 <- FindCorrespondenceScans$new(peak_finder$multi_scan_peaklist, sd_fit_function = fit2, sd_predict_function = pred2,
+                                    collapse_peaks = FALSE, multiplier = 3)
+```
+
+```{r}
+mpl3 <- fcp2$master_peak_list
+mpl3$calculate_sd_model()
+
+mpl3_model <- rbind(data.frame(mz = mpl3$sd_model_full$x, sd = mpl3$sd_model_full$y, type = "rmsd3"),
+                   data.frame(mz = mpl3$sd_model_full$x, sd = mpl3$sd_model_full$fitted.values, type = "fit3"))
+
+ggplot(mpl3_model, aes(x = mz, y = sd, color = type)) + geom_point()
+```
+
+## What about linear??
+
+Is this really some mixture of a basic linear and a quadratic?
+
+```{r}
+mpl3_data <- data.frame(mz = mpl3$sd_model_full$x, sd = mpl3$sd_model_full$y, type = "rmsd")
+mpl3_lm <- lm(sd ~ mz + mz^3, data = mpl3_data)
+
+mpl3_loes <- loess(sd ~ mz, data = mpl3_data)
+
+mpl3_plot_data <- rbind(mpl3_data, data.frame(mz = mpl3_data$mz, sd = mpl3_loes$fitted, type = "loes"))
+
+ggplot(mpl3_plot_data, aes(x = mz, y = sd, color = type)) + geom_point()
+```
+
