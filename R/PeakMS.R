@@ -480,8 +480,7 @@ MultiScans <- R6::R6Class("MultiScans",
     },
     res_mz_model = function(){
       tmp_models <- lapply(self$scans, function(x){x$res_mz_model})
-      set_model <- do.call(rbind, tmp_models)
-      colMeans(set_model)
+      tmp_models
     },
 
     initialize = function(raw_ms, peak_method = "lm_weighted", min_points = 4, n_peak = Inf, flat_cut = 0.98,
