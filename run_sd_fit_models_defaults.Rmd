@@ -75,6 +75,7 @@ zip_files <- mclapply(use_files, function(ifile) {
   anal_ms$peak_finder$apply_raw_filter()
   anal_ms$peak_finder$create_multi_scan()
   anal_ms$peak_finder$create_multi_scan_peaklist()
+  anal_ms$peak_finder$create_correspondent_peaks()
   anal_ms$peak_finder$multi_scan <- NULL
   peak_finder <- anal_ms$peak_finder
   
