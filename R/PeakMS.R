@@ -1003,7 +1003,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        # mpl_order <- order(mpl_digital_resolution$scan_information_content$information_content, decreasing = TRUE)
        # multi_scan_peak_list$reorder(mpl_order)
 
-       ms_dr_model <- multi_scan_peak_list$mz_model()
+       ms_dr_model <- multi_scan_peak_list$mz_model
 
        if (notify_progress) {
          print("digital resolution done!")
@@ -1012,12 +1012,12 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        all_models = list(ms_dr = ms_dr_model)
 
        mpl_digital_resolution$calculate_sd_model()
-       dr_sd_model <- mpl_digital_resolution$sd_model_coef
+       dr_sd_model <- mpl_digital_resolution$sd_model
 
        all_models[[2]] <- dr_sd_model
 
        mpl_sd_1 <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type,
-                                      sd_model = mpl_digital_resolution$sd_model_coef,
+                                      sd_model = mpl_digital_resolution$sd_model,
                                       sd_fit_function = sd_fit_function,
                                       sd_predict_function = sd_predict_function,
                                       multiplier = multiplier)
@@ -1037,13 +1037,12 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        while ((!all(sd_1_v_2)) && (n_iter < max_iteration)) {
          n_iter <- n_iter + 1
          mpl_sd_1$calculate_sd_model()
-         all_models[[n_iter + 2]] <- mpl_sd_1$sd_model_coef
+         all_models[[n_iter + 2]] <- mpl_sd_1$sd_model
 
-         mpl_sd_2 <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type, sd_model = mpl_sd_1$sd_model_coef,
+         mpl_sd_2 <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type, sd_model = mpl_sd_1$sd_model,
                                         multiplier = multiplier,
                                         sd_fit_function = sd_fit_function,
-                                        sd_predict_function = sd_predict_function,
-                                        noise_calculator = noise_function)
+                                        sd_predict_function = sd_predict_function)
 
          # we wait until 5 iterations here because we want the SD model to be mostly
          # set before we start collapsing peaks, given that the collapsing is based
@@ -1082,6 +1081,8 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
        if (!is.null(sd_fit_function)) {
          self$sd_fit_function <- sd_fit_function
+       } else if (!is.null(multi_scan_peak_list$sd_fit_function)) {
+         self$sd_fit_function <- multi_scan_peak_list$sd_fit_function
        } else {
          self$sd_fit_function <- default_sd_fit_function
        }
