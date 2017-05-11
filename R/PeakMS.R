@@ -169,48 +169,69 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
       })
 
     },
-    mz_model = function(){
-      colMeans(self$scan_mz_models())
-    },
+    mz_model = NULL,
 
-    sd_predict_function = NULL,
+    mz_model_diffs = NULL,
 
-    diff_mean_model = function(){
-      mz_ranges <- lapply(self$peak_list_by_scans, function(in_scan){
-        range(in_scan$peak_list$ObservedMZ)
+    # calculates an average model and deviations from that model
+    # Assuming LOESS models, a generic set of m/z are created spaced by 0.5 mz,
+    # and then predictions of SD made based on m/z. The average model is created
+    # by averaging the SDs and fitting average SD ~ m/z.
+    #
+    # In the process, it also gets the sum of absolute residuals of each model
+    # to the average.
+    calculate_average_mz_model = function(){
+      list_of_models <- self$scan_mz_models()
+      mz_ranges <- lapply(list_of_models, function(x){range(round(x$x))})
+      mz_ranges <- range(do.call(rbind, mz_ranges))
+
+      mz_values <- seq(mz_ranges[1], mz_ranges[2], .5)
+
+      sd_preds <- lapply(list_of_models, function(in_model){
+        self$sd_predict_function(in_model, mz_values)
       })
 
-      mz_ranges <- do.call(rbind, mz_ranges)
-      mz_values <- seq(round(min(mz_ranges)), round(max(mz_ranges)), 2)
+      mean_sd_preds <- colMeans(do.call(rbind, sd_preds))
 
-      mean_mz_sd <- data.frame(mz = mz_values,
-                               sd = self$sd_predict_function(self$mz_model(), mz_values))
-      scan_models <- self$scan_mz_models()
+      # generate and set the new model
+      mean_model <- self$sd_fit_function(mz_values, mean_sd_preds)
+      self$mz_model <- mean_model
+
+      # get the differences from the model so can look for potential outliers
       scan_nums <- self$scan_numbers()
-      scan_mz_sd <- lapply(seq(1, nrow(scan_models)), function(in_scan){
-        scan_sd <- self$sd_predict_function(scan_models[in_scan, ], mz_values)
+
+      scan_mz_sd <- lapply(seq(1, length(sd_preds)), function(in_scan){
+        scan_sd <- sd_preds[[in_scan]]
         data.frame(mz = mz_values,
                    sd = scan_sd,
-                   diff = scan_sd - mean_mz_sd$sd,
+                   diff = scan_sd - mean_sd_preds,
                    scan = scan_nums[in_scan])
       })
       scan_mz_sd <- do.call(rbind, scan_mz_sd)
 
       dplyr::group_by(scan_mz_sd, scan) %>%
-        dplyr::summarise(., sum_diff = sum(abs(diff)), median_diff = median(diff)) %>%
+        dplyr::summarise(., sum_diff = sum(abs(diff)), median_diff = median(abs(diff))) %>%
         dplyr::ungroup() -> scan_mz_summaries
 
-      scan_mz_summaries
+      self$mz_model_diffs <- scan_mz_summaries
 
     },
 
+    sd_predict_function = NULL,
+    sd_fit_function = NULL,
+
     remove_bad_resolution_scans = function(){
-      diff_model <- self$diff_mean_model()
-      min_out <- min(grDevices::boxplot.stats(diff_model$sum_diff)$out)
-      keep_scans <- self$scan_numbers() %in% diff_model$scan[diff_model$sum_diff < min_out]
+      if (is.null(self$mz_model_diffs)) {
+        self$calculate_average_mz_model()
+      }
+      diff_model <- self$mz_model_diffs
+      max_out <- max(grDevices::boxplot.stats(diff_model$sum_diff)$conf)
+      keep_scans <- self$scan_numbers() %in% diff_model$scan[diff_model$sum_diff <= max_out]
 
       self$peak_list_by_scans <- self$peak_list_by_scans[keep_scans]
       self$noise_info <- self$noise_info[keep_scans, ]
+
+      self$calculate_average_mz_model()
       invisible(self)
     },
 
@@ -252,7 +273,7 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
     },
 
     initialize = function(multi_scans, peak_type = "lm_weighted", mz_range = NULL, noise_function = NULL,
-                          sd_predict_function = NULL){
+                          sd_fit_function = NULL, sd_predict_function = NULL){
       self$noise_function <- noise_function
       self$peak_type <- peak_type
 
@@ -261,9 +282,17 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
       if (!is.null(sd_predict_function)) {
         self$sd_predict_function <- sd_predict_function
       } else if (!is.null(multi_scans$sd_predict_function)) {
-        self$sd_predict_function <- sd_predict_function
+        self$sd_predict_function <- multi_scans$sd_predict_function
       } else {
         self$sd_predict_function <- default_sd_predict_function
+      }
+
+      if (!is.null(sd_fit_function)) {
+        self$sd_fit_function <- sd_fit_function
+      } else if (!is.null(multi_scans$sd_fit_function)) {
+        self$sd_fit_function <- multi_scans$sd_fit_function
+      } else {
+        self$sd_fit_function <- default_sd_fit_function
       }
 
       self$peak_list_by_scans <- lapply(seq(1, length(multi_scans$scans)), function(in_scan){
