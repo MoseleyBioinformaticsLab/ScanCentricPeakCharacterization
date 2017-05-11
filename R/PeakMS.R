@@ -875,7 +875,7 @@ collapse_correspondent_peaks <- function(mpl){
   mpl_diffs$n_scan <- mpl$count_notna()
   mpl_diffs <- dplyr::mutate(mpl_diffs, peak_lag = peak - lag(peak), peak_lead = lead(peak) - peak)
   mpl_diffs$scans <- mpl_scans
-  mpl_diffs$sd <- 4 * mpl$sd_predict_function(mpl$sd_model_coef, mpl_diffs$mz)[,1]
+  mpl_diffs$sd <- 4 * mpl$sd_predict_function(mpl$sd_model, mpl_diffs$mz)
 
   mpl_diffs <- dplyr::filter(mpl_diffs, (mz_lead <= sd | mz_lag <= sd), n_scan >= 3)
   mpl_diffs <- dplyr::mutate(mpl_diffs, peak_lag = peak - lag(peak), peak_lead = lead(peak) - peak)

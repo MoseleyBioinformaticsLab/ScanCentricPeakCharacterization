@@ -274,7 +274,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
       median_mz <- median(scan_mz)
       sd_mz <- sd(scan_mz)
 
-      model_sd = self$sd_predict_function(sd_model, mean_mz)[1]
+      model_sd = self$sd_predict_function(sd_model, mean_mz)
       values = scan_mz
 
       list(Mean = mean_mz,
@@ -406,11 +406,13 @@ PeakFinder <- R6::R6Class("PeakFinder",
 )
 
 default_sd_fit_function <- function(x, y){
-  exponential_fit_zeroint(x, y, n_exp = 4)
+  loess_frame <- data.frame(x = x, y = y)
+  loess_fit <- stats::loess(y ~ x, data = loess_frame, control = stats::loess.control(surface = "direct"))
+  loess_fit
 }
 
-default_sd_predict_function <- function(coef, x){
-  exponential_predict_zeroint(coef, x)
+default_sd_predict_function <- function(model, x){
+  stats:::predict.loess(model, newdata = x)
 }
 
 #' peak finding and reporting
