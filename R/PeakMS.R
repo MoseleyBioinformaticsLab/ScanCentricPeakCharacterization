@@ -560,8 +560,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     novel_peaks = NULL,
     sd_fit_function = NULL,
     sd_predict_function = NULL,
-    sd_model_coef = NULL,
-    sd_model_full = NULL,
+    sd_model = NULL,
     mz_range = NULL,
     is_normalized = FALSE,
     normalization_factors = NULL,
@@ -635,10 +634,14 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
       }
 
-      self$sd_model_full <- self$sd_fit_function(master, master_rmsd)
-      self$sd_model_full$x <- master
-      self$sd_model_full$y <- master_rmsd
-      self$sd_model_coef <- self$sd_model_full$coefficients
+      self$sd_model <- self$sd_fit_function(master, master_rmsd)
+      if (is.null(self$sd_model$x)) {
+        self$sd_model_full$x <- master
+      }
+
+      if (is.null(self$sd_model$y)) {
+        self$sd_model_full$y <- master_rmsd
+      }
     },
 
     count_notna = function(){
@@ -823,18 +826,22 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
       if (!is.null(sd_fit_function)) {
         self$sd_fit_function <- sd_fit_function
+      } else if (!is.null(multi_scan_peak_list$sd_fit_function)) {
+        self$sd_fit_function <- multi_scan_peak_list$sd_fit_function
       } else {
         self$sd_fit_function <- default_sd_fit_function
       }
 
       if (!is.null(sd_predict_function)) {
         self$sd_predict_function <- sd_predict_function
+      } else if (!is.null(multi_scan_peak_list$sd_predict_function)) {
+        self$sd_predict_function <- multi_scan_peak_list$sd_predict_function
       } else {
         self$sd_predict_function <- default_sd_predict_function
       }
 
       if (!is.null(noise_calculator)) {
-        self$noise_calculator = noise_calculator
+        self$noise_calculator <- noise_calculator
       }
       self$peak_correspondence(multi_scan_peak_list, peak_calc_type, sd_model = sd_model, multiplier = multiplier,
                                mz_range = mz_range)
