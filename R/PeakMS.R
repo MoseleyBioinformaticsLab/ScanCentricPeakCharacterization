@@ -993,7 +993,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
                                          multiplier = 1,
                                          mz_range = c(-Inf, Inf), sd_fit_function = NULL, sd_predict_function = NULL,
                                          notify_progress = FALSE,
-                                         noise_function = NULL, collapse_peaks = TRUE){
+                                         noise_function = NULL, collapse_peaks = FALSE){
        mpl_digital_resolution <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type, sd_model = NULL,
                                                     multiplier = multiplier, mz_range = mz_range,
                                                     sd_fit_function = sd_fit_function,
