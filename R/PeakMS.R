@@ -822,7 +822,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       assertthat::assert_that(any(class(multi_scan_peak_list) %in% "MultiScansPeakList"))
 
       if (is.null(sd_model)) {
-        sd_model = multi_scan_peak_list$mz_model()
+        sd_model = multi_scan_peak_list$mz_model
       }
 
       if (!is.null(sd_fit_function)) {
