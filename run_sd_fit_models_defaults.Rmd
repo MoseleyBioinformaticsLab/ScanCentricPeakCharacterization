@@ -28,18 +28,6 @@ filter_scans <- function(raw_data){
 }
 ```
 
-### SD Functions
-
-```{r}
-sd_fit_function <- function(x, y){
-  SIRM.FTMS.peakCharacterization:::exponential_fit_zeroint(x, y, n_exp = 3)
-}
-
-sd_predict_function <- function(coef, x){
-  SIRM.FTMS.peakCharacterization:::exponential_predict_zeroint(coef, x)
-}
-```
-
 
 ## Run Data
 
@@ -67,8 +55,7 @@ zip_files <- mclapply(use_files, function(ifile) {
   }
   
   anal_ms <- AnalyzeMS$new(ifile, out_file = out_file, peak_finder = PeakFinder$new(
-    raw_filter = filter_scans, sd_fit_function = sd_fit_function, sd_predict_function = sd_predict_function
-  ))
+    raw_filter = filter_scans))
   anal_ms$load_file()
   anal_ms$peak_finder$raw_data <- anal_ms$zip_ms$raw_ms
   anal_ms$peak_finder$out_file <- anal_ms$zip_ms$out_file
@@ -81,16 +68,16 @@ zip_files <- mclapply(use_files, function(ifile) {
   
   raw_data <- anal_ms$zip_ms$raw_ms
   
-  raw_residuals <- lapply(raw_data$scan_range, function(in_scan){
-    scan_data <- xcms::getScan(raw_data$raw_data, in_scan)
-    
-    scan_data <- SIRM.FTMS.peakCharacterization:::get_scan_nozeros(as.data.frame(scan_data))
-    mz_model <- sd_fit_function(scan_data$mz, scan_data$lag)
-    scan_data$fit <- mz_model$fitted.values
-    list(model = mz_model$coefficients, scan = scan_data)
-  })
-  
-  save(peak_finder, raw_residuals, file = mspl_file)
+  # raw_residuals <- lapply(raw_data$scan_range, function(in_scan){
+  #   scan_data <- xcms::getScan(raw_data$raw_data, in_scan)
+  #   
+  #   scan_data <- SIRM.FTMS.peakCharacterization:::get_scan_nozeros(as.data.frame(scan_data))
+  #   mz_model <- sd_fit_function(scan_data$mz, scan_data$lag)
+  #   scan_data$fit <- mz_model$fitted.values
+  #   list(model = mz_model$coefficients, scan = scan_data)
+  # })
+  # 
+  save(peak_finder, file = mspl_file)
   
   mspl_file
 })
