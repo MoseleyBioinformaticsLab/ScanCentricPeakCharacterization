@@ -636,12 +636,13 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
       self$sd_model <- self$sd_fit_function(master, master_rmsd)
       if (is.null(self$sd_model$x)) {
-        self$sd_model_full$x <- master
+        self$sd_model$x <- master
       }
 
       if (is.null(self$sd_model$y)) {
-        self$sd_model_full$y <- master_rmsd
+        self$sd_model$y <- master_rmsd
       }
+
     },
 
     count_notna = function(){
