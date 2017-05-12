@@ -304,6 +304,7 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
       tmp_noise_info <- lapply(self$peak_list_by_scans, function(x){x$noise_info})
       self$noise_info <- do.call(rbind, tmp_noise_info)
       self$noise_info$scan <- self$scan_numbers()
+      self$calculate_average_mz_model()
       invisible(self)
     }
   ),
@@ -1074,7 +1075,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
      initialize = function(multi_scan_peak_list, peak_calc_type = "lm_weighted", max_iteration = 20, multiplier = 1,
                            mz_range = c(-Inf, Inf), notify_progress = FALSE, noise_function = NULL,
-                           sd_fit_function = NULL, sd_predict_function = NULL, collapse_peaks = TRUE){
+                           sd_fit_function = NULL, sd_predict_function = NULL, collapse_peaks = FALSE){
        assertthat::assert_that(any(class(multi_scan_peak_list) %in% "MultiScansPeakList"))
 
        self$collapse_peaks <- collapse_peaks
