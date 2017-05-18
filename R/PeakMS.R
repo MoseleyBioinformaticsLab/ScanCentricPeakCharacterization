@@ -1022,6 +1022,8 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
      initial_rmsd_multiplier = NULL,
      final_rmsd_multiplier = NULL,
      converged = NULL,
+     n_scan_peaks = NULL,
+     scan_fraction = NULL,
 
      # iterative correspondence first does correspondence based on the digital resolution,
      # and then creates a model using the SD of the correspondent peaks themselves,
@@ -1032,10 +1034,17 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
                                          mz_range = c(-Inf, Inf), sd_fit_function = NULL, sd_predict_function = NULL,
                                          notify_progress = FALSE,
                                          noise_function = NULL, collapse_peaks = FALSE){
+
+       n_scan <- length(multi_scan_peak_list$scan_numbers())
+
+       self$scan_fraction <- 0.1
+       self$n_scan_peaks <- floor(n_scan * self$scan_fraction)
+
        mpl_digital_resolution <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type, sd_model = NULL,
                                                     multiplier = digital_resolution_multiplier, mz_range = mz_range,
                                                     sd_fit_function = sd_fit_function,
-                                                    sd_predict_function = sd_predict_function)
+                                                    sd_predict_function = sd_predict_function,
+                                                    rmsd_min_scans = self$n_scan_peaks)
 
        # mpl_digital_resolution$calculate_scan_information_content()
        # mpl_order <- order(mpl_digital_resolution$scan_information_content$information_content, decreasing = TRUE)
@@ -1058,7 +1067,8 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
                                       sd_model = mpl_digital_resolution$sd_model,
                                       sd_fit_function = sd_fit_function,
                                       sd_predict_function = sd_predict_function,
-                                      multiplier = rmsd_multiplier)
+                                      multiplier = rmsd_multiplier,
+                                      rmsd_min_scans = self$n_scan_peaks)
        mpl_sd_1$calculate_sd_model()
 
        if (notify_progress) {
@@ -1072,12 +1082,11 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        n_fail_iter <- 0
        sd_1_v_2 <- compare_master_peak_lists(mpl_sd_1, mpl_digital_resolution)
 
-       tmp_rmsd_multiplier <- rmsd_multiplier
        # mpl_sd_1$calculate_scan_information_content()
        # mpl_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
        # multi_scan_peak_list$reorder(mpl_order)
 
-       while ((!all(sd_1_v_2)) && (n_good_iter < max_iteration) && (n_fail_iter < max_failures)) {
+       while ((!all(sd_1_v_2)) && (n_good_iter < max_iteration) && (self$scan_fraction >= 0.5)) {
          n_iter <- n_iter + 1
          mpl_sd_1$calculate_sd_model()
          all_models[[n_iter + 2]] <- mpl_sd_1$sd_model
@@ -1085,19 +1094,19 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          mpl_sd_2 <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type, sd_model = mpl_sd_1$sd_model,
                                         multiplier = tmp_rmsd_multiplier,
                                         sd_fit_function = sd_fit_function,
-                                        sd_predict_function = sd_predict_function)
+                                        sd_predict_function = sd_predict_function,
+                                        rmsd_min_scans = self$n_scan_peaks)
 
          mpl_sd_2$calculate_sd_model()
 
          sd_status <- check_model_sd(sd_predict_function, mpl_sd_1$sd_model, mpl_sd_2$sd_model)
 
          if (!sd_status) {
-           tmp_rmsd_multiplier <- tmp_rmsd_multiplier * (2/3)
-           n_fail_iter <- n_fail_iter + 1
-           next()
+           self$scan_fraction <- self$scan_fraction + 0.05
+           self$n_scan_peaks <- floor(n_scan * self$scan_fraction)
+           next
          } else {
            n_good_iter <- n_good_iter + 1
-           tmp_rmsd_multiplier <- rmsd_multiplier
          }
 
          # we wait until 5 iterations here because we want the SD model to be mostly
