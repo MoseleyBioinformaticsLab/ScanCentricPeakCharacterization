@@ -1063,6 +1063,8 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        n_good_iter <- 0
        n_fail_iter <- 0
        sd_1_v_2 <- compare_master_peak_lists(mpl_sd_1, mpl_digital_resolution)
+
+       tmp_rmsd_multiplier <- rmsd_multiplier
        # mpl_sd_1$calculate_scan_information_content()
        # mpl_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
        # multi_scan_peak_list$reorder(mpl_order)
@@ -1073,7 +1075,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          all_models[[n_iter + 2]] <- mpl_sd_1$sd_model
 
          mpl_sd_2 <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type, sd_model = mpl_sd_1$sd_model,
-                                        multiplier = rmsd_multiplier,
+                                        multiplier = tmp_rmsd_multiplier,
                                         sd_fit_function = sd_fit_function,
                                         sd_predict_function = sd_predict_function)
 
@@ -1082,11 +1084,12 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          sd_status <- check_model_sd(sd_predict_function, mpl_sd_1$sd_model, mpl_sd_2$sd_model)
 
          if (!sd_status) {
-           rmsd_multiplier <- rmsd_multiplier * 0.5
+           tmp_rmsd_multiplier <- tmp_rmsd_multiplier * (2/3)
            n_fail_iter <- n_fail_iter + 1
            next()
          } else {
            n_good_iter <- n_good_iter + 1
+           tmp_rmsd_multiplier <- rmsd_multiplier
          }
 
          # we wait until 5 iterations here because we want the SD model to be mostly
