@@ -562,6 +562,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     sd_fit_function = NULL,
     sd_predict_function = NULL,
     sd_model = NULL,
+    rmsd_min_scans = NULL,
     mz_range = NULL,
     is_normalized = FALSE,
     normalization_factors = NULL,
@@ -587,7 +588,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     calculate_sd_model = function(){
       # trim to peaks with at least 3 peaks in scans
       n_notna <- self$count_notna()
-      keep_peaks <- n_notna >= 3
+      keep_peaks <- n_notna >= self$rmsd_min_scans
       master <- self$master[keep_peaks]
       scan_mz <- self$scan_mz[keep_peaks, ]
       #scan_intensity <- self$scan_intensity[keep_peaks, ]
@@ -819,7 +820,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
     initialize = function(multi_scan_peak_list, peak_calc_type = "lm_weighted", sd_model = NULL, multiplier = 1,
                           mz_range = c(-Inf, Inf), noise_calculator = NULL, sd_fit_function = NULL,
-                          sd_predict_function = NULL){
+                          sd_predict_function = NULL, rmsd_min_scans = 3){
       assertthat::assert_that(any(class(multi_scan_peak_list) %in% "MultiScansPeakList"))
 
       if (is.null(sd_model)) {
@@ -845,6 +846,8 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       if (!is.null(noise_calculator)) {
         self$noise_calculator <- noise_calculator
       }
+
+      self$rmsd_min_scans <- rmsd_min_scans
       self$peak_correspondence(multi_scan_peak_list, peak_calc_type, sd_model = sd_model, multiplier = multiplier,
                                mz_range = mz_range)
       invisible(self)
