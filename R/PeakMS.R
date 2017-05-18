@@ -942,31 +942,36 @@ collapse_correspondent_peaks <- function(mpl){
       set_intersect <- intersect(use_set, which(not_na[irow, ]))
 
       if (length(set_intersect) != 0) {
-        stop("There is an intersection of scans, stopping!")
+        warning("There is an intersection of scans, skipping!")
+        skip_blob <- TRUE
       } else {
         use_set <- c(use_set, which(not_na[irow, ]))
+        skip_blob <- FALSE
       }
     }
 
-    for (irow in use_rows[seq(2, length(use_rows))]) {
-      tmp_not_na <- not_na[irow, ]
-      copy_loc <- use_rows[1]
+    if (!skip_blob) {
+      for (irow in use_rows[seq(2, length(use_rows))]) {
+        tmp_not_na <- not_na[irow, ]
+        copy_loc <- use_rows[1]
 
-      mpl$scan_mz[copy_loc, tmp_not_na] <- mpl$scan_mz[irow, tmp_not_na]
-      mpl$scan_mz[irow, ] <- na_replace
+        mpl$scan_mz[copy_loc, tmp_not_na] <- mpl$scan_mz[irow, tmp_not_na]
+        mpl$scan_mz[irow, ] <- na_replace
 
-      mpl$scan_area[copy_loc, tmp_not_na] <- mpl$scan_area[irow, tmp_not_na]
-      mpl$scan_area[irow, ] <- na_replace
+        mpl$scan_area[copy_loc, tmp_not_na] <- mpl$scan_area[irow, tmp_not_na]
+        mpl$scan_area[irow, ] <- na_replace
 
-      mpl$scan_height[copy_loc, tmp_not_na] <- mpl$scan_height[irow, tmp_not_na]
-      mpl$scan_height[irow, ] <- na_replace
+        mpl$scan_height[copy_loc, tmp_not_na] <- mpl$scan_height[irow, tmp_not_na]
+        mpl$scan_height[irow, ] <- na_replace
 
-      mpl$scan_normalizedarea[copy_loc, tmp_not_na] <- mpl$scan_normalizedarea[irow, tmp_not_na]
-      mpl$scan_normalizedarea[irow, ] <- na_replace
+        mpl$scan_normalizedarea[copy_loc, tmp_not_na] <- mpl$scan_normalizedarea[irow, tmp_not_na]
+        mpl$scan_normalizedarea[irow, ] <- na_replace
 
-      mpl$scan_peak[copy_loc, tmp_not_na] <- mpl$scan_peak[irow, tmp_not_na]
-      mpl$scan_peak[irow, ] <- na_replace
+        mpl$scan_peak[copy_loc, tmp_not_na] <- mpl$scan_peak[irow, tmp_not_na]
+        mpl$scan_peak[irow, ] <- na_replace
+      }
     }
+
   }
 
   mpl$cleanup()
