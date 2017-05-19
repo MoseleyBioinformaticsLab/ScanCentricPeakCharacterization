@@ -1010,6 +1010,7 @@ check_model_sd <- function(predict_function, model_1, model_2, reject_frac = 0.1
 
 FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
    public = list(
+     all_master_peak_lists = NULL, # store all of the master peak lists
      master_peak_list = NULL, # store the final master peak list
      sd_fit_function = NULL,
      sd_predict_function = NULL,
@@ -1058,6 +1059,9 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
        all_models = list(ms_dr = ms_dr_model)
 
+       all_mpls = vector(mode = "list", length = 22)
+       all_mpls[[1]] <- mpl_digital_resolution
+
        mpl_digital_resolution$calculate_sd_model()
        dr_sd_model <- mpl_digital_resolution$sd_model
 
@@ -1070,6 +1074,8 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
                                       multiplier = rmsd_multiplier,
                                       rmsd_min_scans = self$n_scan_peaks)
        mpl_sd_1$calculate_sd_model()
+
+       all_mpls[[2]] <- mpl_sd_1
 
        if (notify_progress) {
          print("first sd done!")
@@ -1098,6 +1104,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
                                         rmsd_min_scans = self$n_scan_peaks)
 
          mpl_sd_2$calculate_sd_model()
+         all_mpls[[n_iter + 2]] <- mpl_sd_2
 
          #sd_status <- check_model_sd(sd_predict_function, mpl_sd_1$sd_model, mpl_sd_2$sd_model)
          sd_status <- TRUE
@@ -1135,6 +1142,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        self$n_iteration <- n_iter
        self$peak_type <- peak_calc_type
        self$final_rmsd_multiplier <- rmsd_multiplier
+       self$all_master_peak_lists <- all_mpls
        if (n_fail_iter >= max_failures) {
          self$converged <- FALSE
        } else {
