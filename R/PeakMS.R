@@ -1092,7 +1092,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          all_models[[n_iter + 2]] <- mpl_sd_1$sd_model
 
          mpl_sd_2 <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type, sd_model = mpl_sd_1$sd_model,
-                                        multiplier = tmp_rmsd_multiplier,
+                                        multiplier = rmsd_multiplier,
                                         sd_fit_function = sd_fit_function,
                                         sd_predict_function = sd_predict_function,
                                         rmsd_min_scans = self$n_scan_peaks)
