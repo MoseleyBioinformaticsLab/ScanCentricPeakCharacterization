@@ -1086,7 +1086,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        # mpl_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
        # multi_scan_peak_list$reorder(mpl_order)
 
-       while ((!all(sd_1_v_2)) && (n_good_iter < max_iteration) && (self$scan_fraction >= 0.5)) {
+       while ((!all(sd_1_v_2)) && (n_good_iter < max_iteration) && (self$scan_fraction <= 0.5)) {
          n_iter <- n_iter + 1
          mpl_sd_1$calculate_sd_model()
          all_models[[n_iter + 2]] <- mpl_sd_1$sd_model
@@ -1099,7 +1099,8 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
          mpl_sd_2$calculate_sd_model()
 
-         sd_status <- check_model_sd(sd_predict_function, mpl_sd_1$sd_model, mpl_sd_2$sd_model)
+         #sd_status <- check_model_sd(sd_predict_function, mpl_sd_1$sd_model, mpl_sd_2$sd_model)
+         sd_status <- TRUE
 
          if (!sd_status) {
            self$scan_fraction <- self$scan_fraction + 0.05
