@@ -121,7 +121,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
     create_correspondent_peaks = function(...){
       self$correspondent_peaks <-
         SIRM.FTMS.peakCharacterization::FindCorrespondenceScans$new(self$multi_scan_peaklist,
-                                                                    digital_resolution_multiplier = 0.5,
+                                                                    digital_resolution_multiplier = 1,
                                                                     rmsd_multiplier = 3,
                                                                     sd_fit_function = self$sd_fit_function,
                                                                     sd_predict_function = self$sd_predict_function,
