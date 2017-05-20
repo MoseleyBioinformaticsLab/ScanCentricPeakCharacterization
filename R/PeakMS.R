@@ -1194,6 +1194,44 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
 )
 
+#' compare MasterPeakList to others
+#'
+#' Given one MasterPeakList and a bunch of others, determine if there is a match
+#' to any of the previous ones
+#'
+#' @param mpl_check the list of things
+#' @param mpl_list the one to check
+#' @param min_check what value is a minimum valid check
+#' @param exclude_check is there anything to exclude??
+#'
+#' @export
+compare_mpl_to_list <- function(mpl_check, mpl_list, min_check = 3, exclude_check = NULL){
+  has_result <- vapply(mpl_list, length, numeric(1)) > 0
+  mpl_list <- mpl_list[1:max(which(has_result))]
+
+  if (is.null(exclude_check)) {
+    exclude_check <- length(mpl_list)
+  }
+
+  mpl_compare <- lapply(mpl_list, compare_master_peak_lists, mpl_check)
+  mpl_compare <- as.data.frame(do.call(rbind, mpl_compare))
+  mpl_compare$index <- seq(1, nrow(mpl_compare))
+  mpl_compare <- dplyr::mutate(mpl_compare, all_true = master & scan & scan_height & scan_area & scan_mz)
+  mpl_compare <- mpl_compare[-exclude_check, ]
+
+  if (sum(mpl_compare$all_true) > 0) {
+    min_which_same <- min(which(mpl_compare$all_true[-exclude_check]))
+    if (min_which_same >= min_check) {
+      is_converged <- TRUE
+    } else {
+      is_converged <- FALSE
+    }
+  } else {
+    is_converged <- FALSE
+  }
+  is_converged
+}
+
 #' compare two MasterPeakList objects
 #'
 #' Given two MasterPeakList objects, make a determination as to whether they
