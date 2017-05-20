@@ -1079,20 +1079,20 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
        if (notify_progress) {
          print("first sd done!")
-         save(mpl_digital_resolution, file = "mpl_dr.RData")
-         save(mpl_sd_1, file = "mpl_sd_0.RData")
+         #save(mpl_digital_resolution, file = "mpl_dr.RData")
+         #save(mpl_sd_1, file = "mpl_sd_0.RData")
        }
 
        n_iter <- 0
        n_good_iter <- 0
        n_fail_iter <- 0
-       sd_1_v_2 <- compare_master_peak_lists(mpl_sd_1, mpl_digital_resolution)
+       sd_2_v_others <- compare_mpl_to_list(mpl_sd_1, all_mpls, exclude_check = 2)
 
        # mpl_sd_1$calculate_scan_information_content()
        # mpl_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
        # multi_scan_peak_list$reorder(mpl_order)
 
-       while ((!all(sd_1_v_2)) && (n_good_iter < max_iteration) && (self$scan_fraction <= 0.5)) {
+       while ((!all(sd_2_v_others)) && (n_good_iter < max_iteration) && (self$scan_fraction <= 0.5)) {
          n_iter <- n_iter + 1
          mpl_sd_1$calculate_sd_model()
          all_models[[n_iter + 2]] <- mpl_sd_1$sd_model
@@ -1124,7 +1124,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
            mpl_sd_2 <- collapse_correspondent_peaks(mpl_sd_2)
          }
 
-         sd_1_v_2 <- compare_master_peak_lists(mpl_sd_1, mpl_sd_2)
+         sd_2_v_others <- compare_mpl_to_list(mpl_sd_2, all_mpls, exclude_check = n_iter + 2)
          mpl_sd_1 <- mpl_sd_2
          # mpl_sd_1$calculate_scan_information_content()
          # mpl_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
@@ -1133,12 +1133,12 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          if (notify_progress) {
            notify_message <- paste0(as.character(n_iter), " iteration done!")
            print(notify_message)
-           save(mpl_sd_1, file = paste0("mpl_sd_", as.character(n_iter), ".RData"))
+           #save(mpl_sd_1, file = paste0("mpl_sd_", as.character(n_iter), ".RData"))
          }
        }
        self$master_peak_list <- mpl_sd_1
        self$sd_models <- all_models
-       self$compare_mpl_models <- sd_1_v_2
+       self$compare_mpl_models <- sd_2_v_others
        self$n_iteration <- n_iter
        self$peak_type <- peak_calc_type
        self$final_rmsd_multiplier <- rmsd_multiplier
