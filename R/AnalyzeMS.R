@@ -337,15 +337,34 @@ PeakFinder <- R6::R6Class("PeakFinder",
       document_peakfinder[[".__enclos_env__"]] <- NULL
       document_peakfinder$clone <- NULL
 
+      dr_model <- self$correspondent_peaks$sd_models[[1]]
+
+      if (class(dr_model) == "loess") {
+        dr_model <- self$remove_loess_class(dr_model)
+      }
+
+      sd_model <- self$correspondent_peaks$sd_models[[length(self$correspondent_peaks$sd_models)]]
+
+      if (class(sd_model) == "loess") {
+        sd_model <- self$remove_loess_class(sd_model)
+      }
+
       self$processing_info <- list(Package = function_pkg,
                                    Version = pkg_description$Version,
                                    Sha = pkg_sha,
                                    FunctionCalled = document_peakfinder,
                                    Parameters = list(Method = self$peak_method,
                                                      Scans = self$raw_data$scan_range),
-                                   Models = list(DigitalResolutionModel = self$correspondent_peaks$sd_models[[1]],
-                                                 SDModel = self$correspondent_peaks$sd_models[[length(self$correspondent_peaks$sd_models)]])
+                                   Models = list(DigitalResolutionModel = dr_model,
+                                                 SDModel = sd_model)
       )
+    },
+
+    remove_loess_class = function(sd_model){
+      attr(sd_model, "class") <- NULL
+      sd_model$call <- NULL
+      sd_model$terms <- NULL
+      sd_model
     },
 
     run_correspondence = function(){
