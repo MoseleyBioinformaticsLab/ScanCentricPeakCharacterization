@@ -57,9 +57,10 @@ zip_files <- mclapply(use_files, function(ifile) {
     message("file already exists, skipping!")
   }
   
-  anal_ms$peak_finder$multi_scans <- NULL
   peak_finder <- anal_ms$peak_finder
-  save(anal_ms$peak_finder, file = mspl_file)
+  peak_finder$multi_scan <- NULL
+  
+  save(peak_finder, file = mspl_file)
   out_file
   
 })
