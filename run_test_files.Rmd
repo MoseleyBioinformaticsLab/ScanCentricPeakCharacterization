@@ -1,0 +1,67 @@
+---
+title: "Process Test Files, fit 4"
+author: "Robert M Flight"
+date: "`r Sys.time()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(SIRM.FTMS.peakCharacterization)
+library(parallel)
+options(mc.cores = 12)
+```
+
+## Functions
+
+### Filtering
+
+```{r filtering_scans}
+filter_scans <- function(raw_data){
+  scan_times <- data.frame(scan = raw_data$scan_range, 
+                           time = raw_data$raw_data@scantime[raw_data$scan_range])
+  scan_times <- dplyr::mutate(scan_times, lag = time - lag(time), lead = lead(time) - time)
+  scan_times <- dplyr::filter(scan_times, lag >= 4, lead >= 4)
+  
+  raw_data$set_scans(scan_range = scan_times$scan)
+  raw_data
+}
+```
+
+
+## Run Data
+
+```{r}
+use_files <- dir("test_files", full.names = TRUE, pattern = "mzML")
+zip_save <- paste0("test_files/zip_files_", make.names(Sys.time()))
+
+if (!dir.exists(zip_save)) {
+  dir.create(zip_save)
+}
+
+rdata_save <- paste0("test_files/mspl_files_defaults_fullrun_", make.names(Sys.time()))
+if (!dir.exists(rdata_save)) {
+  dir.create(rdata_save)
+}
+
+zip_files <- mclapply(use_files, function(ifile) {
+  out_file <- file.path(zip_save, gsub("mzML$", "zip", basename(ifile)))
+  mspl_file <- file.path(rdata_save, gsub(".mzML$", "_peaklist.RData", basename(ifile)))
+  
+  out_file <- file.path(zip_save, gsub("mzML$", "zip", basename(ifile)))
+  
+  if (!file.exists(out_file)) {
+    anal_ms <- AnalyzeMS$new(ifile, out_file = out_file, peak_finder = PeakFinder$new(raw_filter = filter_scans))
+    try(anal_ms$run_all())
+  } else {
+    message("file already exists, skipping!")
+  }
+  
+  anal_ms$peak_finder$multi_scans <- NULL
+  peak_finder <- anal_ms$peak_finder
+  save(anal_ms$peak_finder, file = mspl_file)
+  out_file
+  
+})
+```
+
