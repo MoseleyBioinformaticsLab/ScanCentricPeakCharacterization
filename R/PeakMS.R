@@ -225,7 +225,7 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
         self$calculate_average_mz_model()
       }
       diff_model <- self$mz_model_diffs
-      max_out <- max(grDevices::boxplot.stats(diff_model$sum_diff)$conf)
+      max_out <- max(grDevices::boxplot.stats(diff_model$sum_diff)$stats)
       keep_scans <- self$scan_numbers() %in% diff_model$scan[diff_model$sum_diff <= max_out]
 
       self$peak_list_by_scans <- self$peak_list_by_scans[keep_scans]
