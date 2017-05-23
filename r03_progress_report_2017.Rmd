@@ -138,6 +138,84 @@ spectrum, and 9% of the peaks present after filtering out those peaks with
 less than 0.01% of the intensity.
 
 
+```{r sample_correspondence_files}
+cor_files <- dir("~/data/amandaspear/20161205_beadcaptureexotest_lipids_FTMS_ARS/peak_picked/inter_files_X2017.05.22.11.57.27", pattern = "pos", full.names = TRUE)
+
+cor_mpl <- lapply(cor_files, function(in_file){
+  tmp_env <- new.env()
+  load(in_file, envir = tmp_env)
+  mpl <- tmp_env$peak_finder$correspondent_peaks$master_peak_list$clone(deep = TRUE)
+  rm(tmp_env)
+  mpl
+})
+
+names(cor_mpl) <- basename(cor_files)
+```
+
+```{r setup_correspondence}
+peakfinder <- new.env()
+load(cor_files[1], envir = peakfinder)
+
+multisample <- MultiSamplePeakList$new(cor_mpl)
+multisample$set_min_scans()
+multisample$filter_min_scans()
+
+multisample$sd_fit_function <- peakfinder$peak_finder$sd_fit_function
+multisample$sd_predict_function <- peakfinder$peak_finder$sd_predict_function
+
+multisample$calculate_average_mz_model()
+```
+
+```{r run_sample_correspondence}
+cor_sample <- MasterPeakList$new(multisample, multiplier = 3)
+```
+
+```{r how_sparse}
+sparseness_value <- function(value_matrix){
+  not_na <- sum(is.na(value_matrix))
+  total <- nrow(value_matrix) * ncol(value_matrix)
+  not_na / total
+}
+
+single_sparseness <- sparseness_value(cor_sample$scan_mz)
+
+double_sparseness <- sparseness_value(cor_sample$scan_mz[cor_sample$count_notna() >= 2, ])
+
+triple_sparseness <- sparseness_value(cor_sample$scan_mz[cor_sample$count_notna() >= 3, ])
+
+data_sparcity <- data.frame(perc.sparse = c(single_sparseness, double_sparseness, triple_sparseness) * 100,
+                            n_sample = c(1, 2, 3))
+```
+
+```{r report_sparcity}
+knitr::kable(data_sparcity, digits = 0)
+```
+
+Table 1. Levels of data sparcity based on peak correspondence across `r ncol(cor_sample$scan_mz)` samples.
+
+Table 1 reports the level of data sparcity for an exosomal lipid dataset 
+comprised of `r ncol(cor_sample$scan_mz)` samples. The three levels of **n_sample**
+denote the differing levels of sparcity if a peak is required to be in at least **n sample**'s.
+These values of data sparcity are much lower than the levels of data sparcity that
+we have previously observed in data of this type.
+
+
+```{r sparseness_figure}
+frac_notna <- data.frame(nonzero_frac = cor_sample$count_notna() / ncol(cor_sample$scan_mz) )
+
+sparsity_figure <- ggplot(frac_notna, aes(x = nonzero_frac)) + geom_histogram() + scale_y_log10() + xlab("fraction non-zero")
+sparsity_figure
+```
+
+Figure 5. Histogram of the log-10 counts of the number of peaks with a given
+fraction of sparsity.
+
+Figure 5 shows the distribution of peaks with particular fractions of non-zero entries
+across samples. Although the overall distribution is similar in shape to what
+has been previously observed, the overall number of peaks with higher fractions
+of non-zero entries across samples is higher than previously observed.
+
+
 ```{r save_to_file}
 library(ReporteRs)
 doc <- pptx()
@@ -153,6 +231,9 @@ doc <- addPlot(doc = doc, fun = print, x = corr_depth_plot, vector.graphic = TRU
 
 doc <- addSlide(doc, slide.layout = "Content with Caption")
 doc <- addPlot(doc = doc, fun = print, x = drop_figure, vector.graphic = TRUE)
+
+doc <- addSlide(doc, slide.layout = "Content with Caption")
+doc <- addPlot(doc = doc, fun = pritn, x = sparsity_figure, vector.graphic = TRUE)
 
 writeDoc(doc, file = "r03_figures.pptx")
 ```
