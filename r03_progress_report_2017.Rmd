@@ -29,19 +29,8 @@ if (!dir.exists(figure_loc)) {
 load(use_files)
 ```
 
-## Purpose
 
-Provide figures for the R03 progress report.
-
-## Data
-
-One of the exosomal lipid extracts performed by Amanda Spear.
-
-## Noise Levels
-
-### Single Scan
-
-```{r}
+```{r scan_noise_plot_function}
 scan_noise_plots <- function(peak_list_by_scans){
   all_plots <- lapply(peak_list_by_scans, function(in_scan){
     peak_list <- in_scan$peak_list
@@ -66,14 +55,11 @@ single_scan_noiseplot <- ggplot(single_scan_peaklist, aes(x = log10_height, fill
 single_scan_noiseplot
 ```
 
-Figure 1. log-10 of peak heights within a single scan. 
+Figure 1. Example log-10 histogram of peak heights within a single scan. 
 
-These peak heights show a bimodal distribution that we believe is indicative 
-of a noise and a signal component, and therefore can be 
+The first major lowest intensity mode is indicative noise, and therefore can be 
 separated prior to peak correspondence across scans, improving scan-to-scan peak
 correspondence.
-
-### Across Scans
 
 ```{r across_scan_noise}
 across_scans <- peak_finder$multi_scan_peaklist$noise_info
@@ -81,13 +67,12 @@ across_scan_noise <- ggplot(across_scans, aes(x = noise)) + geom_histogram(bins 
 across_scan_noise
 ```
 
-Figure 2. Log-10 of noise peaks across multiple scans for one sample. 
+Figure 2. Log-10 histogram of noise levels across multiple scans for one sample. 
 
 Figure 2 demonstrates that the noise levels across scans can vary, and although
-it is often within a narrow range, sometimes some of the scans will be outside. Normalization
-or removal of the outlier scans may improve the analysis.
+it is often within a narrow range, sometimes some of the scans will be outside. 
+Removal of outlier scans appears to improve the analysis.
 
-## Correspondece Depth
 
 ```{r correspondence_depth}
 mpl <- peak_finder$correspondent_peaks$master_peak_list
@@ -106,7 +91,7 @@ corr_depth_plot <- ggplot(n_scan, aes(x = n_scan)) + geom_histogram(bins = 56) +
 corr_depth_plot
 ```
 
-Figure 3. Number of correspondent-peaks with a given number of peaks across the scans.
+Figure 3. Histogram of correspondent-peaks with a given number of peaks across scans.
 
 Following correspondence of the peaks across the scans, the number of individual
 scan-peaks for each correspondent peak can be assessed. More than 2000 of the peaks
@@ -114,9 +99,6 @@ appear in only a single scan, seeding doubt as to whether they are **real** peak
 or some form of artifact. In contrast, `r sum(n_peaks >= 5)` are present in
 at least 5 scans.
 
-## Drop In Peaks Before / After Scan Level Correspondence
-
-Base this on doing peak picking on the **averaged** scans.
 
 ```{r averaged_peak_picking}
 raw_data <- peak_finder$raw_data$raw_data
@@ -130,8 +112,6 @@ peaks <- peaks[(peaks[,4] - peaks[,3]) >= 5, ]
 max_peak <- max(peaks[,1]) * 0.00001
 ```
 
-There are **`r nrow(peaks)`** with at least 5 data points, of which `r sum(peaks[,1] >= max_peak)` would remain
-using a noise cutoff of 0.01% of the maximum peak.
 
 ```{r drop_in_peaks}
 drop_peaks <- data.frame(condition = c("raw", "0.01%", "all_scans", "> 5 scans"),
@@ -143,21 +123,20 @@ drop_figure <- ggplot(drop_peaks, aes(x = condition, y = n_peak)) + geom_col()
 drop_figure
 ```
 
-Figure 4. Number of reported peaks under different conditions. **raw** are the
-number of peaks with at least 5 data points peak-picked from the fully averaged
+Figure 4. Number of reported peaks under different criteria. **raw** are the
+number of peaks with at least 5 non-zero data points peak-picked from the fully averaged
 spectrum. **0.01%** is the number of **raw** peaks left after removing those
 less than 0.01% the height of the highest peak. **all_scans** is the number of
-peaks present in at least one scan after doing scan level peak picking and correspondence,
+peaks present in at least one scan after doing scan level noise removal and peak correspondence,
 and **> 5 scans** is the number of peaks present in at least 5 scans.
 
 Figure 4 demonstrates how much data reduction takes place through the use of
-scan level peak picking and correspondence of peaks across scans. For this
+scan level peak picking, noise removal, and correspondence of peaks across scans. For this
 one sample, the `r drop_peaks[4, "n_peak"]` peaks present in at least 5 scans
 represents 3% of the peaks present when peak picking across the fully averaged
 spectrum, and 9% of the peaks present after filtering out those peaks with
 less than 0.01% of the intensity.
 
-## Save to File
 
 ```{r save_to_file}
 library(ReporteRs)
