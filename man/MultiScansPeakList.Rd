@@ -12,4 +12,3 @@ MultiScansPeakList
 holds a list of peak lists where each list entry is from a different scan
 }
 \keyword{datasets}
-

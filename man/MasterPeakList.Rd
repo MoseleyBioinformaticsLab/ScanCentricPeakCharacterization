@@ -12,4 +12,3 @@ MasterPeakList
 Stores a master list of peaks, and which peaks from which scan match it
 }
 \keyword{datasets}
-

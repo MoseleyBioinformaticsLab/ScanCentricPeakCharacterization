@@ -12,4 +12,3 @@ FindCorrespondenceScans
 generate correspondent peaks
 }
 \keyword{datasets}
-

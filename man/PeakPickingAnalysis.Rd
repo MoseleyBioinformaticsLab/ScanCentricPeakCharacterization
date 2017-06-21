@@ -12,4 +12,3 @@ PeakPickingAnalysis
 Reference class to hold the results of a peak picking analysis
 }
 \keyword{datasets}
-

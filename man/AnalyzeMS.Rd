@@ -13,4 +13,3 @@ This class allows you to analyze mass spec data, and controls the execution
 of reading in the mass
 }
 \keyword{datasets}
-

@@ -20,4 +20,3 @@ how to pass the data to the various summary functions for finding the peak
 center, intensity, area, etc.
 }
 \keyword{internal}
-

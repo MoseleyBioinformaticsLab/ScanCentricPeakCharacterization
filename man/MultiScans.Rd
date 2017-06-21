@@ -12,4 +12,3 @@ MultiScans
 stores the results of peak picking on multiple MS scans
 }
 \keyword{datasets}
-

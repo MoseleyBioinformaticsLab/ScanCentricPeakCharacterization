@@ -55,4 +55,3 @@ rms$find_peaks <- function(){
 
 }
 \keyword{internal}
-

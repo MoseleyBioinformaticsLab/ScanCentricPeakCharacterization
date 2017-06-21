@@ -25,4 +25,3 @@ Reference class to hold the results of peak finding of an entire "scan"
 within a mass-spectrum.
 }
 \keyword{datasets}
-
