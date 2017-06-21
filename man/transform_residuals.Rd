@@ -20,4 +20,3 @@ numeric
 given a set of original and fitted values and a transform, return a set of
 transformed residuals.
 }
-

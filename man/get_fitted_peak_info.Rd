@@ -18,4 +18,3 @@ data.frame
 given the peak, simply returns the model and residuals for the full peak
 and the area
 }
-

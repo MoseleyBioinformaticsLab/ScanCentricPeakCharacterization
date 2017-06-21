@@ -30,4 +30,3 @@ about the peak. Currently available methods include:
   \item{lm_unweighted}{quadratic linear fit to log-intensities}
 }
 }
-

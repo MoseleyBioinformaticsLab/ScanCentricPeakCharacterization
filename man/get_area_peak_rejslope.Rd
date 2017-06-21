@@ -17,4 +17,3 @@ numeric
 \description{
 get area peak
 }
-

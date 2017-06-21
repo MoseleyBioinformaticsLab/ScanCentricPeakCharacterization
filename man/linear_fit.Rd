@@ -17,4 +17,3 @@ vector
 \description{
 calculates system of equations for a linear fit
 }
-

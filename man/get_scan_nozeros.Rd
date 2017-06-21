@@ -14,4 +14,3 @@ get_scan_nozeros(rawdata, cutoff = 0.00225)
 \description{
 filter the raw scan data so we can use it for resolution
 }
-

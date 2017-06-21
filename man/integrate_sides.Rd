@@ -22,4 +22,3 @@ numeric
 provides ability to calculate the area on the sides of a peak that are not
 caught by the parabolic model assuming a triangle to each side of the parabola
 }
-

@@ -18,4 +18,3 @@ list
 Given the peak mz and intensity, decide what type of peak it is and roughly
 where the peak should be.
 }
-

@@ -22,4 +22,3 @@ To do the normalization, we find the set of peaks that have a large
   number of corresponding peaks, and using these peaks, for each peak, for each
   scan get the log-ratio of the peak in that scan against all the other scans
 }
-

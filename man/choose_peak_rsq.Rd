@@ -17,4 +17,3 @@ numeric
 \description{
 choose peak rsq
 }
-

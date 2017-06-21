@@ -17,4 +17,3 @@ tbl_df
 \description{
 returns peaks found by \code{pracma::findpeaks}
 }
-

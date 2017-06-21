@@ -17,4 +17,3 @@ zipped \emph{mzML}, \emph{metadata.json}, and \emph{raw_metadata.json}.
 This zip file is what will be operated on by anything that accesses files,
 so that our interface is consistent.
 }
-

@@ -45,8 +45,8 @@ for carrying out the various steps of an analysis, including peak finding.
    \item{\code{out_file}}{the file where data will be saved}
  }
 }
+
 \seealso{
 AnalyzeMS
 }
 \keyword{datasets}
-

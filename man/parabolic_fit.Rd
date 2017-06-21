@@ -19,4 +19,3 @@ list
 \description{
 calculates the coefficients of a parabolic fit (y = x + x^2) of x to y
 }
-

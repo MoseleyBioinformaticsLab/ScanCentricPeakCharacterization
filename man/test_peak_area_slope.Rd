@@ -30,4 +30,3 @@ returns a matrix of vectors, where the vector is:
   \item area
 }
 }
-

@@ -17,4 +17,3 @@ ggplot
 \description{
 generates a plot of peaks so we can compare them
 }
-

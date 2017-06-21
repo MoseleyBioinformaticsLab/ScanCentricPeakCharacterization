@@ -20,4 +20,3 @@ numeric
 given a peak found, try to fit a parabolic model and return the center,
 intensity, and area using basic and model based if possible.
 }
-

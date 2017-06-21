@@ -17,4 +17,3 @@ list
 \description{
 given a zip and a metadata file, load it and return it
 }
-

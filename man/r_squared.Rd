@@ -17,4 +17,3 @@ numeric
 \description{
 given a series of x's and y's, how well do they fit a parabolic model?
 }
-

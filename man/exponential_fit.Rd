@@ -23,4 +23,3 @@ list
 \description{
 Given a set of X's and Y's, calculates the fit for y = a + bx + cx^2 + dx^n ...
 }
-

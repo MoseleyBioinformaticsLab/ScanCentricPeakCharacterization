@@ -17,4 +17,3 @@ tbl_df
 \description{
 takes json representing a PeakList object, and generates the data.frame version
 }
-

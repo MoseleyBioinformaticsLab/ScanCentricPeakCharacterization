@@ -16,4 +16,3 @@ list
 after finding closest peaks, goes through and looks for cases where there are
 multiple matches, and selects the smallest difference to keep.
 }
-

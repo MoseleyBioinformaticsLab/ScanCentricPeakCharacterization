@@ -15,4 +15,3 @@ json_string
 \description{
 takes a PeakList object, and generates a json version
 }
-

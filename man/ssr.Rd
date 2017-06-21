@@ -15,4 +15,3 @@ numeric
 \description{
 returns the sum of squares residuals from an \code{lm} object
 }
-

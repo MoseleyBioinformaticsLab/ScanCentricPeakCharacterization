@@ -12,4 +12,3 @@ ZipMS$add_peak_list(peak_list_data)
 \description{
 adds a peak list to the \code{ZipMS}
 }
-

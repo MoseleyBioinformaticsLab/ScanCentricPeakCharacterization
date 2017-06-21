@@ -20,4 +20,3 @@ function makes a very simple assumption, that the length of the coefficients
 corresponds to a number of exponential terms in the model, i.e. if the
 coefficients has 3 terms, then the model was \emph{Y = a + bx + cx^2}.
 }
-

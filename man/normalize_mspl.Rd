@@ -18,4 +18,3 @@ MultiScanPeakList
 Given a set of normalization factors and a \code{MultiScanPeakList}, normalize
 the peaks in each scan of the \code{MultiScanPeakList}
 }
-

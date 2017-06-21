@@ -23,4 +23,3 @@ Uses the \code{pracma::findpeaks} regular expression diff algorithm to find
 possible peaks, then tests each one to fit to parabolic model on log-intensities,
 returning the statistics about the peak.
 }
-

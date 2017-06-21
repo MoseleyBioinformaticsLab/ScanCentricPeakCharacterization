@@ -13,4 +13,3 @@ check_zip_file(zip_dir)
 checks that the zip file has the basic contents it should have, and that
 files listed in the metadata actually exist.
 }
-

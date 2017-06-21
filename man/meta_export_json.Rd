@@ -12,4 +12,3 @@ meta_export_json(meta_list)
 \description{
 export the list metadata to a json string
 }
-

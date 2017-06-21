@@ -22,4 +22,3 @@ xcmsRaw
 function to import raw mass spec data in a way that provides what we need to work
 with it. \code{raw_data} should be the \emph{full path} to the data.
 }
-

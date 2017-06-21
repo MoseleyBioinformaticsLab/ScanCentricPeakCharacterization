@@ -22,4 +22,3 @@ tbl_df
 taking a \code{query_data}, go through the \code{subject_data}
 and find the closest peaks in \code{query_data}.
 }
-

@@ -21,4 +21,3 @@ numeric
 \description{
 provides the area integration for the peak that fits the parabolic model
 }
-

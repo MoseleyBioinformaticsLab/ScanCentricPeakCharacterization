@@ -17,4 +17,3 @@ data.frame
 \description{
 generate peak info using a cauchy fit
 }
-

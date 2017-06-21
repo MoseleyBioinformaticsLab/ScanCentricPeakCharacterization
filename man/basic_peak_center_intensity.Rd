@@ -18,4 +18,3 @@ numeric
 given the peak, finds center based on the mean, and intensity by averaging
 between the two middle points.
 }
-

@@ -36,4 +36,3 @@ This calculation is based on the premise that a distribution of
 Given a peak list data.frame object, determines a noise cutoff and classifies
 peaks as to whether they are "not_noise".
 }
-

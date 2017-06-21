@@ -18,4 +18,3 @@ ggplot
 function to plot the total intensity chromatogram of the data, with information
 about which scans are which
 }
-

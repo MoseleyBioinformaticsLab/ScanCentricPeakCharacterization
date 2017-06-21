@@ -17,4 +17,3 @@ data.frame
 \description{
 given some m/z intensity data, log-transform with some small constant added
 }
-

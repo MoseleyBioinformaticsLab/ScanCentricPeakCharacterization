@@ -18,4 +18,3 @@ compare_master_peak_lists(mpl_1, mpl_2, compare_list = c("master", "scan",
 Given two MasterPeakList objects, make a determination as to whether they
 are the same or different
 }
-

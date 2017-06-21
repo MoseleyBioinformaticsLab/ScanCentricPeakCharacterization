@@ -18,4 +18,3 @@ numeric
 given a matrix that defines the possible sets of points for a parabolic,
 choose the longest set with an r-squared fit above a certain criteria
 }
-

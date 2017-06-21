@@ -27,4 +27,3 @@ returns a matrix of vectors, where the vector is:
   \item r-square fit for the set of points
 }
 }
-

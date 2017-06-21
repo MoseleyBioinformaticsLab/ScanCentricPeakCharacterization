@@ -12,4 +12,3 @@ get_mzml_metadata(mzml_file)
 \description{
 get mzML metadata
 }
-

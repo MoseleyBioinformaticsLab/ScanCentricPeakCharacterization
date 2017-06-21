@@ -21,4 +21,3 @@ to the file, and then add to the zip file
 a directory created by \code{tempdir} is used to hold the file,
 which is then added to the zip file.
 }
-

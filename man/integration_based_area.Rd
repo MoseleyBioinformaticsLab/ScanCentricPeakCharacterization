@@ -25,4 +25,3 @@ integration_based_area(mz_data, int_data, full_peak_loc, model_peak_loc,
 \description{
 gives the area of the peak based on integrating the model bits and the sides
 }
-

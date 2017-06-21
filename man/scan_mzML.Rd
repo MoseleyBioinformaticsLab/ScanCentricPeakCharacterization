@@ -33,4 +33,3 @@ Returns a list of \code{tbl_df}'s, with \code{mz} and \code{intensity}.
   scan_data <- scan_mzML(mz_file, scan_times = c(24, 80)) # scans in this time range
 }
 }
-

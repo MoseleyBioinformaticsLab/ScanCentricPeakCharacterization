@@ -17,4 +17,3 @@ numeric
 \description{
 for a set of mz - intensity point pairs, get the point-to-point slopes
 }
-

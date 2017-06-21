@@ -19,4 +19,3 @@ numeric
 \description{
 get rsq peak
 }
-

@@ -14,4 +14,3 @@ initialize_metadata_from_mzml(zip_dir, mzml_file)
 \description{
 initialize metadata from mzML
 }
-

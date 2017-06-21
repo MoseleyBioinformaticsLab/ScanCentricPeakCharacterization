@@ -33,4 +33,3 @@ The peak of a parabola is defined where y is zero for the derivative.
 We can use this to derive where the center of the peak is, and then put the
 center value back into the equation to get the intensity.
 }
-

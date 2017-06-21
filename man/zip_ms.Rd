@@ -18,4 +18,3 @@ zip_ms(in_file, out_file = NULL, load_raw = TRUE, load_peak_list = TRUE)
 \description{
 make a new ZipMS
 }
-

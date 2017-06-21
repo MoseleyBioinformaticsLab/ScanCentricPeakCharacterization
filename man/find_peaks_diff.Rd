@@ -22,4 +22,3 @@ Was copied from a cross-validated post:
   http://stats.stackexchange.com/questions/22974/how-to-find-local-peaks-valleys-in-a-series-of-data
   by user stas-g
 }
-

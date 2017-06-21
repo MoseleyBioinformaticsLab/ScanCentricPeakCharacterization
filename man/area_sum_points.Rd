@@ -19,4 +19,3 @@ numeric
 \description{
 calculate the area based on summing the points
 }
-
