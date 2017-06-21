@@ -1347,3 +1347,95 @@ normalize_mspl <- function(normalization_factors, mspl){
   })
   mspl
 }
+
+#' MultiSamplePeakList
+#'
+#' PeakList objects for multiple samples
+#'
+#' @export
+
+MultiSamplePeakList <- R6::R6Class("MultiFilePeakList",
+                                 inherit = MultiScansPeakList,
+  public = list(
+    sample_id = NULL,
+    min_scans = NULL,
+    set_min_scans = function(){
+      sample_scans <- vapply(self$peak_list_by_scans, function(in_sample){
+        in_sample$n_scans
+      }, numeric(1))
+      self$min_scans <- floor(mean(sample_scans) * 0.1)
+      self$peak_list_by_scans <- lapply(self$peak_list_by_scans, function(in_sample){
+        in_sample$min_scans <- self$min_scans
+        in_sample
+      })
+    },
+    filter_min_scans = function(){
+      if (!is.null(self$min_scans)) {
+        self$peak_list_by_scans <- lapply(self$peak_list_by_scans, function(in_sample){
+          in_sample$filter_min_scans()
+          in_sample
+        })
+      } else {
+        warning("Set min_scans first!")
+      }
+
+    },
+    initialize = function(sample_list = NULL){
+      n_scan <- length(sample_list)
+
+      if (class(sample_list) == "character") {
+        self$peak_list_by_scans <- lapply(seq(1, n_scan), function(in_scan){
+          tmp_env <- new.env()
+          load(sample_list[in_scan], envir = tmp_env)
+          CorrespondentPeakList$new(tmp_env$peak_finder$correspondent_peaks$master_peak_list,
+                                    scan = in_scan, sample_id = sample_list[in_scan])
+        })
+        self$sample_id <- basename(sample_list)
+      } else if (class(sample_list) == "list") {
+        if (!is.null(names(sample_list))) {
+          tmp_ids <- names(sample_list)
+        } else {
+          tmp_ids <- as.character(seq(1, n_scan))
+        }
+        self$peak_list_by_scans <- lapply(seq(1, n_scan), function(in_scan){
+          CorrespondentPeakList$new(sample_list[[in_scan]], scan = in_scan, sample_id = tmp_ids[in_scan])
+        })
+        self$sample_id <- tmp_ids
+      }
+
+    }
+  )
+)
+
+#' CorrespondentPeakList
+#'
+#' Creates a PeakList compatible object from a correspondent object
+#'
+#' @export
+
+CorrespondentPeakList <- R6::R6Class("CorrespondentPeakList",
+  inherit = PeakList,
+  public = list(
+    sample_id = NULL,
+    min_scans = NULL,
+    filter_min_scans = function(){
+      self$peak_list <- dplyr::filter(self$peak_list, n_scan >= self$min_scans)
+    },
+    n_scans = NULL,
+    initialize = function(master_peak_list, scan = NULL, sample_id = NULL){
+
+      n_peak <- length(master_peak_list$master)
+      self$peak_list <- data.frame(ObservedMZ = rowMeans(master_peak_list$scan_mz, na.rm = TRUE),
+                                   Height = rowMeans(master_peak_list$scan_height, na.rm = TRUE),
+                                   Area = rowMeans(master_peak_list$scan_area, na.rm = TRUE),
+                                   NormalizedArea = rowMeans(master_peak_list$scan_normalizedarea, na.rm = TRUE),
+                                   n_scan = master_peak_list$count_notna(),
+                                   peak = seq(1, n_peak))
+      self$scan <- scan
+      self$sd_predict_function <- master_peak_list$sd_predict_function
+      self$mz_model <- master_peak_list$sd_model
+
+      self$sample_id <- sample_id
+      self$n_scans <- length(master_peak_list$scan)
+    }
+  ))
