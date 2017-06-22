@@ -158,13 +158,13 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
     peak_type = NULL,
 
     scan_numbers = function(){
-      vapply(self$peak_list_by_scans, function(in_scan){
+      vapply(self$peak_list_by_scans[self$scan_indices], function(in_scan){
         in_scan$scan
       }, numeric(1))
     },
 
     scan_mz_models = function(){
-      all_models <- lapply(self$peak_list_by_scans, function(in_scan){
+      all_models <- lapply(self$peak_list_by_scans[self$scan_indices], function(in_scan){
         in_scan$mz_model
       })
 
@@ -172,6 +172,8 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
     mz_model = NULL,
 
     mz_model_diffs = NULL,
+
+    scan_indices = NULL,
 
     # calculates an average model and deviations from that model
     # Assuming LOESS models, a generic set of m/z are created spaced by 0.5 mz,
@@ -228,9 +230,10 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
       max_out <- max(grDevices::boxplot.stats(diff_model$sum_diff)$stats)
       keep_scans <- self$scan_numbers() %in% diff_model$scan[diff_model$sum_diff <= max_out]
 
-      self$peak_list_by_scans <- self$peak_list_by_scans[keep_scans]
-      self$noise_info <- self$noise_info[keep_scans, ]
+      #self$peak_list_by_scans <- self$peak_list_by_scans[keep_scans]
+      #self$noise_info <- self$noise_info[keep_scans, ]
 
+      self$scan_indices <- which(keep_scans)
       self$calculate_average_mz_model()
       invisible(self)
     },
@@ -301,10 +304,12 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
                      sd_predict_function = self$sd_predict_function)
       })
 
+      self$scan_indices <- seq(1, length(self$peak_list_by_scans))
       tmp_noise_info <- lapply(self$peak_list_by_scans, function(x){x$noise_info})
       self$noise_info <- do.call(rbind, tmp_noise_info)
       self$noise_info$scan <- self$scan_numbers()
       self$calculate_average_mz_model()
+
       invisible(self)
     }
   ),
