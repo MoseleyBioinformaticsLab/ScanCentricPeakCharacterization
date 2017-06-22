@@ -1,3 +1,57 @@
+#' get raw metadata
+#'
+#' When raw files are copied, we also generated metadata about their original locations
+#' and new locations, and some other useful info. We would like to capture it, and
+#' keep it along with the metadata from the mzml file. So, given a list of mzml
+#' files, and a location for the raw files, this function creates metadata json
+#' files for the mzml files.
+#'
+#' @param mzml_files the paths to the mzml files
+#' @param raw_file_loc the directory holding raw files and json metadata files
+#'
+#' @importFrom purrr map_lgl
+#'
+#' @export
+raw_metadata_mzml <- function(mzml_files, raw_file_loc, recursive = TRUE){
+  # mzml_files <- dir("/home/rmflight/data/test_json_meta/mzml_data", full.names = TRUE)
+  # raw_file_loc <- "/home/rmflight/data/test_json_meta"
+  # recursive <- TRUE
+  all_json_files <- dir(raw_file_loc, pattern = "json", full.names = TRUE, recursive = recursive)
+  json_data <- data.frame(json_file = all_json_files, id = basename_no_file_ext(all_json_files), stringsAsFactors = FALSE)
+  mzml_data <- data.frame(mzml_file = mzml_files, id = basename_no_file_ext(mzml_files), stringsAsFactors = FALSE)
+  mzml_data <- mzml_data[file.exists(mzml_files), ]
+
+  json_mzml_match <- dplyr::inner_join(json_data, mzml_data, by = "id")
+  json_mzml_match$mzml_meta <- FALSE
+
+  did_write_mzml_meta <- purrr::map_lgl(seq(1, nrow(json_mzml_match)), function(in_row){
+    file_meta <- jsonlite::fromJSON(json_mzml_match[in_row, "json_file"], simplifyVector = FALSE, )
+    print(json_mzml_match[in_row, "mzml_file"])
+    mzml_meta <- try(get_mzml_metadata(json_mzml_match[in_row, "mzml_file"]))
+    if (class(mzml_meta) != "try-error") {
+      tmp_model <- as.character(mzml_meta$referenceableParamGroupList$referenceableParamGroup[[1]]$name)
+      tmp_serial <- as.character(mzml_meta$referenceableParamGroupList$referenceableParamGroup[[2]]$value)
+      mzml_meta$run$instrument <- list(model = tmp_model,
+                                       serial = tmp_serial)
+      mzml_meta$file <- file_meta[[1]]
+
+      outfile <- paste0(tools::file_path_sans_ext(json_mzml_match[in_row, "mzml_file"]), ".json")
+      cat(jsonlite::toJSON(mzml_meta, pretty = TRUE, auto_unbox = TRUE), file = outfile)
+      did_write <- TRUE
+    } else {
+      did_write <- FALSE
+    }
+    did_write
+  })
+  json_mzml_match$mzml_meta <- did_write_mzml_meta
+  json_mzml_match
+}
+
+basename_no_file_ext <- function(in_files){
+  file_no_ext <- tools::file_path_sans_ext(in_files)
+  basename(file_no_ext)
+}
+
 zip_ms_from_zip <- function(in_file){
   ZipMS$new(in_file)
   ZipMS
