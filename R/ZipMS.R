@@ -26,7 +26,7 @@ raw_metadata_mzml <- function(mzml_files, raw_file_loc, recursive = TRUE){
 
   did_write_mzml_meta <- purrr::map_lgl(seq(1, nrow(json_mzml_match)), function(in_row){
     file_meta <- jsonlite::fromJSON(json_mzml_match[in_row, "json_file"], simplifyVector = FALSE, )
-    print(json_mzml_match[in_row, "mzml_file"])
+    #print(json_mzml_match[in_row, "mzml_file"])
     mzml_meta <- try(get_mzml_metadata(json_mzml_match[in_row, "mzml_file"]))
     if (class(mzml_meta) != "try-error") {
       tmp_model <- as.character(mzml_meta$referenceableParamGroupList$referenceableParamGroup[[1]]$name)
