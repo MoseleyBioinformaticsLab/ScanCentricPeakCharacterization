@@ -127,31 +127,43 @@ check_zip_file <- function(zip_dir){
 #' initialize metadata
 #'
 #' @param zip_dir
-#' @param sample_id
 #'
 #' @export
-initialize_zip_metadata <- function(zip_dir, sample_id){
-  mzml_file <- file.path(zip_dir, paste0(sample_id, ".mzML"))
-  json_file <- file.path(paste0(sample_id, ".json"))
+initialize_zip_metadata <- function(zip_dir){
+  mzml_file <- dir(zip_dir, pattern = "mzML", full.names = TRUE)
+  json_file <- dir(zip_dir, pattern = "json", full.names = TRUE)
 
-  if (!file.exists(mzml_file)) {
-    stop("mzML file not found, exiting!", call. = TRUE)
+  if (length(mzml_file) == 1) {
+    mzml_base <- tools::file_path_sans_ext(basename(mzml_file))
+  } else {
+    stop("there should only be one mzML file passed!", call. = TRUE)
   }
 
-  if (!file.exists(json_file)) {
+  if (length(json_file) == 1) {
+    json_base <- tools::file_path_sans_ext(basename(json_file))
+
+    if (json_base == mzml_base) {
+      raw_meta <- jsonlite::fromJSON(json_file, simplifyVector = FALSE)
+      file.rename(json_file, file.path(zip_dir, "raw_metadata.json"))
+    } else {
+      warning("JSON meta-data file does not match mzML file name!")
+      raw_meta <- get_mzml_metadata(mzml_file)
+      cat(meta_export_json(raw_meta), file = file.path(zip_dir, "raw_metadata.json"))
+    }
+  } else {
     raw_meta <- get_mzml_metadata(mzml_file)
     cat(meta_export_json(raw_meta), file = file.path(zip_dir, "raw_metadata.json"))
-  } else {
-    raw_meta <- jsonlite::fromJSON(json_file, simplifyVector = FALSE)
-    file.rename(json_file, file.path(zip_dir, "raw_metadata.json"))
   }
-  zip_meta <- list(id = raw_meta$mzML$id,
+
+  zip_meta <- list(id = mzml_base,
+                   mzml_id = raw_meta$mzML$id,
                    raw = list(raw_data = basename(mzml_file),
                               metadata = "raw_metadata.json"))
   zip_meta_json <- meta_export_json(zip_meta)
 
   zip_meta_file <- file.path(zip_dir, "metadata.json")
   cat(zip_meta_json, file = zip_meta_file)
+
 }
 
 #' initialize metadata from mzML

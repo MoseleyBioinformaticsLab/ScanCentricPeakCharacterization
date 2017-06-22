@@ -198,9 +198,9 @@ ZipMS <- R6::R6Class("ZipMS",
       } else {
         file.copy(in_file, file.path(private$temp_directory, basename(in_file)))
         if (!is.null(mzml_meta_file)) {
-          file.copy(mzml_meta_file, file.path(private$temp_directory, basename(in_file)))
+          file.copy(mzml_meta_file, file.path(private$temp_directory, basename(mzml_meta_file)))
         }
-        initialize_zip_metadata(private$temp_directory, basename(in_file))
+        initialize_zip_metadata(private$temp_directory)
         self$zip_file <- in_file
       }
 
