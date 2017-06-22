@@ -7,7 +7,7 @@
 AnalyzeMS <- R6::R6Class("AnalyzeMS",
   public = list(
    load_file = function(){
-     self$zip_ms <- ZipMS$new(self$in_file, self$out_file, temp_loc = self$temp_loc)
+     self$zip_ms <- ZipMS$new(self$in_file, self$metadata_file, self$out_file, temp_loc = self$temp_loc)
    },
    found_peaks = NULL,
 
@@ -39,6 +39,7 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
 
    zip_ms = NULL,
    in_file = NULL,
+   metadata_file = NULL,
    out_file = NULL,
    temp_loc = NULL,
 
@@ -49,8 +50,13 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
      self$zip_ms$cleanup()
    },
 
-   initialize = function(in_file, out_file = NULL, peak_finder = NULL, temp_loc = NULL){
+   initialize = function(in_file, metadata_file = NULL, out_file = NULL, peak_finder = NULL, temp_loc = NULL){
      self$in_file <- in_file
+
+     if (!is.null(metadata_file)) {
+       self$metadata_file <- metadata_file
+     }
+
      if (!is.null(out_file)) {
        self$out_file <- out_file
      }
