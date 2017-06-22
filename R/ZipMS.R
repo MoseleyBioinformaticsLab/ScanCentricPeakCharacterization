@@ -173,8 +173,8 @@ ZipMS <- R6::R6Class("ZipMS",
     id = NULL,
     out_file = NULL,
 
-    initialize = function(in_file, out_file = NULL, load_raw = TRUE,
-                                              load_peak_list = TRUE,
+    initialize = function(in_file, mzml_meta_file = NULL, out_file = NULL, load_raw = TRUE,
+                          load_peak_list = TRUE,
                           temp_loc = NULL){
       private$do_load_raw <- load_raw
       private$do_load_peak_list <- load_peak_list
@@ -197,7 +197,10 @@ ZipMS <- R6::R6Class("ZipMS",
 
       } else {
         file.copy(in_file, file.path(private$temp_directory, basename(in_file)))
-        initialize_metadata_from_mzml(private$temp_directory, basename(in_file))
+        if (!is.null(mzml_meta_file)) {
+          file.copy(mzml_meta_file, file.path(private$temp_directory, basename(in_file)))
+        }
+        initialize_zip_metadata(private$temp_directory, basename(in_file))
         self$zip_file <- in_file
       }
 

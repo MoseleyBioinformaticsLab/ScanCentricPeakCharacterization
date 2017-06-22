@@ -124,6 +124,36 @@ check_zip_file <- function(zip_dir){
 
 }
 
+#' initialize metadata
+#'
+#' @param zip_dir
+#' @param sample_id
+#'
+#' @export
+initialize_zip_metadata <- function(zip_dir, sample_id){
+  mzml_file <- file.path(zip_dir, paste0(sample_id, ".mzML"))
+  json_file <- file.path(paste0(sample_id, ".json"))
+
+  if (!file.exists(mzml_file)) {
+    stop("mzML file not found, exiting!", call. = TRUE)
+  }
+
+  if (!file.exists(json_file)) {
+    raw_meta <- get_mzml_metadata(mzml_file)
+    cat(meta_export_json(raw_meta), file = file.path(zip_dir, "raw_metadata.json"))
+  } else {
+    raw_meta <- jsonlite::fromJSON(json_file, simplifyVector = FALSE)
+    file.rename(json_file, file.path(zip_dir, "raw_metadata.json"))
+  }
+  zip_meta <- list(id = raw_meta$mzML$id,
+                   raw = list(raw_data = basename(mzml_file),
+                              metadata = "raw_metadata.json"))
+  zip_meta_json <- meta_export_json(zip_meta)
+
+  zip_meta_file <- file.path(zip_dir, "metadata.json")
+  cat(zip_meta_json, file = zip_meta_file)
+}
+
 #' initialize metadata from mzML
 #'
 #' @param zip_dir the directory containing unzipped data
