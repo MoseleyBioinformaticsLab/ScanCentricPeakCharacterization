@@ -138,7 +138,7 @@ spectrum, and 9% of the peaks present after filtering out those peaks with
 less than 0.01% of the intensity.
 
 
-```{r sample_correspondence_files}
+```{r sample_correspondence_files, cache = TRUE}
 cor_files <- dir("~/data/amandaspear/20161205_beadcaptureexotest_lipids_FTMS_ARS/peak_picked/inter_files_X2017.05.22.11.57.27", pattern = "pos", full.names = TRUE)
 
 cor_mpl <- lapply(cor_files, function(in_file){
@@ -152,7 +152,7 @@ cor_mpl <- lapply(cor_files, function(in_file){
 names(cor_mpl) <- basename(cor_files)
 ```
 
-```{r setup_correspondence}
+```{r setup_correspondence, cache = TRUE}
 peakfinder <- new.env()
 load(cor_files[1], envir = peakfinder)
 
@@ -183,13 +183,15 @@ double_sparseness <- sparseness_value(cor_sample$scan_mz[cor_sample$count_notna(
 
 triple_sparseness <- sparseness_value(cor_sample$scan_mz[cor_sample$count_notna() >= 3, ])
 
-data_sparcity <- data.frame(perc.sparse = c(single_sparseness, double_sparseness, triple_sparseness) * 100,
+data_sparcity <- data.frame(perc.sparse = format(c(single_sparseness, double_sparseness, triple_sparseness) * 100, digits = 2),
                             n_sample = c(1, 2, 3))
 ```
 
-```{r report_sparcity}
-knitr::kable(data_sparcity, digits = 0)
+```{r report_sparcity, results='asis'}
+knitr::kable(data_sparcity, format = "html")
 ```
+
+**Note this is in the powerpoint figures document, can't get it to display properly here**
 
 Table 1. Levels of data sparcity based on peak correspondence across `r ncol(cor_sample$scan_mz)` samples.
 
@@ -203,7 +205,7 @@ we have previously observed in data of this type.
 ```{r sparseness_figure}
 frac_notna <- data.frame(nonzero_frac = cor_sample$count_notna() / ncol(cor_sample$scan_mz) )
 
-sparsity_figure <- ggplot(frac_notna, aes(x = nonzero_frac)) + geom_histogram() + scale_y_log10() + xlab("fraction non-zero")
+sparsity_figure <- ggplot(frac_notna, aes(x = nonzero_frac)) + geom_histogram(bins = 29) + scale_y_log10(breaks = c(10, 100, 1000)) + xlab("fraction non-zero")
 sparsity_figure
 ```
 
@@ -213,7 +215,10 @@ fraction of sparsity.
 Figure 5 shows the distribution of peaks with particular fractions of non-zero entries
 across samples. Although the overall distribution is similar in shape to what
 has been previously observed, the overall number of peaks with higher fractions
-of non-zero entries across samples is higher than previously observed.
+of non-zero entries across samples is much higher than previously observed in
+spectrum-level peak picking and assignment-based correspondence analyses. Previous
+spectrum-level analyses had generated data sparsity of 0.95 vs 0.75 as shown
+in these scan-level analyses.
 
 
 ```{r save_to_file}
@@ -233,7 +238,10 @@ doc <- addSlide(doc, slide.layout = "Content with Caption")
 doc <- addPlot(doc = doc, fun = print, x = drop_figure, vector.graphic = TRUE)
 
 doc <- addSlide(doc, slide.layout = "Content with Caption")
-doc <- addPlot(doc = doc, fun = pritn, x = sparsity_figure, vector.graphic = TRUE)
+doc <- addFlexTable(doc, flextable = FlexTable(data_sparcity))
+
+doc <- addSlide(doc, slide.layout = "Content with Caption")
+doc <- addPlot(doc = doc, fun = print, x = sparsity_figure, vector.graphic = TRUE)
 
 writeDoc(doc, file = "r03_figures.pptx")
 ```
