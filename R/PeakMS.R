@@ -175,6 +175,14 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
 
     scan_indices = NULL,
 
+    get_scan_peak_lists = function(){
+      self$peak_list_by_scans[self$scan_indices]
+    },
+
+    get_noise_info = funciton(){
+      self$noise_info[self$scan_indices, ]
+    },
+
     # calculates an average model and deviations from that model
     # Assuming LOESS models, a generic set of m/z are created spaced by 0.5 mz,
     # and then predictions of SD made based on m/z. The average model is created
@@ -562,6 +570,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
     scan_normalizedarea = NULL,
     scan_peak = NULL,
     scan = NULL,
+    scan_indices = NULL,
     master = NULL,
     novel_peaks = NULL,
     sd_fit_function = NULL,
