@@ -1,6 +1,6 @@
 context("import-data")
 
-test_file <- system.file("extdata/mztest.mzML", package = "SIRM.FTMS.peakPickingMethods")
+test_file <- system.file("extdata/mztest.mzML", package = "SIRM.FTMS.peakCharacterization")
 
 test_that("basic importing works", {
   scan_1 <- scan_mzML(test_file)
