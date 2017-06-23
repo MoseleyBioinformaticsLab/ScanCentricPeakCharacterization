@@ -179,8 +179,12 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
       self$peak_list_by_scans[self$scan_indices]
     },
 
-    get_noise_info = funciton(){
+    get_noise_info = function(){
       self$noise_info[self$scan_indices, ]
+    },
+
+    reset_scan_indices = function(){
+      self$scan_indices <- seq(1, length(self$peak_list_by_scans))
     },
 
     # calculates an average model and deviations from that model
