@@ -1,13 +1,17 @@
 image: rmflight-rbase
 
-deps:
-  script:
+before_script:
     - apt-get update
     - apt-get -y install libnetcdf-dev libssl-dev libxml2-dev
     - install2.r testthat cowplot ggplot2 readxl # package dependencies
     - install2.r --deps TRUE snow futile.logger bookdown rmarkdown waveslim XML doParallel foreach iterators hexbin RANN faahKO msdata ncdf4 rgl microbenchmark MALDIquant # other stuff in bioconductor
     - install2.r -r http://bioconductor.org/packages/release/bioc --deps TRUE xcms
 
-install:
+runit:
   script:
     - R CMD INSTALL .
+    - R CMD build . --no-build-vignettes --no-manual
+    - PKG_FILE_NAME=$(ls -1t *.tar.gz | head -n 1)
+    - R CMD check "${PKG_FILE_NAME}" --no-build-vignettes --no-manual --as-cran 
+
+
