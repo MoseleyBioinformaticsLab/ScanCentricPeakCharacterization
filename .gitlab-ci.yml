@@ -2,5 +2,6 @@ image: rmflight-rbase
 
 build:
   script:
-    - install2.r testthat cowplot ggplot2 readxl xcms
+    - install2.r testthat cowplot ggplot2 readxl
+    - install2.r http://bioconductor.org/packages/release/bioc --deps TRUE xcms
     - R CMD build . --no-build-vignettes --no-manual
