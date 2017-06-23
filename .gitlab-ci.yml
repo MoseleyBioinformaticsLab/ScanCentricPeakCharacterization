@@ -5,6 +5,6 @@ build:
     - apt-get update
     - apt-get install libnetcdf-dev
     - install2.r testthat cowplot ggplot2 readxl # package dependencies
-    - install2.r --deps TRUE snow futile.logger bookdown rmarkdown waveslim XML doParallel foreach iterators # other stuff in bioconductor
+    - install2.r --deps TRUE snow futile.logger bookdown rmarkdown waveslim XML doParallel foreach iterators hexbin # other stuff in bioconductor
     - install2.r -r http://bioconductor.org/packages/release/bioc --deps TRUE xcms
     - R CMD build . --no-build-vignettes --no-manual
