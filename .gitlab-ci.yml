@@ -1,0 +1,6 @@
+image: rmflight-base
+
+build:
+  script:
+    - install2.r testthat cowplot ggplot2 readxl xcms
+    - R CMD build . --no-build-vignettes --no-manual
