@@ -1,4 +1,4 @@
 library(testthat)
-library(SIRM.FTMS.peakPickingMethods)
+library(SIRM.FTMS.peakCharacterization)
 
-test_check("SIRM.FTMS.peakPickingMethods")
+test_check("SIRM.FTMS.peakCharacterization")
