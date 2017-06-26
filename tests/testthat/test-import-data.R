@@ -1,10 +1,10 @@
 context("import-data")
 
-test_file <- system.file("extdata/mztest.mzML", package = "SIRM.FTMS.peakCharacterization")
+test_file <- system.file("extdata/mz_example.mzML", package = "SIRM.FTMS.peakCharacterization")
 
 test_that("basic importing works", {
   scan_1 <- scan_mzML(test_file)
-  expect_equal(length(scan_1), 5)
+  expect_equal(length(scan_1), 61)
 })
 
 test_that("checking null works", {
@@ -12,7 +12,7 @@ test_that("checking null works", {
 })
 
 test_that("checks on input work", {
-  expect_warning(scan_mzML(test_file, scan_indices = seq(1, 10)))
+  expect_warning(scan_mzML(test_file, scan_indices = seq(1, 1000)))
   expect_error(scan_mzML(test_file, scan_times = 20))
 })
 
@@ -26,11 +26,11 @@ test_that("changed inputs work", {
   # first 2 scans by time
   scan_3 <- scan_mzML(test_file, scan_times = c(0, 35))
   expect_lt(scan_3$meta$time[2], 35)
-  expect_equal(length(scan_3), 3)
+  expect_equal(length(scan_3), 4)
 
   # middle 3 scans
   scan_4 <- scan_mzML(test_file, scan_indices = seq(2,4))
   expect_equal(scan_4$meta$index, seq(2,4))
-  expect_gt(scan_4$meta$time[1], 30)
-  expect_lt(scan_4$meta$time[2], 60)
+  expect_gt(scan_4$meta$time[1], 10)
+  expect_lt(scan_4$meta$time[3], 40)
 })
