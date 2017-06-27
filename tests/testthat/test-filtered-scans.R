@@ -1,7 +1,7 @@
 context("filtered-scans")
 
-run_peakpicking <- Sys.getenv("run_peakpicking")
-if (is.null(run_peakpicking)) {
+run_peakpicking <- as.logical(Sys.getenv("run_peakpicking"))
+if (is.na(run_peakpicking)) {
   run_peakpicking <- FALSE
 }
 
