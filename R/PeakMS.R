@@ -737,7 +737,8 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       self$scan_mz <- self$scan_height <- self$scan_area <- self$scan_peak <- self$scan_normalizedarea <- matrix(NA, nrow = max(n_peaks) * init_multiplier, ncol = n_scans)
 
       # initialize the master list
-      tmp_scan <- multi_scan_peak_list$peak_list_by_scans[[1]]$peak_list
+      scan_peak_lists <- multi_scan_peak_list$get_scan_peak_lists()
+      tmp_scan <- scan_peak_lists[[1]]$peak_list
       # filter down to the range we want if desired
       tmp_scan <- self$trim_peaks(tmp_scan, mz_range)
 
