@@ -17,6 +17,10 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
        self$peak_finder$out_file <- self$zip_ms$out_file
        self$peak_finder$run_correspondence()
        self$found_peaks <- self$peak_finder$export_data()
+       self$peak_finder$raw_data <- NULL
+       self$peak_finder$multi_scan <- NULL
+       peak_finder <- self$peak_finder
+       save(peak_finder, file = file.path(self$zip_ms$temp_directory, "peak_finder.rds"))
      } else if ("function" %in% class(self$peak_finder)) {
        self$found_peaks <- self$peak_finder(self$zip_ms$raw_ms, ...)
      }

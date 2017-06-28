@@ -172,6 +172,7 @@ ZipMS <- R6::R6Class("ZipMS",
     peaks = NULL,
     id = NULL,
     out_file = NULL,
+    temp_directory = NULL,
 
     initialize = function(in_file, mzml_meta_file = NULL, out_file = NULL, load_raw = TRUE,
                           load_peak_list = TRUE,
@@ -186,28 +187,28 @@ ZipMS <- R6::R6Class("ZipMS",
       }
 
       dir.create(temp_loc)
-      private$temp_directory <- temp_loc
+      self$temp_directory <- temp_loc
 
       in_file <- path.expand(in_file)
       is_zip <- regexpr("*.zip", in_file)
       if (is_zip != -1) {
         in_zip <- in_file
         self$zip_file <- in_zip
-        unzip(in_zip, exdir = private$temp_directory)
+        unzip(in_zip, exdir = self$temp_directory)
 
       } else {
-        file.copy(in_file, file.path(private$temp_directory, basename(in_file)))
+        file.copy(in_file, file.path(self$temp_directory, basename(in_file)))
         if (!is.null(mzml_meta_file)) {
-          file.copy(mzml_meta_file, file.path(private$temp_directory, basename(mzml_meta_file)))
+          file.copy(mzml_meta_file, file.path(self$temp_directory, basename(mzml_meta_file)))
         }
-        initialize_zip_metadata(private$temp_directory)
+        initialize_zip_metadata(self$temp_directory)
         self$zip_file <- in_file
       }
 
-      check_zip_file(private$temp_directory)
+      check_zip_file(self$temp_directory)
 
       self$metadata_file <- "metadata.json"
-      self$metadata <- load_metadata(private$temp_directory, self$metadata_file)
+      self$metadata <- load_metadata(self$temp_directory, self$metadata_file)
       self$id <- self$metadata$id
 
       if (load_raw && (!is.null(self$metadata$raw$raw_data))) {
@@ -226,7 +227,7 @@ ZipMS <- R6::R6Class("ZipMS",
     },
 
     show_temp_dir = function(){
-      print(private$temp_directory)
+      print(self$temp_directory)
     },
 
     write_zip = function(out_file = NULL){
@@ -235,36 +236,35 @@ ZipMS <- R6::R6Class("ZipMS",
       } else {
         out_file <- private$generate_filename(out_file)
       }
-      zip(out_file, list.files(private$temp_directory, full.names = TRUE), flags = "-j")
+      zip(out_file, list.files(self$temp_directory, full.names = TRUE), flags = "-j")
     },
 
     cleanup = function(){
-      unlink(private$temp_directory, recursive = TRUE, force = TRUE)
-      #file.remove(private$temp_directory)
+      unlink(self$temp_directory, recursive = TRUE, force = TRUE)
+      #file.remove(self$temp_directory)
     },
 
     add_peak_list = function(peak_list_data){
       json_peak_meta <- jsonlite::toJSON(peak_list_data$peakpicking_parameters,
                                          pretty = TRUE, auto_unbox = TRUE)
-      cat(json_peak_meta, file = file.path(private$temp_directory,
+      cat(json_peak_meta, file = file.path(self$temp_directory,
                                       "peakpicking_parameters.json"))
       self$metadata$peakpicking_analysis <- list(parameters =
                                                    "peakpicking_parameters.json",
                                                  output = "raw_peaklist.json")
 
       json_meta <- jsonlite::toJSON(self$metadata, pretty = TRUE, auto_unbox = TRUE)
-      cat(json_meta, file = file.path(private$temp_directory,
+      cat(json_meta, file = file.path(self$temp_directory,
                                       self$metadata_file))
 
       json_peaklist <- peak_list_2_json(peak_list_data$peak_list)
-      cat(json_peaklist, file = file.path(private$temp_directory,
+      cat(json_peaklist, file = file.path(self$temp_directory,
                                           "raw_peaklist.json"))
 
       self$peaks <- peak_list_data
     }
   ),
   private = list(
-    temp_directory = NULL,
     generate_filename = function(out_file = NULL){
 
       is_zip_out <- regexpr("*.zip", self$zip_file)
@@ -290,14 +290,14 @@ ZipMS <- R6::R6Class("ZipMS",
     },
 
     load_raw = function(){
-      RawMS$new(file.path(private$temp_directory, self$metadata$raw$raw_data),
-                file.path(private$temp_directory, self$metadata$raw$metadata))
+      RawMS$new(file.path(self$temp_directory, self$metadata$raw$raw_data),
+                file.path(self$temp_directory, self$metadata$raw$metadata))
     },
 
     load_peak_list = function(){
-      PeakPickingAnalysis$new(file.path(private$temp_directory,
+      PeakPickingAnalysis$new(file.path(self$temp_directory,
                                         self$metadata$peakpicking_analysis$output),
-                              file.path(private$temp_directory,
+                              file.path(self$temp_directory,
                                         self$metadata$peakpicking_analysis$parameters))
     },
 
@@ -315,15 +315,15 @@ ZipMS <- R6::R6Class("ZipMS",
     calc_md5_hashes = function(){
 
       if (!is.null(self$metadata_file)) {
-        private$curr_md5$metadata_file <- tools::md5sum(file.path(private$temp_directory, self$metadata_file))
+        private$curr_md5$metadata_file <- tools::md5sum(file.path(self$temp_directory, self$metadata_file))
       }
 
       if (!is.null(self$raw_ms)) {
         private$curr_md5$raw_metadata_file <-
-          tools::md5sum(file.path(private$temp_directory, self$metadata$raw$metadata))
+          tools::md5sum(file.path(self$temp_directory, self$metadata$raw$metadata))
 
         private$curr_md5$raw_data_file <-
-          tools::md5sum(file.path(private$temp_directory, self$metadata$raw$raw_data))
+          tools::md5sum(file.path(self$temp_directory, self$metadata$raw$raw_data))
       }
 
       private$old_md5 <- private$curr_md5
