@@ -221,7 +221,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
         n_scan <- sum(keep_scans)
       }
 
-      self$scan_normalized <- self$multi_scan_peaklist$scan_numbers()
+      self$scan_normalized <- self$multi_scan_peaklist$scan_indices
 
       # this is getting the difference of a scan to all the other scans.
       # It uses the fact that the peaks are the rows, and the scans are the columns.
