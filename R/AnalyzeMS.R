@@ -384,7 +384,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
         self$apply_raw_filter()
         self$create_multi_scan()
         self$create_multi_scan_peaklist()
-      } if (is.null(self$multi_scan_peaklist)) {
+      } else if (is.null(self$multi_scan_peaklist)) {
         stop("Need a MultiScanPeakList to work with!", call. = TRUE)
       }
       self$filter_dr_models()
