@@ -118,9 +118,9 @@ PeakFinder <- R6::R6Class("PeakFinder",
     scan_start = NULL,
     scan_dr_filter = NULL,
     filter_dr_models = function(){
-      self$scan_start <- self$multi_scan_peaklist$scan_numbers()
+      self$scan_start <- self$multi_scan_peaklist$scan_indices
       self$multi_scan_peaklist <- self$multi_scan_peaklist$remove_bad_resolution_scans()
-      self$scan_dr_filter <- self$multi_scan_peaklist$scan_numbers()
+      self$scan_dr_filter <- self$multi_scan_peaklist$scan_indices
     },
 
     correspondent_peaks = NULL,
@@ -152,7 +152,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
       tmp_information <- tmp_information[order(tmp_information$information_content, decreasing = TRUE), ]
 
       self$multi_scan_peaklist <- self$multi_scan_peaklist$reorder(tmp_information$scan_order)
-      self$scan_information_content <- self$multi_scan_peaklist$scan_numbers()
+      self$scan_information_content <- self$multi_scan_peaklist$scan_indices
 
       self$correspondent_peaks$master_peak_list$reorder(tmp_information$scan_order)
     },

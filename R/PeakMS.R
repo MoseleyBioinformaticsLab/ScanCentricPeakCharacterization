@@ -264,8 +264,7 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
     },
 
     reorder = function(new_order){
-      self$peak_list_by_scans <- self$peak_list_by_scans[new_order]
-      self$noise_info <- self$noise_info[new_order, ]
+      self$scan_indices <- self$scan_indices[new_order]
       invisible(self)
     },
 
@@ -593,6 +592,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       self$scan_normalizedarea <- self$scan_normalized_area[, new_order]
       self$scan_peak <- self$scan_peak[, new_order]
       self$scan <- self$scan[new_order]
+      self$scan_indices[new_order]
 
       if (!is.null(self$normalization_factors)) {
         self$normalization_factors <- self$normalization_factors[new_order]
@@ -845,6 +845,8 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       if (is.null(sd_model)) {
         sd_model = multi_scan_peak_list$mz_model
       }
+
+      self$scan_indices <- multi_scan_peak_list$scan_indices
 
       if (!is.null(sd_fit_function)) {
         self$sd_fit_function <- sd_fit_function
