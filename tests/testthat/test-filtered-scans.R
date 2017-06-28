@@ -73,3 +73,14 @@ test_that("filtering scans works properly", {
   tmp_peaks <- peak_finder$multi_scan_peaklist$get_scan_peak_lists()
   expect_equal(length(tmp_peaks), 37)
 })
+
+test_that("masterpeaklist gets created properly", {
+  load("ref_peak_finder.rds")
+
+  peak_finder$multi_scan_peaklist$remove_bad_resolution_scans()
+  mspl <- peak_finder$multi_scan_peaklist
+  mpl_digital_resolution <- MasterPeakList$new(mspl, sd_model = NULL,
+                                               multiplier = 1,
+                                               rmsd_min_scans = 3)
+
+})
