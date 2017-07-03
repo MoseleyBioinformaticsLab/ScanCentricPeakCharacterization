@@ -276,7 +276,7 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
         in_scan
       })
 
-      noise_info <- lapply(self$get_scan_peak_lists(), function(in_scan){
+      noise_info <- lapply(self$peak_list_by_scans, function(in_scan){
         in_scan$noise_info
       })
       noise_info <- do.call(rbind, noise_info)
