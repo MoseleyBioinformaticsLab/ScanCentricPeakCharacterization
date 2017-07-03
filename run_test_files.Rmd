@@ -66,3 +66,20 @@ zip_files <- mclapply(use_files, function(ifile) {
 })
 ```
 
+## Alternative Running
+
+```{r other_test, eval = FALSE}
+library(SIRM.FTMS.peakCharacterization)
+mzml_file <- "tests/testthat/001UKNneg.mzML"
+json_file <- "tests/testthat/001UKNneg.json"
+
+anal_ms <- AnalyzeMS$new(mzml_file, json_file, out_file = "001UKNneg.zip", peak_finder = PeakFinder$new(raw_filter = filter_scans))
+anal_ms$load_file()
+anal_ms$peak_finder$raw_data <- anal_ms$zip_ms$raw_ms
+anal_ms$peak_finder$apply_raw_filter()
+anal_ms$peak_finder$create_multi_scan()
+anal_ms$peak_finder$create_multi_scan_peaklist()
+anal_ms$peak_finder$multi_scan_peaklist$remove_bad_resolution_scans()
+anal_ms$peak_finder$multi_scan_peaklist$scan_indices
+```
+
