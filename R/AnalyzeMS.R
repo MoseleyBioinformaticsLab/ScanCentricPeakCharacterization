@@ -106,15 +106,23 @@ PeakFinder <- R6::R6Class("PeakFinder",
       }
     },
 
+    vocal = FALSE,
+
 
     multi_scan = NULL,
     create_multi_scan = function(){
+      if (self$vocal) {
+        message("Creating Multi-Scans ....")
+      }
       self$multi_scan <- SIRM.FTMS.peakCharacterization::MultiScans$new(self$raw_data, peak_method = self$peak_method, sd_fit_function = self$sd_fit_function,
                                                                         sd_predict_function = self$sd_predict_function)
       invisible(self)
     },
     multi_scan_peaklist = NULL,
     create_multi_scan_peaklist = function(){
+      if (self$vocal) {
+        message("Creating Multi-Scan Peaklist ....")
+      }
       self$multi_scan_peaklist <- SIRM.FTMS.peakCharacterization::MultiScansPeakList$new(self$multi_scan, noise_function = self$noise_function,
                                                                                          sd_predict_function = self$sd_predict_function)
     },
@@ -122,6 +130,9 @@ PeakFinder <- R6::R6Class("PeakFinder",
     scan_start = NULL,
     scan_dr_filter = NULL,
     filter_dr_models = function(){
+      if (self$vocal) {
+        message("Filtering based on digital resolution models ....")
+      }
       self$scan_start <- self$multi_scan_peaklist$scan_indices
       self$multi_scan_peaklist <- self$multi_scan_peaklist$remove_bad_resolution_scans()
       self$scan_dr_filter <- self$multi_scan_peaklist$scan_indices
@@ -129,6 +140,9 @@ PeakFinder <- R6::R6Class("PeakFinder",
 
     correspondent_peaks = NULL,
     create_correspondent_peaks = function(...){
+      if (self$vocal) {
+        message("Peak Correspondence ....")
+      }
       self$correspondent_peaks <-
         SIRM.FTMS.peakCharacterization::FindCorrespondenceScans$new(self$multi_scan_peaklist,
                                                                     digital_resolution_multiplier = 1,
@@ -140,6 +154,9 @@ PeakFinder <- R6::R6Class("PeakFinder",
 
     scan_information_content = NULL,
     filter_information_content = function(){
+      if (self$vocal) {
+        message("Filtering based on information content ....")
+      }
       # this function removes scans by outlier information content values, and
       # then subsequently re-orders the remaining scans by information content values
       self$correspondent_peaks$master_peak_list$calculate_scan_information_content()
@@ -162,6 +179,9 @@ PeakFinder <- R6::R6Class("PeakFinder",
     },
 
     collapse_correspondent_peaks = function(){
+      if (self$vocal) {
+        message("Collapsing correspondent peaks ....")
+      }
       self$correspondent_peaks$master_peak_list <- collapse_correspondent_peaks(self$correspondent_peaks$master_peak_list)
     },
 
@@ -188,6 +208,9 @@ PeakFinder <- R6::R6Class("PeakFinder",
     },
 
     median_correct_multi_scan_peaklist = function(){
+      if (self$vocal) {
+        message("Median correcting peaks ....")
+      }
       median_offsets <- self$calculate_median_mz_offset()
       for (iscan in seq(1, nrow(median_offsets))) {
         self$multi_scan_peaklist$peak_list_by_scans[[iscan]]$peak_list$ObservedMZ <-
@@ -198,6 +221,9 @@ PeakFinder <- R6::R6Class("PeakFinder",
 
     scan_normalized = NULL,
     normalize_scans_by_correspondent_peaks = function(intensity_measure = "Height", summary_function = mean){
+      if (self$vocal) {
+        message("Normalizing scans ....")
+      }
       mpl <- self$correspondent_peaks$master_peak_list
 
       intensity_options <- c(Height = "scan_height", Area = "scan_area", NormalizedArea = "scan_normalizedarea")
@@ -310,6 +336,9 @@ PeakFinder <- R6::R6Class("PeakFinder",
            Values = values)
     },
     create_peak_data = function(){
+      if (self$vocal) {
+        message("Generating the final peak data ....")
+      }
       sd_model <- self$correspondent_peaks$sd_models[[length(self$correspondent_peaks$sd_models)]] # grab the last model generated from peak correspondence
       master_peaks <- self$correspondent_peaks$master_peak_list
       n_peak <- length(master_peaks$master)
