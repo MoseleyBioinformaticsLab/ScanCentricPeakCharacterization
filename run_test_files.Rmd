@@ -83,3 +83,40 @@ anal_ms$peak_finder$multi_scan_peaklist$remove_bad_resolution_scans()
 anal_ms$peak_finder$multi_scan_peaklist$scan_indices
 ```
 
+## Checking the Results
+
+Now we need to check the results. We do two checks:
+
+1. That the new peaks are identical to a previous set of peaks (if available)
+2. That we can do peak correspondence across two samples
+
+### Comparing to Previous
+
+```{r define_sets, eval = FALSE}
+prev_files <- dir("mspl_files_defaults_fullrun_X2017.05.22.12.57.25", full.names = TRUE)
+curr_files <- dir("mspl_files_defaults_fullrun_X2017.07.03.16.11.15", full.names = TRUE)
+
+prev_data <- lapply(prev_files, function(x){
+  tmp_env <- new.env()
+  load(x, envir = tmp_env)
+  mpl <- tmp_env$peak_finder$correspondent_peaks$master_peak_list$clone(deep = TRUE)
+  rm(tmp_env)
+  mpl
+})
+
+names(prev_data) <- basename(prev_files)
+
+curr_data <- lapply(curr_files, function(x){
+  tmp_env <- new.env()
+  load(x, envir = tmp_env)
+  mpl <- tmp_env$peak_finder$correspondent_peaks$master_peak_list$clone(deep = TRUE)
+  rm(tmp_env)
+  mpl
+})
+names(curr_data) <- basename(curr_files)
+```
+
+```{r check_old_new, eval = FALSE} 
+all.equal(prev_data[[1]], curr_data[[1]])
+```
+
