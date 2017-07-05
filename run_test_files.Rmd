@@ -52,6 +52,7 @@ zip_files <- mclapply(use_files, function(ifile) {
   
   if (!file.exists(out_file)) {
     anal_ms <- AnalyzeMS$new(ifile, out_file = out_file, peak_finder = PeakFinder$new(raw_filter = filter_scans))
+    anal_ms$peak_finder$vocal <- TRUE
     try(anal_ms$run_all())
   } else {
     message("file already exists, skipping!")
