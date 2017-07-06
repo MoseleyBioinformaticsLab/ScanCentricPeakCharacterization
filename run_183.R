@@ -37,7 +37,7 @@ zip_files <- mclapply(use_files, function(ifile) {
 
   if (!file.exists(out_file)) {
     anal_ms <- AnalyzeMS$new(ifile, out_file = out_file, peak_finder = PeakFinder$new(raw_filter = filter_scans))
-    anal_ms$peak_finder$vocal <- TRUE
+    #anal_ms$peak_finder$vocal <- TRUE
 
     anal_ms$load_file()
     anal_ms$peak_finder$raw_data <- anal_ms$zip_ms$raw_ms
