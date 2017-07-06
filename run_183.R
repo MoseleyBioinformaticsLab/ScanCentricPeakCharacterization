@@ -2,6 +2,7 @@ system("git checkout 9f1416e0616e80d73be366349c01b9aef38c5ad4")
 devtools::install()
 library(SIRM.FTMS.peakCharacterization)
 library(parallel)
+library(methods)
 options(mc.cores = 12)
 
 filter_scans <- function(raw_data){
