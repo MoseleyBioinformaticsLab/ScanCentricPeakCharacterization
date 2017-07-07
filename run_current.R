@@ -53,6 +53,7 @@ zip_files <- mclapply(use_files, function(ifile) {
 
     peak_finder$filter_dr_models()
     peak_finder$create_correspondent_peaks()
+    save(peak_finder, file = file.path(mspl_dir, "correspondent_peaklist.rds"))
     peak_finder$collapse_correspondent_peaks()
     peak_finder$correspondent_peaks$master_peak_list$calculate_scan_information_content()
     save(peak_finder, file = file.path(mspl_dir, "scan_information_content.rds"))
