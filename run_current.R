@@ -32,7 +32,7 @@ zip_files <- mclapply(use_files, function(ifile) {
   out_file <- file.path(zip_save, gsub("mzML$", "zip", basename(ifile)))
   mspl_file <- file.path(rdata_save, gsub(".mzML$", "_peaklist.RData", basename(ifile)))
 
-  mspl_dir <- file.path(rdata_save, gsub(".mzML$", "_intermediate_files_", curr_version, basename(ifile)))
+  mspl_dir <- file.path(rdata_save, gsub(".mzML$", paste0("_intermediate_files_", curr_version), basename(ifile)))
   dir.create(mspl_dir)
 
   if (!file.exists(out_file)) {
@@ -80,4 +80,3 @@ zip_files <- mclapply(use_files, function(ifile) {
 
 })
 
-system("git checkout -")
