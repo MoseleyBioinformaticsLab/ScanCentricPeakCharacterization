@@ -130,6 +130,14 @@ names(curr_data) <- basename(curr_files)
 ```
 
 ```{r check_old_new, eval = FALSE} 
-all.equal(prev_data[[1]], curr_data[[1]])
+check_res <- lapply(names(curr_data), function(in_sample){
+  vapply(names(prev_data[[in_sample]]), function(in_scan){
+    isTRUE(all.equal(sort(curr_data[[in_sample]][[in_scan]]), sort(prev_data[[in_sample]][[in_scan]])))
+  }, logical(1))
+})
+
+names(check_res) <- names(curr_data)
+check_res
+
 ```
 
