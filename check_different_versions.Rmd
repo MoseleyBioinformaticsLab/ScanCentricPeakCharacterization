@@ -1,0 +1,73 @@
+---
+title: "Checking different versions of code"
+author: "Robert M Flight"
+date: "`r Sys.time()`"
+output: html_document
+---
+
+```{r setup}
+library(SIRM.FTMS.peakCharacterization)
+```
+
+
+## Checking the Results Between Versions
+
+Now we need to check the results. We do two checks:
+
+1. That the new peaks are identical to a previous set of peaks (if available)
+2. That we can do peak correspondence across two samples
+
+### Comparing to Previous
+
+#### Which Files
+
+```{r define_sets, eval = FALSE}
+prev_files <- dir("mspl_files_defaults_fullrun_X2017.07.07.14.18.45_0.0.183", full.names = TRUE, recursive = TRUE)
+curr_files <- dir("mspl_files_defaults_fullrun_X2017.07.07.10.53.03_0.0.265", full.names = TRUE, recursive = TRUE)
+
+curr_file_id <- basename(dirname(curr_files))
+curr_files <- split(curr_files, curr_file_id)
+
+prev_file_id <- basename(dirname(prev_files))
+prev_files <- split(prev_files, prev_file_id)
+```
+
+#### Check 1, apspear lipid32
+
+```{r load_data}
+use_files <- "aspear_2061205_pos_lipid32_intermediate_files"
+mspl_init <- lapply(c(prev_files[[use_files]][2], curr_files[[use_files]][2]), function(in_file){
+  tmp_env <- new.env()
+  load(in_file, envir = tmp_env)
+  tmp_env
+})
+```
+
+#### Check Some Random Peak Lists
+
+```{r check_random_peaklists}
+check_lists <- sample(52, 10)
+
+mspl_get_scan <- function(peak_finder){
+  all_scans <- peak_finder$multi_scan_peaklist$peak_list_by_scans
+  vapply(all_scans, function(x){x$scan}, numeric(1))
+}
+
+check_scan_match <- lapply(mspl_init, function(x){
+  mspl_get_scan(x$peak_finder)
+})
+all.equal(check_scan_match[[1]], check_scan_match[[2]])
+
+mspl_get_peaks <- function(peak_finder, list_scans){
+  all_scans <- peak_finder$multi_scan_peaklist$peak_list_by_scans[list_scans]
+  lapply(all_scans, function(x){x$peak_list})
+}
+
+mspl_32_peaks <- lapply(mspl_init, function(x){
+  mspl_get_peaks(x$peak_finder, check_lists)
+})
+
+all.equal(mspl_32_peaks[[1]], mspl_32_peaks[[2]])
+```
+
+OK, so at least the peak lists being generated from each scan are identical, and we have overall the same set of scans to start.
