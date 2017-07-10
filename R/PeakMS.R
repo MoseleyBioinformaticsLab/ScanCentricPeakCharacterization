@@ -761,7 +761,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       for (iscan in seq(2, n_scans)) {
         "!DEBUG scan = `iscan`"
 
-        tmp_scan <- multi_scan_peak_list$peak_list_by_scans[[iscan]]$peak_list
+        tmp_scan <- scan_peak_lists[[iscan]]$peak_list
         tmp_scan <- self$trim_peaks(tmp_scan, mz_range)
         n_master <- sum(self$count_notna() != 0)
 
