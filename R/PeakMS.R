@@ -738,7 +738,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
       # initialize the master list
       scan_peak_lists <- multi_scan_peak_list$get_scan_peak_lists()
-      tmp_scan <- scan_peak_lists[[1]]$peak_list
+      tmp_scan <- scan_peak_lists[[1]]$peak_list ##### CHANGE HERE
       # filter down to the range we want if desired
       tmp_scan <- self$trim_peaks(tmp_scan, mz_range)
 
@@ -761,7 +761,8 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       for (iscan in seq(2, n_scans)) {
         "!DEBUG scan = `iscan`"
 
-        tmp_scan <- scan_peak_lists[[iscan]]$peak_list
+        tmp_scan <- scan_peak_lists[[iscan]]$peak_list #### AND ALSO CHANGE HERE
+        # if these are not changed in tandem, you will get some very odd errors between this version and an old version.
         tmp_scan <- self$trim_peaks(tmp_scan, mz_range)
         n_master <- sum(self$count_notna() != 0)
 
