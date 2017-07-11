@@ -21,7 +21,7 @@ Now we need to check the results. We do two checks:
 
 #### Which Files
 
-```{r define_sets, eval = FALSE}
+```{r define_sets}
 prev_files <- dir("mspl_files_defaults_fullrun_X2017.07.07.14.18.45_0.0.183", full.names = TRUE, recursive = TRUE)
 curr_files <- dir("mspl_files_defaults_fullrun_X2017.07.10.13.08.55_0.0.268", full.names = TRUE, recursive = TRUE)
 
@@ -119,7 +119,16 @@ final_data <- lapply(c(prev_files$mspl_files_defaults_fullrun_X2017.07.07.14.18.
   load(in_file, envir = tmp_env)
   tmp_env
 })
+```
 
+```{r}
+all.equal(final_data[[1]]$peak_finder$multi_scan_peaklist$scan_numbers(),
+          final_data[[2]]$peak_finder$multi_scan_peaklist$scan_numbers())
 
+all.equal(final_data[[1]]$peak_finder$correspondent_peaks$master_peak_list$normalization_factors,
+          final_data[[2]]$peak_finder$correspondent_peaks$master_peak_list$normalization_factors)
+
+all.equal(final_data[[1]]$peak_finder$correspondent_peaks$master_peak_list$master,
+          final_data[[2]]$peak_finder$correspondent_peaks$master_peak_list$master)
 ```
 
