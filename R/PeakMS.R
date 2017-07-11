@@ -738,32 +738,30 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
       # initialize the master list
       scan_peak_lists <- multi_scan_peak_list$get_scan_peak_lists()
-      tmp_scan <- scan_peak_lists[[1]]$peak_list ##### CHANGE HERE
-      # filter down to the range we want if desired
-      tmp_scan <- self$trim_peaks(tmp_scan, mz_range)
-
-      n_in1 <- nrow(tmp_scan)
-      self$scan_mz[1:n_in1, 1] <- tmp_scan$ObservedMZ
-      self$scan_height[1:n_in1, 1] <- tmp_scan$Height
-      self$scan_area[1:n_in1, 1] <- tmp_scan$Area
-      self$scan_normalizedarea[1:n_in1, 1] <- tmp_scan$NormalizedArea
-      self$scan_peak[1:n_in1, 1] <- tmp_scan$peak
-
-      self$create_master()
-
-      #diff_cut <- 4 * resolution
-
       self$novel_peaks <- rep(0, n_scans)
-      self$novel_peaks[1] <- n_in1
 
       #out_scan <- 3
 
-      for (iscan in seq(2, n_scans)) {
+      for (iscan in seq(1, n_scans)) {
         "!DEBUG scan = `iscan`"
 
-        tmp_scan <- scan_peak_lists[[iscan]]$peak_list #### AND ALSO CHANGE HERE
-        # if these are not changed in tandem, you will get some very odd errors between this version and an old version.
+        tmp_scan <- scan_peak_lists[[iscan]]$peak_list
         tmp_scan <- self$trim_peaks(tmp_scan, mz_range)
+
+        if (iscan == 1) {
+          n_in1 <- nrow(tmp_scan)
+          self$scan_mz[1:n_in1, 1] <- tmp_scan$ObservedMZ
+          self$scan_height[1:n_in1, 1] <- tmp_scan$Height
+          self$scan_area[1:n_in1, 1] <- tmp_scan$Area
+          self$scan_normalizedarea[1:n_in1, 1] <- tmp_scan$NormalizedArea
+          self$scan_peak[1:n_in1, 1] <- tmp_scan$peak
+
+          self$create_master()
+
+          self$novel_peaks[iscan] <- n_in1
+          next()
+        }
+
         n_master <- sum(self$count_notna() != 0)
 
         # creating match window based on the passed model
