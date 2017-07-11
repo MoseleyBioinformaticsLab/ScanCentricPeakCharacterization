@@ -23,7 +23,7 @@ Now we need to check the results. We do two checks:
 
 ```{r define_sets, eval = FALSE}
 prev_files <- dir("mspl_files_defaults_fullrun_X2017.07.07.14.18.45_0.0.183", full.names = TRUE, recursive = TRUE)
-curr_files <- dir("mspl_files_defaults_fullrun_X2017.07.07.10.53.03_0.0.265", full.names = TRUE, recursive = TRUE)
+curr_files <- dir("mspl_files_defaults_fullrun_X2017.07.10.13.08.55_0.0.268", full.names = TRUE, recursive = TRUE)
 
 curr_file_id <- basename(dirname(curr_files))
 curr_files <- split(curr_files, curr_file_id)
@@ -71,3 +71,55 @@ all.equal(mspl_32_peaks[[1]], mspl_32_peaks[[2]])
 ```
 
 OK, so at least the peak lists being generated from each scan are identical, and we have overall the same set of scans to start.
+
+#### Check digital resolution filter & Correspondence
+
+```{r dr_filter_corr_data}
+corresp_data <- lapply(c(prev_files[[use_files]][1], curr_files[[use_files]][1]), function(in_file){
+  tmp_env <- new.env()
+  load(in_file, envir = tmp_env)
+  tmp_env
+})
+```
+
+```{r corresp_scans}
+corresp_scans <- lapply(corresp_data, function(x){
+  x$peak_finder$correspondent_peaks$master_peak_list$scan
+})
+all.equal(corresp_scans[[1]], corresp_scans[[2]])
+
+corresp_obj <- lapply(corresp_data, function(x){
+  x$peak_finder$correspondent_peaks$master_peak_list
+})
+all.equal(corresp_obj[[1]]$scan_area, corresp_obj[[2]]$scan_area)
+all.equal(corresp_obj[[1]]$master, corresp_obj[[2]]$master)
+```
+
+So, initial correspondence is the same. That's good.
+
+#### Check Collapsing & Information Content
+
+```{r corresp_info}
+collapse_data <- lapply(c(prev_files[[use_files]][3], curr_files[[use_files]][3]), function(in_file){
+  tmp_env <- new.env()
+  load(in_file, envir = tmp_env)
+  tmp_env
+})
+
+all.equal(collapse_data[[1]]$peak_finder$correspondent_peaks$master_peak_list$master, collapse_data[[2]]$peak_finder$correspondent_peaks$master_peak_list$master)
+
+all.equal(collapse_data[[1]]$peak_finder$correspondent_peaks$master_peak_list$scan_information_content, collapse_data[[2]]$peak_finder$correspondent_peaks$master_peak_list$scan_information_content)
+```
+
+#### Final Set
+
+```{r final_set}
+final_data <- lapply(c(prev_files$mspl_files_defaults_fullrun_X2017.07.07.14.18.45_0.0.183[1], curr_files$mspl_files_defaults_fullrun_X2017.07.10.13.08.55_0.0.268[1]), function(in_file){
+  tmp_env <- new.env()
+  load(in_file, envir = tmp_env)
+  tmp_env
+})
+
+
+```
+
