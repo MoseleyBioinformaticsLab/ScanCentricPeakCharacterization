@@ -61,8 +61,12 @@ zip_files <- mclapply(use_files, function(ifile) {
 
     peak_finder$median_correct_multi_scan_peaklist()
     peak_finder$create_correspondent_peaks()
+    save(peak_finder, file = file.path(mspl_dir, "correspondent_peaklist2.rds"))
     peak_finder$collapse_correspondent_peaks()
+    peak_finder$correspondent_peaks$master_peak_list$calculate_scan_information_content()
+    save(peak_finder, file = file.path(mspl_dir, "scan_information_content2.rds"))
     peak_finder$normalize_scans_by_correspondent_peaks()
+    save(peak_finder, file = file.path(mspl_dir, "normalized_peaks.rds"))
     peak_finder$save_intermediates()
     peak_finder$create_report()
     peak_finder$create_peak_data()
