@@ -22,21 +22,31 @@ Now we need to check the results. We do two checks:
 #### Which Files
 
 ```{r define_sets}
-prev_files <- dir("mspl_files_defaults_fullrun_X2017.07.07.14.18.45_0.0.183", full.names = TRUE, recursive = TRUE)
-curr_files <- dir("mspl_files_defaults_fullrun_X2017.07.10.13.08.55_0.0.268", full.names = TRUE, recursive = TRUE)
+prev_files <- dir("mspl_files_defaults_fullrun_X2017.07.11.16.19.33_0.0.183", full.names = TRUE, recursive = TRUE)
+curr_files <- dir("mspl_files_defaults_fullrun_X2017.07.11.14.48.44_0.0.270", full.names = TRUE, recursive = TRUE)
 
 curr_file_id <- basename(dirname(curr_files))
 curr_files <- split(curr_files, curr_file_id)
 
 prev_file_id <- basename(dirname(prev_files))
 prev_files <- split(prev_files, prev_file_id)
+
+prev_files <- lapply(prev_files, function(x){
+  names(x) <- basename(x)
+  x
+})
+
+curr_files <- lapply(curr_files, function(x){
+  names(x) <- basename(x)
+  x
+})
 ```
 
 #### Check 1, apspear lipid32
 
 ```{r load_data}
 use_files <- "aspear_2061205_pos_lipid32_intermediate_files"
-mspl_init <- lapply(c(prev_files[[use_files]][2], curr_files[[use_files]][2]), function(in_file){
+mspl_init <- lapply(c(prev_files[[use_files]]["multi_scan_peaklist_init.rds"], curr_files[[use_files]]["multi_scan_peaklist_init.rds"]), function(in_file){
   tmp_env <- new.env()
   load(in_file, envir = tmp_env)
   tmp_env
@@ -75,7 +85,7 @@ OK, so at least the peak lists being generated from each scan are identical, and
 #### Check digital resolution filter & Correspondence
 
 ```{r dr_filter_corr_data}
-corresp_data <- lapply(c(prev_files[[use_files]][1], curr_files[[use_files]][1]), function(in_file){
+corresp_data <- lapply(c(prev_files[[use_files]]["correspondent_peaklist.rds"], curr_files[[use_files]]["correspondent_peaklist.rds"]), function(in_file){
   tmp_env <- new.env()
   load(in_file, envir = tmp_env)
   tmp_env
@@ -100,7 +110,7 @@ So, initial correspondence is the same. That's good.
 #### Check Collapsing & Information Content
 
 ```{r corresp_info}
-collapse_data <- lapply(c(prev_files[[use_files]][3], curr_files[[use_files]][3]), function(in_file){
+collapse_data <- lapply(c(prev_files[[use_files]]["scan_information_content.rds"], curr_files[[use_files]]["scan_information_content.rds"]), function(in_file){
   tmp_env <- new.env()
   load(in_file, envir = tmp_env)
   tmp_env
@@ -109,6 +119,29 @@ collapse_data <- lapply(c(prev_files[[use_files]][3], curr_files[[use_files]][3]
 all.equal(collapse_data[[1]]$peak_finder$correspondent_peaks$master_peak_list$master, collapse_data[[2]]$peak_finder$correspondent_peaks$master_peak_list$master)
 
 all.equal(collapse_data[[1]]$peak_finder$correspondent_peaks$master_peak_list$scan_information_content, collapse_data[[2]]$peak_finder$correspondent_peaks$master_peak_list$scan_information_content)
+```
+
+#### Second Round
+
+```{r second_corresp_scans}
+corresp_data2 <- lapply(c(prev_files[[use_files]]["correspondent_peaklist2.rds"], curr_files[[use_files]]["correspondent_peaklist2.rds"]), function(in_file){
+  tmp_env <- new.env()
+  load(in_file, envir = tmp_env)
+  tmp_env
+})
+```
+
+```{r corresp_scans2}
+corresp_scans2 <- lapply(corresp_data2, function(x){
+  x$peak_finder$correspondent_peaks$master_peak_list$scan
+})
+all.equal(corresp_scans2[[1]], corresp_scans2[[2]])
+
+corresp_obj2 <- lapply(corresp_data2, function(x){
+  x$peak_finder$correspondent_peaks$master_peak_list
+})
+all.equal(corresp_obj2[[1]]$scan_area, corresp_obj2[[2]]$scan_area)
+all.equal(corresp_obj2[[1]]$master, corresp_obj2[[2]]$master)
 ```
 
 #### Final Set
