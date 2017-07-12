@@ -194,7 +194,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
 
       correspond_peaks <- mpl$count_notna() >= n_min_scan
 
-      scan_numbers <- mpl$scan
+      scan_indices <- mpl$scan_indices
 
       scan_diff <- lapply(seq(1, n_col), function(in_scan){
         mz_diffs <- mpl$scan_mz[correspond_peaks, in_scan] -
@@ -202,7 +202,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
         mz_diffs <- mz_diffs[!is.na(mz_diffs)]
 
         data.frame(median = median(mz_diffs),
-                   scan = scan_numbers[in_scan])
+                   scan_index = scan_indices[in_scan])
       })
       do.call(rbind, scan_diff)
     },
@@ -212,9 +212,9 @@ PeakFinder <- R6::R6Class("PeakFinder",
         message("Median correcting peaks ....")
       }
       median_offsets <- self$calculate_median_mz_offset()
-      for (iscan in seq(1, nrow(median_offsets))) {
-        self$multi_scan_peaklist$peak_list_by_scans[[iscan]]$peak_list$ObservedMZ <-
-          self$multi_scan_peaklist$peak_list_by_scans[[iscan]]$peak_list$ObservedMZ - median_offsets[iscan, "median"]
+      for (irow in seq(1, nrow(median_offsets))) {
+          self$multi_scan_peaklist$peak_list_by_scans[[median_offsets[irow, "scan_index"]]]$peak_list$ObservedMZ <-
+          self$multi_scan_peaklist$peak_list_by_scans[[median_offsets[irow, "scan_index"]]]$peak_list$ObservedMZ - median_offsets[irow, "median"]
       }
     },
 
