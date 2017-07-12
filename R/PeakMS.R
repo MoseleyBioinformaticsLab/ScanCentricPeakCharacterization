@@ -592,7 +592,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       self$scan_normalizedarea <- self$scan_normalized_area[, new_order]
       self$scan_peak <- self$scan_peak[, new_order]
       self$scan <- self$scan[new_order]
-      self$scan_indices[new_order]
+      self$scan_indices <- self$scan_indices[new_order]
 
       if (!is.null(self$normalization_factors)) {
         self$normalization_factors <- self$normalization_factors[new_order]
