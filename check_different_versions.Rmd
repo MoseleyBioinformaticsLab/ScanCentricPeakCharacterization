@@ -23,7 +23,7 @@ Now we need to check the results. We do two checks:
 
 ```{r define_sets}
 prev_files <- dir("mspl_files_defaults_fullrun_X2017.07.11.16.19.33_0.0.183", full.names = TRUE, recursive = TRUE)
-curr_files <- dir("mspl_files_defaults_fullrun_X2017.07.11.14.48.44_0.0.270", full.names = TRUE, recursive = TRUE)
+curr_files <- dir("mspl_files_defaults_fullrun_X2017.07.12.15.20.15_0.0.276", full.names = TRUE, recursive = TRUE)
 
 curr_file_id <- basename(dirname(curr_files))
 curr_files <- split(curr_files, curr_file_id)
@@ -147,7 +147,7 @@ all.equal(corresp_obj2[[1]]$master, corresp_obj2[[2]]$master)
 #### Final Set
 
 ```{r final_set}
-final_data <- lapply(c(prev_files$mspl_files_defaults_fullrun_X2017.07.07.14.18.45_0.0.183[1], curr_files$mspl_files_defaults_fullrun_X2017.07.10.13.08.55_0.0.268[1]), function(in_file){
+final_data <- lapply(c(prev_files$mspl_files_defaults_fullrun_X2017.07.11.16.19.33_0.0.183[1], curr_files$mspl_files_defaults_fullrun_X2017.07.12.15.20.15_0.0.276[1]), function(in_file){
   tmp_env <- new.env()
   load(in_file, envir = tmp_env)
   tmp_env
