@@ -139,12 +139,23 @@ PeakFinder <- R6::R6Class("PeakFinder",
     },
 
     correspondent_peaks = NULL,
-    create_correspondent_peaks = function(...){
+    create_correspondent_peaks = function(median_corrected = FALSE, ...){
       if (self$vocal) {
         message("Peak Correspondence ....")
       }
+
+      if (median_corrected && !is.null(self$median_corrected_multi_scan_peaklist)) {
+        use_peaklist <- self$median_corrected_multi_scan_peaklist
+      } else {
+        use_peaklist <- self$multi_scan_peaklist
+      }
+
+      if (median_corrected && is.null(self$median_corrected_multi_scan_peaklist)) {
+        warning("Median corrected peak list requested, but not found, using uncorrected!")
+      }
+
       self$correspondent_peaks <-
-        SIRM.FTMS.peakCharacterization::FindCorrespondenceScans$new(self$multi_scan_peaklist,
+        SIRM.FTMS.peakCharacterization::FindCorrespondenceScans$new(use_peaklist,
                                                                     digital_resolution_multiplier = 1,
                                                                     rmsd_multiplier = 3,
                                                                     sd_fit_function = self$sd_fit_function,
@@ -207,17 +218,22 @@ PeakFinder <- R6::R6Class("PeakFinder",
       do.call(rbind, scan_diff)
     },
 
+    # make sure to actually copy multi_scan_peaklist first and **then** modify it
     median_correct_multi_scan_peaklist = function(){
       if (self$vocal) {
         message("Median correcting peaks ....")
       }
       median_offsets <- self$calculate_median_mz_offset()
+      self$median_corrected_multi_scan_peaklist <- self$multi_scan_peaklist$clone(deep = TRUE)
       for (irow in seq(1, nrow(median_offsets))) {
-          self$multi_scan_peaklist$peak_list_by_scans[[median_offsets[irow, "scan_index"]]]$peak_list$ObservedMZ <-
-          self$multi_scan_peaklist$peak_list_by_scans[[median_offsets[irow, "scan_index"]]]$peak_list$ObservedMZ - median_offsets[irow, "median"]
+          self$median_corrected_multi_scan_peaklist$peak_list_by_scans[[median_offsets[irow, "scan_index"]]]$peak_list$ObservedMZ <-
+          self$median_corrected_multi_scan_peaklist$peak_list_by_scans[[median_offsets[irow, "scan_index"]]]$peak_list$ObservedMZ - median_offsets[irow, "median"]
       }
     },
 
+    # provide a place to have a copy of the median corrected multi_scan_peaklist,
+    # because we don't want to overwrite the actual original data.
+    median_corrected_multi_scan_peaklist = NULL,
 
     scan_normalized = NULL,
     normalize_scans_by_correspondent_peaks = function(intensity_measure = "Height", summary_function = mean){
@@ -417,11 +433,11 @@ PeakFinder <- R6::R6Class("PeakFinder",
         stop("Need a MultiScanPeakList to work with!", call. = TRUE)
       }
       self$filter_dr_models()
-      self$create_correspondent_peaks()
+      self$create_correspondent_peaks(median_corrected = FALSE)
       self$collapse_correspondent_peaks()
       self$filter_information_content()
       self$median_correct_multi_scan_peaklist()
-      self$create_correspondent_peaks()
+      self$create_correspondent_peaks(median_corrected = TRUE)
       self$collapse_correspondent_peaks()
       self$normalize_scans_by_correspondent_peaks()
       self$save_intermediates()
