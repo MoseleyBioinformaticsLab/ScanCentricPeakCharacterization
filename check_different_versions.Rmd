@@ -165,3 +165,31 @@ all.equal(final_data[[1]]$peak_finder$correspondent_peaks$master_peak_list$maste
           final_data[[2]]$peak_finder$correspondent_peaks$master_peak_list$master)
 ```
 
+### All Final Sets
+
+```{r load_finals}
+prev_mspl <- grep("mspl", names(prev_files), value = TRUE)
+curr_mspl <- grep("mspl", names(curr_files), value = TRUE)
+
+prev_final <- lapply(prev_files[[prev_mspl]], function(in_file){
+  tmp_env <- new.env()
+  load(in_file, envir = tmp_env)
+  tmp_env
+})
+
+curr_final <- lapply(curr_files[[curr_mspl]], function(in_file){
+  tmp_env <- new.env()
+  load(in_file, envir = tmp_env)
+  tmp_env
+})
+```
+
+```{r compare_finals}
+for (ifile in seq(1, length(prev_final))) {
+  print(all.equal(prev_final[[ifile]]$peak_finder$correspondent_peaks$master_peak_list$normalization_factors,
+            curr_final[[ifile]]$peak_finder$correspondent_peaks$master_peak_list$normalization_factors))
+  print(all.equal(prev_final[[ifile]]$peak_finder$correspondent_peaks$master_peak_list$master,
+            curr_final[[ifile]]$peak_finder$correspondent_peaks$master_peak_list$master))
+}
+```
+
