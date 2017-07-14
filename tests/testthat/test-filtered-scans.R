@@ -94,6 +94,22 @@ test_that("masterpeaklist gets created properly", {
                                                multiplier = 1,
                                                rmsd_min_scans = 3)
   expect_equal(ncol(mpl_digital_resolution$scan_area), 36)
+  expect_equal_to_reference(mpl_digital_resolution$scan_area, "dr_scan_area.rds")
 
   mpl_digital_resolution$calculate_scan_information_content()
+
+  expect_equal_to_reference(mpl_digital_resolution$scan_information_content, "dr_scan_information_content.rds")
+
+  curr_indices <- cbind(mpl_digital_resolution$scan, mpl_digital_resolution$scan_indices)
+  new_order <- sample(36)
+  mpl_digital_resolution$reorder(new_order)
+
+  expect_equal(mpl_digital_resolution$scan, curr_indices[new_order, 1])
+  expect_equal(mpl_digital_resolution$scan_indices, curr_indices[new_order, 2])
+
+  mspl2 <- mspl$clone(deep = TRUE)
+  mspl2$reorder(new_order)
+  expect_equal(mspl2$scan_numbers(), curr_indices[new_order, 1])
+  expect_equal(mspl2$scan_indices, curr_indices[new_order, 2])
+
 })
