@@ -226,7 +226,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
         message("Median correcting peaks ....")
       }
 
-      self$calculate_median_mz_offset()
+      #self$calculate_median_mz_offset()
 
       msp <- self$multi_scan_peaklist$clone(deep = TRUE)
       if (!is.null(self$median_mz_offsets)) {
