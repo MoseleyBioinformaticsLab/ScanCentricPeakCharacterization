@@ -7,7 +7,7 @@ if (is.na(run_peakcharacterization)) {
 
 test_that("individual steps run", {
   ## file.remove("master_c1.rds", "master_c1_collapsed.rds", "master_c1_scan_information_content.rds", "median_mz_offsets.rds", "master_c2.rds", "master_c2_collapsed.rds", "normalization_factors.rds")
-  skipifnot(run_peakcharacterization)
+  skip_if_not(run_peakcharacterization)
 
   load("ref_peak_finder.rds")
   p2 <- PeakFinder$new()
