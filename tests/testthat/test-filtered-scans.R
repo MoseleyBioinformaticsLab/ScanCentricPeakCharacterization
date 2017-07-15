@@ -28,8 +28,8 @@ filter_scans <- function(raw_data){
 test_that("peak picking works", {
   skip_if_not(run_peakpicking)
 
-  mzml_file <- "001UKNneg.mzML"
-  json_file <- "001UKNneg.json"
+  mzml_file <- "UK001N1exoposb.mzML"
+  json_file <- "UK001N1exoposb.mzML"
 
   tmp_loc <- create_in_temp("peakpick_temp")
   out_loc <- create_in_temp("peakpick_out")
@@ -46,19 +46,21 @@ test_that("peak picking works", {
   anal_ms$peak_finder$raw_data <- anal_ms$zip_ms$raw_ms
   anal_ms$peak_finder$out_file <- anal_ms$zip_ms$out_file
   anal_ms$peak_finder$apply_raw_filter()
-  expect_equal(anal_ms$peak_finder$raw_data$scan_range, seq(2, 38))
+  expect_equal(anal_ms$peak_finder$raw_data$scan_range, seq(2, 35))
   anal_ms$peak_finder$create_multi_scan()
 
   expect_equal_to_reference(anal_ms$peak_finder$multi_scan$n_peaks(), "multi_scan_npeaks.rds")
-  expect_equal_to_reference(anal_ms$peak_finder$multi_scan$scans[[1]]$peaks[1:10], "scan1_peaks1_10.rds")
+  expect_equal_to_reference(anal_ms$peak_finder$multi_scan$scans[[1]]$peaks[1:10], "scan1_peaks_1_10.rds")
   expect_equal_to_reference(anal_ms$peak_finder$multi_scan$scans[[5]]$peaks[1:10], "scan5_peaks_1_10.rds")
 
   anal_ms$peak_finder$create_multi_scan_peaklist()
 
-  expect_equal(length(anal_ms$peak_finder$multi_scan_peaklist$scan_indices), 37)
+  expect_equal(length(anal_ms$peak_finder$multi_scan_peaklist$scan_indices), 34)
   expect_equal_to_reference(anal_ms$peak_finder$multi_scan_peaklist$peak_list_by_scans[[1]]$peak_list[1:10, ], "scan1_ms_peak1_10.rds")
   expect_equal_to_reference(anal_ms$peak_finder$multi_scan_peaklist$peak_list_by_scans[[5]]$peak_list[1:10, ], "scan5_ms_peak1_10.rds")
 
+  ## clean_up for new files
+  ## file.remove("multi_scan_npeaks.rds", "scan1_peaks_1_10.rds", "scan5_peaks_1_10.rds", "scan1_ms_peak1_10.rds", "scan5_ms_peak1_10.rds", "ref_peak_finder.rds")
   ## save the peak_finder
   ## peak_finder <- anal_ms$peak_finder
   ## peak_finder$raw_data <- NULL
@@ -70,22 +72,23 @@ test_that("filtering scans works properly", {
   load("ref_peak_finder.rds")
 
   peak_finder$multi_scan_peaklist$remove_bad_resolution_scans()
-  expect_equal(peak_finder$multi_scan_peaklist$scan_indices, seq(2, 37))
+  expect_equal_to_reference(peak_finder$multi_scan_peaklist$scan_indices, "scan_indices.rds")
   tmp_peaks <- peak_finder$multi_scan_peaklist$get_scan_peak_lists()
-  expect_equal(length(tmp_peaks), 36)
-  expect_equal(nrow(peak_finder$multi_scan_peaklist$get_noise_info()), 36)
-  expect_equal(length(peak_finder$multi_scan_peaklist$n_peaks()), 36)
+  expect_equal(length(tmp_peaks), 32)
+  expect_equal(nrow(peak_finder$multi_scan_peaklist$get_noise_info()), 32)
+  expect_equal(length(peak_finder$multi_scan_peaklist$n_peaks()), 32)
 
 
   peak_finder$multi_scan_peaklist$reset_scan_indices()
-  expect_equal(peak_finder$multi_scan_peaklist$scan_indices, seq(1, 37))
+  expect_equal(peak_finder$multi_scan_peaklist$scan_indices, seq(1, 34))
   tmp_peaks <- peak_finder$multi_scan_peaklist$get_scan_peak_lists()
-  expect_equal(length(tmp_peaks), 37)
-  expect_equal(length(tmp_peaks), 37)
-  expect_equal(nrow(peak_finder$multi_scan_peaklist$get_noise_info()), 37)
+  expect_equal(length(tmp_peaks), 34)
+  expect_equal(length(tmp_peaks), 34)
+  expect_equal(nrow(peak_finder$multi_scan_peaklist$get_noise_info()), 34)
 })
 
 test_that("masterpeaklist gets created properly", {
+  ## file.remove("dr_scan_area.rds", "dr_scan_information_content.rds")
   load("ref_peak_finder.rds")
 
   peak_finder$multi_scan_peaklist$remove_bad_resolution_scans()
@@ -93,7 +96,7 @@ test_that("masterpeaklist gets created properly", {
   mpl_digital_resolution <- MasterPeakList$new(mspl, sd_model = NULL,
                                                multiplier = 1,
                                                rmsd_min_scans = 3)
-  expect_equal(ncol(mpl_digital_resolution$scan_area), 36)
+  expect_equal(ncol(mpl_digital_resolution$scan_area), 32)
   expect_equal_to_reference(mpl_digital_resolution$scan_area, "dr_scan_area.rds")
 
   mpl_digital_resolution$calculate_scan_information_content()
@@ -101,7 +104,7 @@ test_that("masterpeaklist gets created properly", {
   expect_equal_to_reference(mpl_digital_resolution$scan_information_content, "dr_scan_information_content.rds")
 
   curr_indices <- cbind(mpl_digital_resolution$scan, mpl_digital_resolution$scan_indices)
-  new_order <- sample(36)
+  new_order <- sample(32)
   mpl_digital_resolution$reorder(new_order)
 
   expect_equal(mpl_digital_resolution$scan, curr_indices[new_order, 1])
