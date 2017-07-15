@@ -3,6 +3,7 @@ image: rmflight-rpeakcharacterization
 runit:
   script:
     - export run_peakpicking=FALSE
+    - export run_peakcharacterization TRU 
     - R -e "devtools::install_github('rmflight/waitcopy')"
     - R CMD INSTALL .
     - R CMD build . --no-build-vignettes --no-manual
