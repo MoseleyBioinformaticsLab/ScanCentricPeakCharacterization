@@ -134,7 +134,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
         message("Filtering based on digital resolution models ....")
       }
       self$scan_start <- self$multi_scan_peaklist$scan_indices
-      self$multi_scan_peaklist <- self$multi_scan_peaklist$remove_bad_resolution_scans()
+      self$multi_scan_peaklist$remove_bad_resolution_scans()
       self$scan_dr_filter <- self$multi_scan_peaklist$scan_indices
     },
 
