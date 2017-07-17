@@ -1374,7 +1374,7 @@ normalize_mspl <- function(normalization_factors, mspl){
 #'
 #' @export
 
-MultiSamplePeakList <- R6::R6Class("MultiFilePeakList",
+MultiSamplePeakList <- R6::R6Class("MultiSamplePeakList",
                                  inherit = MultiScansPeakList,
   public = list(
     sample_id = NULL,
@@ -1422,6 +1422,7 @@ MultiSamplePeakList <- R6::R6Class("MultiFilePeakList",
         })
         self$sample_id <- tmp_ids
       }
+      self$scan_indices <- seq(1, length(self$peak_list_by_scans))
 
     }
   )
