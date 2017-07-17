@@ -23,7 +23,7 @@ Now we need to check the results. We do two checks:
 
 ```{r define_sets}
 prev_files <- dir("mspl_files_defaults_fullrun_X2017.07.11.16.19.33_0.0.183", full.names = TRUE, recursive = TRUE)
-curr_files <- dir("mspl_files_defaults_fullrun_X2017.07.12.15.20.15_0.0.276", full.names = TRUE, recursive = TRUE)
+curr_files <- dir("mspl_files_defaults_fullrun_X2017.07.14.14.54.20_0.0.281", full.names = TRUE, recursive = TRUE)
 
 curr_file_id <- basename(dirname(curr_files))
 curr_files <- split(curr_files, curr_file_id)
@@ -147,7 +147,7 @@ all.equal(corresp_obj2[[1]]$master, corresp_obj2[[2]]$master)
 #### Final Set
 
 ```{r final_set}
-final_data <- lapply(c(prev_files$mspl_files_defaults_fullrun_X2017.07.11.16.19.33_0.0.183[1], curr_files$mspl_files_defaults_fullrun_X2017.07.12.15.20.15_0.0.276[1]), function(in_file){
+final_data <- lapply(c(prev_files$mspl_files_defaults_fullrun_X2017.07.11.16.19.33_0.0.183[1], curr_files$mspl_files_defaults_fullrun_X2017.07.17.09.09.13_0.0.287[1]), function(in_file){
   tmp_env <- new.env()
   load(in_file, envir = tmp_env)
   tmp_env
@@ -191,5 +191,34 @@ for (ifile in seq(1, length(prev_final))) {
   print(all.equal(prev_final[[ifile]]$peak_finder$correspondent_peaks$master_peak_list$master,
             curr_final[[ifile]]$peak_finder$correspondent_peaks$master_peak_list$master))
 }
+```
+
+
+### Sample-Sample Correspondence
+
+```{r cor_files}
+cor_files <- curr_files$mspl_files_defaults_fullrun_X2017.07.14.14.54.20_0.0.281[1:2]
+
+cor_mpl <- lapply(cor_files, function(in_file){
+  tmp_env <- new.env()
+  load(in_file, envir = tmp_env)
+  mpl <- tmp_env$peak_finder$correspondent_peaks$master_peak_list$clone(deep = TRUE)
+  rm(tmp_env)
+  mpl
+})
+
+names(cor_mpl) <- basename(cor_files)
+```
+
+```{r}
+multisample <- MultiSamplePeakList$new(cor_mpl)
+multisample$set_min_scans()
+multisample$filter_min_scans()
+
+multisample$sd_fit_function <- cor_mpl[[1]]$sd_fit_function
+multisample$sd_predict_function <- cor_mpl[[1]]$sd_predict_function
+
+multisample$calculate_average_mz_model()
+cor_sample <- MasterPeakList$new(multisample, multiplier = 3)
 ```
 
