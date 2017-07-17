@@ -3,6 +3,8 @@ test_res <- as.data.frame(devtools::test())
 warnings_as_errors <- Sys.getenv("warnings_as_errors")
 if (is.null(warnings_as_errors)) {
   warnings_as_errors <- TRUE
+} else {
+  warnings_as_errors <- as.logical(warnings_as_errors)
 }
 
 if (sum(test_res$error) > 0) {
