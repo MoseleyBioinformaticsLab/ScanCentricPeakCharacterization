@@ -1400,6 +1400,11 @@ MultiSamplePeakList <- R6::R6Class("MultiSamplePeakList",
       }
 
     },
+    get_sample_id = function(){
+      vapply(self$peak_list_by_scans[self$scan_indices], function(in_sample){
+        in_sample$sample_id
+      }, character(1))
+    },
     initialize = function(sample_list = NULL){
       n_scan <- length(sample_list)
 
@@ -1460,3 +1465,55 @@ CorrespondentPeakList <- R6::R6Class("CorrespondentPeakList",
       self$n_scans <- length(master_peak_list$scan)
     }
   ))
+
+
+#' MasterSampleList
+#'
+#' Holds the correspondence across samples
+#'
+#' @export
+
+MasterSampleList <- R6::R6Class("MasterSampleList",
+  inherit = MasterPeakList,
+  public = list(
+    sample_id = NULL,
+
+    initialize = function(multi_sample_peak_list, peak_calc_type = "lm_weighted", sd_model = NULL, multiplier = 1,
+                          mz_range = c(-Inf, Inf), noise_calculator = NULL, sd_fit_function = NULL,
+                          sd_predict_function = NULL, rmsd_min_scans = 3){
+      assertthat::assert_that(any(class(multi_sample_peak_list) %in% "MultiSamplePeakList"))
+
+      if (is.null(sd_model)) {
+        sd_model = multi_sample_peak_list$mz_model
+      }
+
+      self$scan_indices <- multi_sample_peak_list$scan_indices
+
+      if (!is.null(sd_fit_function)) {
+        self$sd_fit_function <- sd_fit_function
+      } else if (!is.null(multi_sample_peak_list$sd_fit_function)) {
+        self$sd_fit_function <- multi_sample_peak_list$sd_fit_function
+      } else {
+        self$sd_fit_function <- default_sd_fit_function
+      }
+
+      if (!is.null(sd_predict_function)) {
+        self$sd_predict_function <- sd_predict_function
+      } else if (!is.null(multi_sample_peak_list$sd_predict_function)) {
+        self$sd_predict_function <- multi_sample_peak_list$sd_predict_function
+      } else {
+        self$sd_predict_function <- default_sd_predict_function
+      }
+
+      if (!is.null(noise_calculator)) {
+        self$noise_calculator <- noise_calculator
+      }
+
+      self$rmsd_min_scans <- rmsd_min_scans
+      self$sample_id <- multi_sample_peak_list$get_sample_id()
+      self$peak_correspondence(multi_sample_peak_list, peak_calc_type, sd_model = sd_model, multiplier = multiplier,
+                               mz_range = mz_range)
+      invisible(self)
+    }
+  )
+)
