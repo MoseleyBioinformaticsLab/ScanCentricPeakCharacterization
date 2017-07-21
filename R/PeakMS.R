@@ -250,6 +250,16 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
       invisible(self)
     },
 
+    # it may happen that there are scans with no signal peaks, so we need a way
+    # to remove those
+    remove_no_signal_scans = function(){
+      if (!is.null(x$noise_function)) {
+        curr_noise <- self$get_noise_info()
+        has_signal <- which(curr_noise$n_signal != 0)
+        self$reorder(has_signal)
+      }
+    },
+
     noise_function = NULL,
     noise_info = NULL,
 
@@ -316,9 +326,16 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
       })
 
       self$scan_indices <- seq(1, length(self$peak_list_by_scans))
-      tmp_noise_info <- lapply(self$peak_list_by_scans, function(x){x$noise_info})
-      self$noise_info <- do.call(rbind, tmp_noise_info)
-      self$noise_info$scan <- self$scan_numbers()
+      if (!is.null(noise_function)) {
+        tmp_noise_info <- lapply(self$peak_list_by_scans, function(x){x$noise_info})
+        self$noise_info <- do.call(rbind, tmp_noise_info)
+        self$noise_info$scan <- self$scan_numbers()
+      }
+
+      # we remove these during initialization so that they are less likely to
+      # be used by anything later.
+      self$remove_no_signal_scans()
+
       self$calculate_average_mz_model()
 
       invisible(self)
