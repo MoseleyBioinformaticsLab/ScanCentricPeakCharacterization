@@ -479,7 +479,7 @@ noise_sorted_peaklist <- function(peaklist, intensity_measure = "Height", sd_mea
   intensity_mean <- 1
   sd_mean_ratio <- sd_mean_ratio
 
-  while (intensity_sd < (intensity_mean * sd_mean_ratio)) {
+  while ((intensity_sd < (intensity_mean * sd_mean_ratio)) && (noise_count < length(intensities))) {
     noise_count <- noise_count + 1
     select_intensities <- intensities[1:noise_count]
     intensity_sd <- sd(select_intensities)
@@ -487,18 +487,27 @@ noise_sorted_peaklist <- function(peaklist, intensity_measure = "Height", sd_mea
     intensity_median <- median(select_intensities)
   }
   noise_threshold <- intensity_median * noise_multiplier
+
   peaklist$not_noise <- FALSE
+  if (noise_count >= length(intensities)) {
+    # don't modify the not_noise column
+    median_noise <- median(log10(peaklist[[intensity_measure]][!peaklist$not_noise]), na.rm = TRUE)
+    median_signal <- 0
+    sum_signal <- 0
+    n_signal <- 0
+    signal_noise_ratio <- -1 * median_noise
+  } else {
+    not_na <- which(!is.na(peaklist[[intensity_measure]]))
+    possible_noise <- peaklist[[intensity_measure]][not_na]
+    not_noise <- not_na[possible_noise > noise_threshold]
+    peaklist[not_noise, "not_noise"] <- TRUE
 
-  not_na <- which(!is.na(peaklist[[intensity_measure]]))
-  possible_noise <- peaklist[[intensity_measure]][not_na]
-  not_noise <- not_na[possible_noise > noise_threshold]
-  peaklist[not_noise, "not_noise"] <- TRUE
-
-  median_noise <- median(log10(peaklist[[intensity_measure]][!peaklist$not_noise]), na.rm = TRUE)
-  median_signal <- median(log10(peaklist[[intensity_measure]][peaklist$not_noise]), na.rm = TRUE)
-  sum_signal <- sum(log10(peaklist[[intensity_measure]][peaklist$not_noise]) - median_noise, na.rm = TRUE)
-  n_signal <- sum(peaklist$not_noise)
-  signal_noise_ratio <- median_signal - median_noise
+    median_noise <- median(log10(peaklist[[intensity_measure]][!peaklist$not_noise]), na.rm = TRUE)
+    median_signal <- median(log10(peaklist[[intensity_measure]][peaklist$not_noise]), na.rm = TRUE)
+    sum_signal <- sum(log10(peaklist[[intensity_measure]][peaklist$not_noise]) - median_noise, na.rm = TRUE)
+    n_signal <- sum(peaklist$not_noise)
+    signal_noise_ratio <- median_signal - median_noise
+  }
 
   return(list(peak_list = peaklist,
               noise_info = data.frame(noise = median_noise,
