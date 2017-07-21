@@ -253,7 +253,7 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
     # it may happen that there are scans with no signal peaks, so we need a way
     # to remove those
     remove_no_signal_scans = function(){
-      if (!is.null(x$noise_function)) {
+      if (!is.null(self$noise_function)) {
         curr_noise <- self$get_noise_info()
         has_signal <- which(curr_noise$n_signal != 0)
         self$reorder(has_signal)
@@ -279,14 +279,13 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
     },
 
     calculate_noise = function(...){
-      self_noise <- self$noise_function
       self$peak_list_by_scans <- lapply(self$peak_list_by_scans, function(in_scan){
         #in_scan$noise_function <- self$noise_function
         in_scan$calculate_noise(...)
         in_scan
       })
 
-      noise_info <- lapply(self$peak_list_by_scans, function(in_scan){
+      noise_info <- lapply(self$get_scan_peak_lists(), function(in_scan){
         in_scan$noise_info
       })
       noise_info <- do.call(rbind, noise_info)
@@ -327,9 +326,7 @@ MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
 
       self$scan_indices <- seq(1, length(self$peak_list_by_scans))
       if (!is.null(noise_function)) {
-        tmp_noise_info <- lapply(self$peak_list_by_scans, function(x){x$noise_info})
-        self$noise_info <- do.call(rbind, tmp_noise_info)
-        self$noise_info$scan <- self$scan_numbers()
+        self$calculate_noise()
       }
 
       # we remove these during initialization so that they are less likely to
