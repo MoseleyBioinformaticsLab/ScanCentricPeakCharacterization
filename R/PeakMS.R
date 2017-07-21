@@ -495,10 +495,17 @@ noise_sorted_peaklist <- function(peaklist, intensity_measure = "Height", sd_mea
   peaklist[not_noise, "not_noise"] <- TRUE
 
   median_noise <- median(log10(peaklist[[intensity_measure]][!peaklist$not_noise]), na.rm = TRUE)
-  median_signal <- median(log10(peaklist[[intensity_measure]][peaklist$not_noise]), na.rm = TRUE)
-  sum_signal <- sum(log10(peaklist[[intensity_measure]][peaklist$not_noise]) - median_noise, na.rm = TRUE)
-  n_signal <- sum(peaklist$not_noise)
-  signal_noise_ratio <- median_signal - median_noise
+  if (sum(peaklist[["not_noise"]]) > 0) {
+    median_signal <- median(log10(peaklist[[intensity_measure]][peaklist$not_noise]), na.rm = TRUE)
+    sum_signal <- sum(log10(peaklist[[intensity_measure]][peaklist$not_noise]) - median_noise, na.rm = TRUE)
+    n_signal <- sum(peaklist$not_noise)
+    signal_noise_ratio <- median_signal - median_noise
+  } else {
+    median_signal <- 0
+    sum_signal <- 0
+    n_signal <- 0
+    signal_noise_ratio <- -1 * median_noise
+  }
 
   return(list(peak_list = peaklist,
               noise_info = data.frame(noise = median_noise,
