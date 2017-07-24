@@ -28,8 +28,8 @@ filter_scans <- function(raw_data){
 test_that("peak picking works", {
   skip_if_not(run_peakpicking)
 
-  mzml_file <- "UK001N1exoposb.mzML"
-  json_file <- "UK001N1exoposb.mzML"
+  mzml_file <- system.file("extdata/UK001N1exoposb.mzML", package = "SIRM.FTMS.peakCharacterization")
+  json_file <- system.file("extdata/UK001N1exoposb.json", package = "SIRM.FTMS.peakCharacterization")
 
   tmp_loc <- create_in_temp("peakpick_temp")
   out_loc <- create_in_temp("peakpick_out")
