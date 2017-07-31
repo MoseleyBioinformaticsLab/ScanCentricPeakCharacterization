@@ -74,9 +74,9 @@ test_that("filtering scans works properly", {
   peak_finder$multi_scan_peaklist$remove_bad_resolution_scans()
   expect_equal_to_reference(peak_finder$multi_scan_peaklist$scan_indices, "scan_indices.rds")
   tmp_peaks <- peak_finder$multi_scan_peaklist$get_scan_peak_lists()
-  expect_equal(length(tmp_peaks), 32)
-  expect_equal(nrow(peak_finder$multi_scan_peaklist$get_noise_info()), 32)
-  expect_equal(length(peak_finder$multi_scan_peaklist$n_peaks()), 32)
+  expect_equal(length(tmp_peaks), 30)
+  expect_equal(nrow(peak_finder$multi_scan_peaklist$get_noise_info()), 30)
+  expect_equal(length(peak_finder$multi_scan_peaklist$n_peaks()), 30)
 
 
   peak_finder$multi_scan_peaklist$reset_scan_indices()
@@ -96,7 +96,7 @@ test_that("masterpeaklist gets created properly", {
   mpl_digital_resolution <- MasterPeakList$new(mspl, sd_model = NULL,
                                                multiplier = 1,
                                                rmsd_min_scans = 3)
-  expect_equal(ncol(mpl_digital_resolution$scan_area), 32)
+  expect_equal(ncol(mpl_digital_resolution$scan_area), 30)
   expect_equal_to_reference(mpl_digital_resolution$scan_area, "dr_scan_area.rds")
 
   mpl_digital_resolution$calculate_scan_information_content()
@@ -104,7 +104,7 @@ test_that("masterpeaklist gets created properly", {
   expect_equal_to_reference(mpl_digital_resolution$scan_information_content, "dr_scan_information_content.rds")
 
   curr_indices <- cbind(mpl_digital_resolution$scan, mpl_digital_resolution$scan_indices)
-  new_order <- sample(32)
+  new_order <- sample(30)
   mpl_digital_resolution$reorder(new_order)
 
   expect_equal(mpl_digital_resolution$scan, curr_indices[new_order, 1])
