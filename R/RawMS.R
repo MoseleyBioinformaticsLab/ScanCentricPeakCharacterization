@@ -97,6 +97,9 @@ RawMS <- R6::R6Class("RawMS",
          self$rt_range <- range(ms_scan_info$time)
        }
      },
+     count_raw_peaks = function(){
+       count_raw_peaks(self$raw_data, self$scan_range)
+     },
 
 
    initialize = function(raw_file, metadata_file = NULL, scan_range = NULL, rt_range = NULL){
@@ -122,3 +125,21 @@ RawMS <- R6::R6Class("RawMS",
 )
 
 
+#' count raw peaks
+#'
+#' from a RawMS object, get the scans, average them, and count the peaks.
+#'
+#' @param rawdata the raw_data bit of the RawMS object
+#' @param scans which scans to use.
+#'
+#' @importFrom pracma findpeaks
+#' @importFrom xcms getSpec
+#'
+#' @export
+#' @return numeric
+count_raw_peaks <- function(rawdata, scans){
+  raw_points <- as.data.frame(xcms::getSpec(rawdata, scanrange = scans))
+
+  raw_peaks <- pracma::findpeaks(raw_points$intensity, nups = 2, ndowns = 2)
+  nrow(raw_peaks)
+}
