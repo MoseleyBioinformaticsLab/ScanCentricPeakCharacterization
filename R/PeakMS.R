@@ -63,10 +63,11 @@ PeakMS <- R6::R6Class("PeakMS",
 #'
 #' @importFrom dplyr filter mutate lag
 #'
-get_scan_nozeros <- function(rawdata, cutoff = 2.25e-3){
+get_scan_nozeros <- function(rawdata, cutoff = 2.5e-3){
   lag_cutoff <- paste0("!(lag >= ", cutoff, ")")
-  rawdata <- dplyr::filter_(rawdata, "!(intensity == 0)")
+  rawdata[rawdata$intensity == 0, "mz"] <- NA
   rawdata <- dplyr::mutate_(rawdata, lag = "mz - lag(mz)")
+  rawdata <- dplyr::filter_(rawdata, "!is.na(lag)")
   rawdata <- dplyr::filter_(rawdata, lag_cutoff)
   rawdata
 }
