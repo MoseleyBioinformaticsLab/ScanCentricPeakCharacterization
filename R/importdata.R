@@ -27,9 +27,10 @@ import_raw_ms <- function(raw_data, profstep = 0, includeMSn = TRUE){
 #' @param color_ms should scans be colored by their \emph{ms} level and type?
 #'
 #' @import ggplot2
+#' @importFrom forcats fct_relevel
 #' @return ggplot
 #' @export
-plot_tic <- function(xcms_raw, color_ms = TRUE){
+plot_tic <- function(xcms_raw, color_ms = TRUE, log_transform = TRUE){
   ms1_data <- data.frame(ms_level = paste0("ms", 1),
                          tic = xcms_raw@tic,
                          scantime = xcms_raw@scantime,
@@ -50,8 +51,19 @@ plot_tic <- function(xcms_raw, color_ms = TRUE){
 
   all_data$ms_type <- paste0(all_data$type, ".", all_data$ms_level)
 
-  ggplot(all_data, aes(x = scantime, xend = scantime, y = 0, yend = (tic + 1), color = ms_type)) + geom_segment() +
-    ylab("tic")
+  if (log_transform) {
+    all_data$tic <- log10(all_data$tic + 1)
+    y_lab <- "Log10(TIC)"
+  } else {
+    y_lab <- "TIC"
+  }
+
+  all_data$ms_type <- forcats::fct_relevel(all_data$ms_type, "normal.ms1", "precursor.ms1", "normal.ms2")
+
+
+
+  ggplot(all_data, aes(x = scantime, xend = scantime, y = 0, yend = tic, color = ms_type)) + geom_segment() +
+    labs(y = y_lab)
 }
 
 #' import Xcalibur data

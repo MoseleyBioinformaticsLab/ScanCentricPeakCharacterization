@@ -4,7 +4,7 @@
 \alias{plot_tic}
 \title{plot tic}
 \usage{
-plot_tic(xcms_raw, color_ms = TRUE)
+plot_tic(xcms_raw, color_ms = TRUE, log_transform = TRUE)
 }
 \arguments{
 \item{xcms_raw}{an \code{xcmsRaw} object (ideally from \code{import_mzML})}

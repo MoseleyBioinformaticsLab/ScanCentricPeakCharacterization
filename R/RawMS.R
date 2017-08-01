@@ -69,7 +69,9 @@ RawMS <- R6::R6Class("RawMS",
      scan_range = NULL,
      rt_range = NULL,
      mz_range = NULL,
-     plot_tic = function(){plot_tic(self$raw_data)},
+     plot_tic = function(color_ms = TRUE, log_transform = TRUE){
+       plot_tic(self$raw_data, color_ms = color_ms, log_transform = log_transform)
+     },
      set_scans = function(scan_range = NULL, rt_range = NULL){
        if (is.null(scan_range) && is.null(rt_range)) {
          message("Setting scans to be MS1 non-precursor scans!")

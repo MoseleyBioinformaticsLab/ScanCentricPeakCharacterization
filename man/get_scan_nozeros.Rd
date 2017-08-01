@@ -4,7 +4,7 @@
 \alias{get_scan_nozeros}
 \title{filter raw scan data}
 \usage{
-get_scan_nozeros(rawdata, cutoff = 0.00225)
+get_scan_nozeros(rawdata, cutoff = 0.0025)
 }
 \arguments{
 \item{rawdata}{data.frame of mz and intensity}
