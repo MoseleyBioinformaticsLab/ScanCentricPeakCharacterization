@@ -5,7 +5,6 @@ runit:
     - export run_peakpicking=FALSE
     - export run_peakcharacterization=true
     - export warnings_as_errors=FALSE
-    - R -e "devtools::install_github('rmflight/waitcopy')"
     - R CMD INSTALL .
     - R CMD build . --no-build-vignettes --no-manual
     - PKG_FILE_NAME=$(ls -1t *.tar.gz | head -n 1)
