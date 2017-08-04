@@ -112,9 +112,11 @@ zip_ms_from_mzml <- function(in_file, out_dir){
 #' @param load_raw logical to load the raw data
 #' @param load_peak_list to load the peak list if it exists
 #'
+#' @export
+#' @return ZipMS
 zip_ms <- function(in_file, out_file = NULL, load_raw = TRUE,
                    load_peak_list = TRUE){
-  ZipMS$new(in_file, out_file = NULL, load_raw = TRUE, load_peak_list = TRUE)
+  ZipMS$new(in_file, out_file = out_file, load_raw = load_raw, load_peak_list = load_peak_list)
 }
 
 #' ZipMS - save
