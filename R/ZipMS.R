@@ -108,15 +108,16 @@ zip_ms_from_mzml <- function(in_file, out_dir){
 #' make a new ZipMS
 #'
 #' @param in_file the file to use (either .zip or .mzML)
+#' @param mzml_meta_file metadata file (.json)
 #' @param out_file the file to save to at the end
 #' @param load_raw logical to load the raw data
 #' @param load_peak_list to load the peak list if it exists
 #'
 #' @export
 #' @return ZipMS
-zip_ms <- function(in_file, out_file = NULL, load_raw = TRUE,
+zip_ms <- function(in_file, mzml_meta_file = NULL, out_file = NULL, load_raw = TRUE,
                    load_peak_list = TRUE){
-  ZipMS$new(in_file, out_file = out_file, load_raw = load_raw, load_peak_list = load_peak_list)
+  ZipMS$new(in_file, mzml_meta_file = mzml_meta_file, out_file = out_file, load_raw = load_raw, load_peak_list = load_peak_list)
 }
 
 #' ZipMS - save
@@ -177,6 +178,24 @@ ZipMS <- R6::R6Class("ZipMS",
     out_file = NULL,
     temp_directory = NULL,
 
+    load_raw = function(){
+      RawMS$new(file.path(self$temp_directory, self$metadata$raw$raw_data),
+                file.path(self$temp_directory, self$metadata$raw$metadata))
+    },
+
+    load_peak_list = function(){
+      if (file.exists(file.path(self$temp_directory, "peak_finder.rds"))) {
+        tmp_env <- new.env()
+        load(file.path(self$temp_directory, "peak_finder.rds"), envir = tmp_env)
+        peak_data <- tmp_env$peak_finder$correspondent_peaks$master_peak_list$clone(deep = TRUE)
+        rm(tmp_env)
+      } else {
+        warning("No peak_finder.rds found, not returning peaks!")
+        peak_data <- NULL
+      }
+      peak_data
+    },
+
     initialize = function(in_file, mzml_meta_file = NULL, out_file = NULL, load_raw = TRUE,
                           load_peak_list = TRUE,
                           temp_loc = NULL){
@@ -215,11 +234,11 @@ ZipMS <- R6::R6Class("ZipMS",
       self$id <- self$metadata$id
 
       if (load_raw && (!is.null(self$metadata$raw$raw_data))) {
-        self$raw_ms <- private$load_raw()
+        self$raw_ms <- self$load_raw()
       }
 
       if (load_peak_list && (!is.null(self$metadata$peakpicking_analysis$output))) {
-        self$peaks <- private$load_peak_list()
+        self$peaks <- self$load_peak_list()
       }
 
       private$calc_md5_hashes()
@@ -292,17 +311,6 @@ ZipMS <- R6::R6Class("ZipMS",
       out_file
     },
 
-    load_raw = function(){
-      RawMS$new(file.path(self$temp_directory, self$metadata$raw$raw_data),
-                file.path(self$temp_directory, self$metadata$raw$metadata))
-    },
-
-    load_peak_list = function(){
-      PeakPickingAnalysis$new(file.path(self$temp_directory,
-                                        self$metadata$peakpicking_analysis$output),
-                              file.path(self$temp_directory,
-                                        self$metadata$peakpicking_analysis$parameters))
-    },
 
 
     do_load_raw = NULL,
