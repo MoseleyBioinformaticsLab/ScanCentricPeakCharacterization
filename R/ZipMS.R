@@ -214,6 +214,7 @@ ZipMS <- R6::R6Class("ZipMS",
         correspondent_peak_density <- data.frame(window = NA, density = NA, type = "correspondent", stringsAsFactors = FALSE)
       }
       peak_densities <- rbind(raw_peak_density, correspondent_peak_density)
+      peak_densities$type <- forcats::fct_relevel(peak_densities$type, "raw", "correspondent")
 
       peak_densities
     },
