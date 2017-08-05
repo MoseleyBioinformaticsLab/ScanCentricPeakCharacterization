@@ -196,6 +196,28 @@ ZipMS <- R6::R6Class("ZipMS",
       peak_data
     },
 
+    compare_raw_corresponded_densities = function(mz_range = c(150, 1600), window = 1, delta = 0.1){
+      if (!is.null(self$raw_ms)) {
+        raw_peak_mz <- raw_peaks(self$raw_ms)
+        raw_peak_density <- calculate_density(raw_peak_mz, use_range = mz_range, window = window, delta = delta)
+        raw_peak_density$type <- "raw"
+      } else {
+        warning("No raw data to get peaks from!")
+        raw_peak_density <- data.frame(window = NA, density = NA, type = "raw", stringsAsFactors = FALSE)
+      }
+      if (!is.null(self$peaks)) {
+        correspondent_peak_mz <- self$peaks$master
+        correspondent_peak_density <- calculate_density(correspondent_peak_mz, use_range = mz_range, window = window, delta = delta)
+        correspondent_peak_density$type <- "correspondent"
+      } else {
+        warning("No correspondent peaks to get peaks from!")
+        correspondent_peak_density <- data.frame(window = NA, density = NA, type = "correspondent", stringsAsFactors = FALSE)
+      }
+      peak_densities <- rbind(raw_peak_density, correspondent_peak_density)
+
+      peak_densities
+    },
+
     initialize = function(in_file, mzml_meta_file = NULL, out_file = NULL, load_raw = TRUE,
                           load_peak_list = TRUE,
                           temp_loc = NULL){
@@ -343,3 +365,54 @@ ZipMS <- R6::R6Class("ZipMS",
 
   )
 )
+
+#' raw peaks
+#'
+#' generate raw peaks from just averaging scans via xcms
+#'
+#' @param raw_ms an RawMS object
+#' @param scanrange the range of scans to use, default is derived from raw_ms
+#'
+#' @export
+#' @importFrom xcms getSpec
+#' @importFrom pracma findpeaks
+#' @return numeric
+#'
+raw_peaks <- function(raw_ms, scanrange = raw_ms$scan_range) {
+  mean_scan <- xcms::getSpec(raw_ms$raw_data, scanrange = scanrange)
+  mean_scan <- mean_scan[!is.na(mean_scan[, 2]), ]
+  mean_peaks <- pracma::findpeaks(mean_scan[, 2], nups = 2)
+
+  mean_peak_mz <- mean_scan[mean_peaks[, 2], 1]
+  mean_peak_mz
+}
+
+#' peak density
+#'
+#' calculates peak density in a sliding window of m/z
+#'
+#' @param peak_data numeric vector of m/z values representing peaks
+#' @param use_range the range of m/z's to generate windows
+#' @param window how big an m/z window to calculate density
+#' @param delta how much to slide the window
+#'
+#' @return data.frame
+#' @export
+#'
+calculate_density <- function(peak_data, use_range = NULL, window = 1, delta = 0.1){
+  peak_data <- sort(peak_data, decreasing = FALSE)
+  if (is.null(use_range)) {
+    use_range <- range(peak_data)
+  }
+
+  window_locs <- data.frame(beg = round(seq(use_range[1], use_range[2] - window, delta), 2),
+                            end = round(seq(use_range[1] + window, use_range[2], delta), 2))
+
+  peak_density <- purrr::map_df(seq(1, nrow(window_locs)), function(in_window){
+    out_val <- sum((peak_data >= window_locs[in_window, "beg"]) & (peak_data <= window_locs[in_window, "end"]))
+
+    data.frame(window = (window_locs[in_window, "beg"] + window_locs[in_window, "end"]) / 2,
+               density = out_val)
+  })
+  peak_density
+}
