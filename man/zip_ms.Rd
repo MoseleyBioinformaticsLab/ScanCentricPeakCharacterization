@@ -15,6 +15,9 @@ zip_ms(in_file, out_file = NULL, load_raw = TRUE, load_peak_list = TRUE)
 
 \item{load_peak_list}{to load the peak list if it exists}
 }
+\value{
+ZipMS
+}
 \description{
 make a new ZipMS
 }
