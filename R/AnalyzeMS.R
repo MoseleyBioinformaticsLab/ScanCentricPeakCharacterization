@@ -595,3 +595,86 @@ peak_finder <- function(raw_data, method = "lm_weighted", noise_function = noise
 
   PeakPickingAnalysis$new(peak_data, processing_meta)
 }
+
+
+#' scans to json
+#'
+#' write the scan level peaks to a JSON format
+#'
+#' @param peak_finder the peak_finder object that has everything
+#' @param exclude_noise should noise peaks be excluded?
+#' @param file_output where should the json go?
+#'
+#' @export
+#' @return character
+scans_to_json <- function(peak_finder, exclude_noise = TRUE, file_output = NULL){
+  sd_model <- peak_finder$correspondent_peaks$master_peak_list$sd_model
+  sd_pred_function <- peak_finder$correspondent_peaks$master_peak_list$sd_predict_function
+
+  peak_lists <- peak_finder$multi_scan_peaklist$get_scan_peak_lists()
+  peak_frames <- purrr::map_df(peak_lists, function(in_list){
+    out_frame <- in_list$peak_list
+    out_frame$scan <- in_list$scan
+    if (exclude_noise) {
+      out_frame <- out_frame[out_frame$not_noise, ]
+    }
+    out_frame
+  })
+  Peaks <- purrr::map(seq(1, nrow(peak_frames)), function(in_row){
+    tmp_data <- peak_frames[in_row, ]
+    list(N = 1,
+         Scans = tmp_data$scan,
+         ObservedMZ = list(Mean = tmp_data$ObservedMZ,
+                           Median = tmp_data$ObservedMZ,
+                           SD = sd_pred_function(sd_model, tmp_data$ObservedMZ),
+                           ModelSD = sd_pred_function(sd_model, tmp_data$ObservedMZ),
+                           Values = tmp_data$ObservedMZ),
+         Height = list(Mean = tmp_data$Height,
+                       Median = tmp_data$Height,
+                       SD = 0,
+                       RSD = 0,
+                       Values = tmp_data$Height),
+         Area = list(Mean = tmp_data$Area,
+                     Median = tmp_data$Area,
+                     SD = 0,
+                     RSD = 0,
+                     Values = tmp_data$Area),
+         NormalizedArea = list(Mean = tmp_data$NormalizedArea,
+                               Median = tmp_data$NormalizedArea,
+                               SD = 0,
+                               RSD = 0,
+                               Values = tmp_data$NormalizedArea)
+    )
+  })
+
+  if (!is.null(file_output)) {
+    scans_json <- peak_list_2_json(list(Peaks = Peaks))
+    cat(scans_json, file = file.path(file_output, "scans_peaklist.json"))
+  }
+  invisible(scans_json)
+}
+
+
+#' add scans to file
+#'
+#' adds the jsonified scan peaks to an already existing zip file
+#'
+#' @param zip_file the zip file to work with
+#' @param out_file if desired, a new file name to generate
+#'
+#' @export
+#' @return NULL
+add_scans_to_file <- function(zip_file, out_file = zip_file){
+  zip_data <- zip_ms(zip_file, out_file = out_file, load_raw = TRUE, load_peak_list = FALSE)
+
+  tmp_env <- new.env()
+  if (file.exists(file.path(zip_data$temp_directory, "peak_finder.rds"))) {
+    load(file.path(zip_data$temp_directory, "peak_finder.rds"), envir = tmp_env)
+    scans_to_json(tmp_env$peak_finder, file_output = zip_data$temp_directory)
+    zip_data$write_zip()
+    zip_data$cleanup()
+
+  } else {
+    warning("peak_finder.rds not present!")
+  }
+}
