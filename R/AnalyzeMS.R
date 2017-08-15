@@ -677,13 +677,13 @@ scans_to_json <- function(peak_finder, exclude_noise = TRUE, file_output = NULL)
 #'
 #' @export
 #' @return NULL
-add_scans_to_file <- function(zip_file, out_file = zip_file){
+add_scans_to_file <- function(zip_file, out_file = zip_file, exclude_noise = TRUE){
   zip_data <- zip_ms(zip_file, out_file = out_file, load_raw = TRUE, load_peak_list = FALSE)
 
   tmp_env <- new.env()
   if (file.exists(file.path(zip_data$temp_directory, "peak_finder.rds"))) {
     load(file.path(zip_data$temp_directory, "peak_finder.rds"), envir = tmp_env)
-    scans_to_json(tmp_env$peak_finder, file_output = zip_data$temp_directory)
+    scans_to_json(tmp_env$peak_finder, exclude_noise = exclude_noise, file_output = zip_data$temp_directory)
     zip_data$write_zip()
     zip_data$cleanup()
 
