@@ -618,6 +618,16 @@ scans_to_json <- function(peak_finder, exclude_noise = TRUE, file_output = NULL)
     out_frame$scan <- in_list$scan
     if (exclude_noise) {
       out_frame <- out_frame[out_frame$not_noise, ]
+      out_frame$noise_rank <- 0
+    } else {
+      noise_frame <- out_frame[!out_frame$not_noise, ]
+      nonoise_frame <- out_frame[out_frame$not_noise, ]
+
+      noise_frame <- noise_frame[order(noise_frame$Height), ]
+      noise_frame$noise_rank <- seq(nrow(noise_frame), 1, -1)
+
+      nonoise_frame$noise_rank <- 0
+      out_frame <- rbind(nonoise_frame, noise_frame)
     }
     out_frame
   })
@@ -644,7 +654,9 @@ scans_to_json <- function(peak_finder, exclude_noise = TRUE, file_output = NULL)
                                Median = tmp_data$NormalizedArea,
                                SD = NA,
                                RSD = NA,
-                               Values = tmp_data$NormalizedArea)
+                               Values = tmp_data$NormalizedArea),
+         NoiseInfo = list(IsNoise = !tmp_data$not_noise,
+                          NoiseRank = tmp_data$noise_rank)
     )
   })
 
