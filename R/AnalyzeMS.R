@@ -502,15 +502,6 @@ default_sd_predict_function <- function(model, x){
   stats:::predict.loess(model, newdata = x)
 }
 
-default_offset_fit_function <- function(x, y){
-  loess_frame <- data.frame(x = x, y = y)
-  loess_fit <- stats::loess(y ~ x, data = loess_frame, span = 1.5, control = stats::loess.control(surface = "direct"))
-  loess_fit
-}
-
-default_offset_predict_function <- function(model, x){
-  stats:::predict.loess(model, newdata = x)
-}
 
 #' peak finding and reporting
 #'

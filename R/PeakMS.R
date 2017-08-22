@@ -687,6 +687,9 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
     },
 
+    offset_predict_function = NULL,
+    offset_fit_function = NULL,
+
     count_notna = function(){
       apply(self$scan_mz, 1, function(x){sum(!is.na(x))})
     },
@@ -860,7 +863,8 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
     initialize = function(multi_scan_peak_list, peak_calc_type = "lm_weighted", sd_model = NULL, multiplier = 1,
                           mz_range = c(-Inf, Inf), noise_calculator = NULL, sd_fit_function = NULL,
-                          sd_predict_function = NULL, rmsd_min_scans = 3){
+                          sd_predict_function = NULL,
+                          offset_fit_function = NULL, offset_predict_function = NULL, rmsd_min_scans = 3){
       assertthat::assert_that(any(class(multi_scan_peak_list) %in% "MultiScansPeakList"))
 
       if (is.null(sd_model)) {
@@ -883,6 +887,18 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
         self$sd_predict_function <- multi_scan_peak_list$sd_predict_function
       } else {
         self$sd_predict_function <- default_sd_predict_function
+      }
+
+      if (!is.null(offset_fit_function)) {
+        self$offset_fit_function <- offset_fit_function
+      } else {
+        self$offset_fit_function <- default_offset_fit_function
+      }
+
+      if (!is.null(offset_predict_function)) {
+        self$offset_predict_function <- offset_predict_function
+      } else {
+        self$offset_predict_function <- default_offset_predict_function
       }
 
       if (!is.null(noise_calculator)) {
