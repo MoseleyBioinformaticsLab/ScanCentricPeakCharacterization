@@ -1083,6 +1083,7 @@ check_model_sd <- function(predict_function, model_1, model_2, reject_frac = 0.1
 #' @param sd_predict_function function for predicting RMSD cutoffs
 #' @param offset_correction_function function for doing offset correction
 #' @param collapse_peaks whether to collapse the peaks or not
+#' @param stop_tolerance differences between iterations to stop
 #'
 #' @export
 #' @return FindCorrespondenceScans
@@ -1091,10 +1092,11 @@ find_correspondence_scans <- function(multi_scan_peak_list, peak_calc_type = "lm
                                       max_failures = 5,
                                       mz_range = c(-Inf, Inf), notify_progress = FALSE, noise_function = NULL,
                                       sd_fit_function = NULL, sd_predict_function = NULL,
-                                      offset_correction_function = NULL, collapse_peaks = FALSE){
+                                      offset_correction_function = NULL, collapse_peaks = FALSE,
+                                      stop_tolerance = 1e-10){
   FindCorrespondenceScans$new(multi_scan_peak_list = multi_scan_peak_list,
                               peak_calc_type = peak_calc_type, max_iteration = max_iteration,
-                              digital_resolution_multiplier = digitial_resolution_multiplier,
+                              digital_resolution_multiplier = digital_resolution_multiplier,
                               rmsd_multiplier = rmsd_multiplier,
                               max_failures = max_failures,
                               mz_range = mz_range, notify_progress = notify_progress,
@@ -1102,7 +1104,8 @@ find_correspondence_scans <- function(multi_scan_peak_list, peak_calc_type = "lm
                               sd_fit_function = sd_fit_function,
                               sd_predict_function = sd_predict_function,
                               offset_correction_function = offset_correction_function,
-                              collapse_peaks = collapse_peaks)
+                              collapse_peaks = collapse_peaks,
+                              stop_tolerance = stop_tolerance)
 }
 
 filter_information_content = function(master_peak_list, multi_scan_peak_list, vocal = FALSE){
@@ -1295,7 +1298,9 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
                            digital_resolution_multiplier = 0.5, rmsd_multiplier = 3,
                            max_failures = 5,
                            mz_range = c(-Inf, Inf), notify_progress = FALSE, noise_function = NULL,
-                           sd_fit_function = NULL, sd_predict_function = NULL, collapse_peaks = FALSE){
+                           sd_fit_function = NULL, sd_predict_function = NULL, collapse_peaks = FALSE,
+                           offset_correction_function = NULL,
+                           stop_tolerance = 1e-10){
        assertthat::assert_that(any(class(multi_scan_peak_list) %in% "MultiScansPeakList"))
 
        self$digital_resolution_multiplier <- digital_resolution_multiplier
@@ -1317,6 +1322,12 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          self$sd_predict_function <- multi_scan_peak_list$sd_predict_function
        } else {
          self$sd_predict_function <- default_sd_predict_function
+       }
+
+       if (!is.null(offset_correction_function)) {
+         self$offset_correction_function <- offset_correction_function
+       } else {
+         self$offset_correction_function <- default_correct_offset_function
        }
 
        self$iterative_correspondence(multi_scan_peak_list, peak_calc_type = peak_calc_type,
@@ -1383,7 +1394,7 @@ compare_mpl_to_list <- function(mpl_check, mpl_list, min_check = 3, exclude_chec
 #' @export
 #'
 compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("master", "scan",
-                                                                     "scan_height", "scan_area", "scan_mz")){
+                                                                     "scan_height", "scan_area")){
   compare_results <- vapply(compare_list, function(in_obj){
     isTRUE(all.equal(mpl_1[[in_obj]], mpl_2[[in_obj]]))
   }, logical(1))
