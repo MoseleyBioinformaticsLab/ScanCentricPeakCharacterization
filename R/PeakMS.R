@@ -1108,7 +1108,7 @@ find_correspondence_scans <- function(multi_scan_peak_list, peak_calc_type = "lm
                               stop_tolerance = stop_tolerance)
 }
 
-filter_information_content = function(master_peak_list, multi_scan_peak_list, vocal = FALSE){
+filter_information_content = function(master_peak_list, multi_scan_peak_list, remove_low_ic_scans = TRUE, vocal = FALSE){
   if (vocal) {
     message("Filtering based on information content ....")
   }
@@ -1119,10 +1119,12 @@ filter_information_content = function(master_peak_list, multi_scan_peak_list, vo
 
   tmp_information$scan_order <- seq(1, nrow(tmp_information))
 
-  # find outliers
-  outlier_values <- grDevices::boxplot.stats(tmp_information$information_content)$out
-  # remove them
-  tmp_information <- tmp_information[!(tmp_information$information_content %in% outlier_values), ]
+  if (remove_low_ic_scans) {
+    # determine outliers
+    outlier_values <- grDevices::boxplot.stats(tmp_information$information_content)$out
+    # remove them
+    tmp_information <- tmp_information[!(tmp_information$information_content %in% outlier_values), ]
+  }
 
   # order by information content so we can reorder everything else
   tmp_information <- tmp_information[order(tmp_information$information_content, decreasing = TRUE), ]
