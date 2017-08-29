@@ -1082,6 +1082,7 @@ check_model_sd <- function(predict_function, model_1, model_2, reject_frac = 0.1
 #' @param sd_fit_function function to fit the RMSD
 #' @param sd_predict_function function for predicting RMSD cutoffs
 #' @param offset_correction_function function for doing offset correction
+#' @param remove_low_ic_scans should low information content scans be removed
 #' @param collapse_peaks whether to collapse the peaks or not
 #' @param stop_tolerance differences between iterations to stop
 #'
@@ -1092,7 +1093,8 @@ find_correspondence_scans <- function(multi_scan_peak_list, peak_calc_type = "lm
                                       max_failures = 5,
                                       mz_range = c(-Inf, Inf), notify_progress = FALSE, noise_function = NULL,
                                       sd_fit_function = NULL, sd_predict_function = NULL,
-                                      offset_correction_function = NULL, collapse_peaks = FALSE,
+                                      offset_correction_function = NULL,
+                                      remove_low_ic_scans = TRUE, collapse_peaks = FALSE,
                                       stop_tolerance = 1e-10){
   FindCorrespondenceScans$new(multi_scan_peak_list = multi_scan_peak_list,
                               peak_calc_type = peak_calc_type, max_iteration = max_iteration,
@@ -1104,6 +1106,7 @@ find_correspondence_scans <- function(multi_scan_peak_list, peak_calc_type = "lm
                               sd_fit_function = sd_fit_function,
                               sd_predict_function = sd_predict_function,
                               offset_correction_function = offset_correction_function,
+                              remove_low_ic_scans = remove_low_ic_scans,
                               collapse_peaks = collapse_peaks,
                               stop_tolerance = stop_tolerance)
 }
@@ -1163,7 +1166,8 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
                                          digital_resolution_multiplier = 0.5, rmsd_multiplier = 1, max_failures = 5,
                                          mz_range = c(-Inf, Inf), sd_fit_function = NULL, sd_predict_function = NULL,
                                          notify_progress = FALSE,
-                                         noise_function = NULL, collapse_peaks = FALSE){
+                                         noise_function = NULL, collapse_peaks = FALSE,
+                                         remove_low_ic_scans = TRUE){
 
        n_scan <- length(multi_scan_peak_list$scan_numbers())
 
@@ -1205,14 +1209,14 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
                                       rmsd_min_scans = self$n_scan_peaks)
        mpl_sd_1$calculate_sd_model()
 
-       filter_information_content(mpl_sd_1, multi_scan_peak_list)
+       filter_information_content(mpl_sd_1, multi_scan_peak_list, remove_low_ic_scans = remove_low_ic_scans)
 
        offset_multi_scan_peak_list <- multi_scan_peak_list$clone(deep = TRUE)
 
        all_mpls[[2]] <- mpl_sd_1
 
        if (notify_progress) {
-         print("first sd done!")
+         message("first sd done!")
          #save(mpl_digital_resolution, file = "mpl_dr.RData")
          #save(mpl_sd_1, file = "mpl_sd_0.RData")
        }
@@ -1274,7 +1278,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
          if (notify_progress) {
            notify_message <- paste0(as.character(n_iter), " iteration done!")
-           print(notify_message)
+           message(notify_message)
            #save(mpl_sd_1, file = paste0("mpl_sd_", as.character(n_iter), ".RData"))
          }
        }
@@ -1301,6 +1305,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
                            max_failures = 5,
                            mz_range = c(-Inf, Inf), notify_progress = FALSE, noise_function = NULL,
                            sd_fit_function = NULL, sd_predict_function = NULL, collapse_peaks = FALSE,
+                           remove_low_ic_scans = TRUE,
                            offset_correction_function = NULL,
                            stop_tolerance = 1e-10){
        assertthat::assert_that(any(class(multi_scan_peak_list) %in% "MultiScansPeakList"))
@@ -1338,9 +1343,8 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
                                      max_failures = max_failures,
                                      mz_range = mz_range, sd_fit_function = self$sd_fit_function,
                                      sd_predict_function = self$sd_predict_function,
-                                     notify_progress = notify_progress, collapse_peaks = self$collapse_peaks)
-
-
+                                     notify_progress = notify_progress, collapse_peaks = self$collapse_peaks,
+                                     remove_low_ic_scans = remove_low_ic_scans)
      }
    )
 
