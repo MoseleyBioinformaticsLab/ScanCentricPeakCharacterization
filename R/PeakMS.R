@@ -1218,7 +1218,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        n_iter <- 0
        n_good_iter <- 0
        n_fail_iter <- 0
-       sd_2_v_others <- compare_mpl_to_list(mpl_sd_1, all_mpls, exclude_check = 2)
+       sd_2_v_others <- compare_object_to_list(mpl_sd_1, all_mpls, exclude_check = 2, check_function = compare_master_peak_lists)
 
        # mpl_sd_1$calculate_scan_information_content()
        # mpl_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
@@ -1263,7 +1263,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
            mpl_sd_2 <- collapse_correspondent_peaks(mpl_sd_2)
          }
 
-         sd_2_v_others <- compare_mpl_to_list(mpl_sd_2, all_mpls, exclude_check = n_iter + 2)
+         sd_2_v_others <- compare_object_to_list(mpl_sd_2, all_mpls, exclude_check = n_iter + 2, check_function = compare_master_peak_lists)
          mpl_sd_1 <- mpl_sd_2
 
          # mpl_sd_1$calculate_scan_information_content()
@@ -1344,42 +1344,49 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
 )
 
-#' compare MasterPeakList to others
+#' compare objects to others
 #'
-#' Given one MasterPeakList and a bunch of others, determine if there is a match
+#' Given one object and a list of others, determine if there is a match
 #' to any of the previous ones
 #'
-#' @param mpl_check the list of things
-#' @param mpl_list the one to check
+#' @param object_check the list of things
+#' @param object_list the one to check
 #' @param min_check what value is a minimum valid check
 #' @param exclude_check is there anything to exclude??
+#' @param check_function what function should be used to compare the objects?
+#'
+#' @details this function allows one to check that an object "matches" any of the
+#'   objects in a provided list. How an object "matches" is determined by the
+#'   \emph{check_function}, it should merely return TRUE or FALSE
+#'
+#' @importFrom purrr map2_df
 #'
 #' @export
-compare_mpl_to_list <- function(mpl_check, mpl_list, min_check = 3, exclude_check = NULL){
-  has_result <- vapply(mpl_list, length, numeric(1)) > 0
-  mpl_list <- mpl_list[1:max(which(has_result))]
+compare_object_to_list <- function(object_check, object_list, min_check = 3, exclude_check = NULL, check_function){
+  has_result <- vapply(object_list, length, numeric(1)) > 0
+  object_list <- object_list[1:max(which(has_result))]
 
   if (is.null(exclude_check)) {
-    exclude_check <- length(mpl_list)
+    exclude_check <- length(object_list)
   }
 
-  mpl_compare <- lapply(mpl_list, compare_master_peak_lists, mpl_check)
-  mpl_compare <- as.data.frame(do.call(rbind, mpl_compare))
-  mpl_compare$index <- seq(1, nrow(mpl_compare))
-  mpl_compare <- dplyr::mutate(mpl_compare, all_true = master & scan & scan_height & scan_area & scan_mz)
-  mpl_compare <- mpl_compare[-exclude_check, ]
+  object_1 <- vector("list", 1)
+  object_1[[1]] <- object_check
+  object_compare <- purrr::map2_df(object_list, object_1, check_function)
+  object_compare$index <- seq(1, nrow(object_compare))
+  object_compare <- object_compare[-exclude_check, ]
 
-  if (sum(mpl_compare$all_true) > 0) {
-    min_which_same <- min(which(mpl_compare$all_true[-exclude_check]))
+  if (sum(object_compare$compare) > 0) {
+    min_which_same <- min(object_compare$index[object_compare$compare])
     if (min_which_same >= min_check) {
-      is_converged <- TRUE
+      is_same <- TRUE
     } else {
-      is_converged <- FALSE
+      is_same <- FALSE
     }
   } else {
-    is_converged <- FALSE
+    is_same <- FALSE
   }
-  is_converged
+  is_same
 }
 
 #' compare two MasterPeakList objects
@@ -1395,10 +1402,10 @@ compare_mpl_to_list <- function(mpl_check, mpl_list, min_check = 3, exclude_chec
 #'
 compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("master", "scan",
                                                                      "scan_height", "scan_area")){
-  compare_results <- vapply(compare_list, function(in_obj){
+  compare_results <- purrr::map_lgl(compare_list, function(in_obj){
     isTRUE(all.equal(mpl_1[[in_obj]], mpl_2[[in_obj]]))
-  }, logical(1))
-  compare_results
+  })
+  data.frame(compare = all(compare_results))
 }
 
 
