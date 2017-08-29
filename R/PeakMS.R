@@ -1406,11 +1406,12 @@ compare_object_to_list <- function(object_check, object_list, min_check = 3, exc
 #'
 #' @export
 #'
-compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("master", "scan",
+compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("scan",
                                                                      "scan_height", "scan_area")){
   compare_results <- purrr::map_lgl(compare_list, function(in_obj){
     isTRUE(all.equal(mpl_1[[in_obj]], mpl_2[[in_obj]]))
   })
+  #print(compare_results)
   data.frame(compare = all(compare_results))
 }
 
