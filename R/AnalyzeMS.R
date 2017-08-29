@@ -165,30 +165,6 @@ PeakFinder <- R6::R6Class("PeakFinder",
     },
 
     scan_information_content = NULL,
-    filter_information_content = function(){
-      if (self$vocal) {
-        message("Filtering based on information content ....")
-      }
-      # this function removes scans by outlier information content values, and
-      # then subsequently re-orders the remaining scans by information content values
-      self$correspondent_peaks$master_peak_list$calculate_scan_information_content()
-      tmp_information <- self$correspondent_peaks$master_peak_list$scan_information_content
-
-      tmp_information$scan_order <- seq(1, nrow(tmp_information))
-
-      # find outliers
-      outlier_values <- grDevices::boxplot.stats(tmp_information$information_content)$out
-      # remove them
-      tmp_information <- tmp_information[!(tmp_information$information_content %in% outlier_values), ]
-
-      # order by information content so we can reorder everything else
-      tmp_information <- tmp_information[order(tmp_information$information_content, decreasing = TRUE), ]
-
-      self$multi_scan_peaklist <- self$multi_scan_peaklist$reorder(tmp_information$scan_order)
-      self$scan_information_content <- self$multi_scan_peaklist$scan_indices
-
-      self$correspondent_peaks$master_peak_list$reorder(tmp_information$scan_order)
-    },
 
     collapse_correspondent_peaks = function(){
       if (self$vocal) {
