@@ -1442,6 +1442,28 @@ compare_model_predictions <- function(model_pred_1, model_pred_2, pred_column = 
   data.frame(compare = is_converged)
 }
 
+#' all model predictions
+#'
+#' When a bunch of offset models are generated, we want to go through and create
+#' a whole set of predictions. This enables creation of a whole lot of predictions.
+#'
+#' @param predict_function the function used to make the predictions
+#' @param x the thing to make predictions with
+#' @param list_of_models the set of models
+#'
+#' @importFrom purrr map2_df
+#'
+#' @export
+#'
+df_of_model_predictions <- function(predict_function, x, list_of_models){
+  in_x <- vector("list", 1)
+  in_x[[1]] <- x
+  generate_df <- function(model, x){
+    data.frame(x = x, y = predict_function(model, x))
+  }
+  purrr::map2_df(list_of_models, in_x, generate_df)
+}
+
 #'
 #' normalize scans
 #'
