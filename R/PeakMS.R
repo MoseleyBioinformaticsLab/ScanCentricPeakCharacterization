@@ -1337,7 +1337,11 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          self$offset_correction_function <- default_correct_offset_function
        }
 
-       self$iterative_correspondence(multi_scan_peak_list, peak_calc_type = peak_calc_type,
+       # we copy this, because some of the methods applied make changes to the
+       # object, and we don't want to apply them to the original, because otherwise
+       # we get unexpected behavior on the user end.
+       multi_scan_peak_list_copy <- multi_scan_peak_list$clone(deep = TRUE)
+       self$iterative_correspondence(multi_scan_peak_list_copy, peak_calc_type = peak_calc_type,
                                      max_iteration = max_iteration, digital_resolution_multiplier = digital_resolution_multiplier,
                                      rmsd_multiplier = rmsd_multiplier,
                                      max_failures = max_failures,
