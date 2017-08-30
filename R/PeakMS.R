@@ -1145,6 +1145,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
      sd_fit_function = NULL,
      sd_predict_function = NULL,
      sd_models = NULL, # store the coefficients for the models
+     sd_predictions = NULL,
      collapse_peaks = NULL,
      compare_mpl_models = NULL,
      n_iteration = NULL,
@@ -1157,6 +1158,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
      scan_fraction = NULL,
      offset_correction_function = NULL,
      offset_correction_models = NULL,
+     offset_correction_predictions = NULL,
 
      # iterative correspondence first does correspondence based on the digital resolution,
      # and then creates a model using the SD of the correspondent peaks themselves,
@@ -1183,15 +1185,21 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        # mpl_digital_resolution$calculate_scan_information_content()
        # mpl_order <- order(mpl_digital_resolution$scan_information_content$information_content, decreasing = TRUE)
        # multi_scan_peak_list$reorder(mpl_order)
+       #
+       mz_range <- range(mpl_digital_resolution$master)
+       mz_pred_values <- seq(mz_range[1], mz_range[2], 0.5)
 
        ms_dr_model <- multi_scan_peak_list$mz_model
 
        if (notify_progress) {
-         print("digital resolution done!")
+         message("digital resolution done!")
        }
 
        all_models = list(ms_dr = ms_dr_model)
+       all_sd_predictions <- list(ms_dr = data.frame(x = mz_pred_values, y = sd_predict_function(ms_dr_model, mz_pred_values)))
+
        offset_models = vector(mode = "list", length = 22)
+       offset_predictions = vector(mode = "list", length = 22)
 
        all_mpls = vector(mode = "list", length = 22)
        all_mpls[[1]] <- mpl_digital_resolution
@@ -1200,6 +1208,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        dr_sd_model <- mpl_digital_resolution$sd_model
 
        all_models[[2]] <- dr_sd_model
+       all_sd_predictions[[2]] <- data.frame(x = mz_pred_values, y = sd_predict_function(dr_sd_model, mz_pred_values))
 
        mpl_sd_1 <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type,
                                       sd_model = mpl_digital_resolution$sd_model,
@@ -1224,13 +1233,14 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        n_iter <- 0
        n_good_iter <- 0
        n_fail_iter <- 0
-       sd_2_v_others <- compare_object_to_list(mpl_sd_1, all_mpls, exclude_check = 2, check_function = compare_master_peak_lists)
+
+       converged <- FALSE
 
        # mpl_sd_1$calculate_scan_information_content()
        # mpl_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
        # multi_scan_peak_list$reorder(mpl_order)
 
-       while ((!all(sd_2_v_others)) && (n_good_iter < max_iteration) && (self$scan_fraction <= 0.5)) {
+       while ((!all(converged)) && (n_good_iter < max_iteration) && (self$scan_fraction <= 0.5)) {
          n_iter <- n_iter + 1
          mpl_sd_1$calculate_sd_model()
          all_models[[n_iter + 2]] <- mpl_sd_1$sd_model
@@ -1240,6 +1250,11 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          tmp_models <- purrr::map_df(corrected_mspl$models, loess_to_df)
          tmp_models$iteration <- as.character(n_iter)
          offset_models[[n_iter]] <- tmp_models
+
+         tmp_offset_predictions <- df_of_model_predictions(self$offset_correction_function, mz_pred_values, corrected_mspl$models)
+         tmp_offset_predictions$iteration <- as.character(n_iter)
+         offset_predictions[[n_iter]] <- tmp_offset_predictions
+
          offset_multi_scan_peak_list <- corrected_mspl$multi_scan_peaklist
 
          mpl_sd_2 <- MasterPeakList$new(offset_multi_scan_peak_list, peak_calc_type, sd_model = mpl_sd_1$sd_model,
@@ -1270,6 +1285,12 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          }
 
          sd_2_v_others <- compare_object_to_list(mpl_sd_2, all_mpls, exclude_check = n_iter + 2, check_function = compare_master_peak_lists)
+         compare_offset_predictions <- compare_object_to_list(offset_predictions[[n_iter]], offset_predictions, exclude_check = n_iter, min_check = 1, check_function = compare_model_predictions)
+         compare_sd_predictions <- compare_object_to_list(sd_predictions[[n_iter + 2]], sd_predictions, exclude_check = n_iter + 2, min_check = 3, check_function = compare_model_predictions)
+
+         if ((compare_offset_predictions && compare_sd_predictions) | sd_2_v_others) {
+           converged <- TRUE
+         }
          mpl_sd_1 <- mpl_sd_2
 
          # mpl_sd_1$calculate_scan_information_content()
