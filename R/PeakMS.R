@@ -1419,7 +1419,30 @@ compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("scan",
   data.frame(compare = all(compare_results))
 }
 
+#' compare two sets of model predictions
+#'
+#' Given two different model prediction objects, use the L1 Norm (maximum absolute difference)
+#' to decide if they are the same or not.
+#'
+#' @param model_pred_1 the first one
+#' @param model_pred_2 the second
+#' @param pred_column which column in the data.frame to use for comparison
+#' @param max_value what is the maximum value that still says the two are the "same"?
+#'
+#' @export
+#' @return data.frame
+compare_model_predictions <- function(model_pred_1, model_pred_2, pred_column = "y", max_value = 1e-8){
+  pred_diffs <- abs(model_pred_1[[pred_column]] - model_pred_2[[pred_column]])
 
+  if (max(pred_diffs) <= max_value) {
+    is_converged <- TRUE
+  } else {
+    is_converged <- FALSE
+  }
+  data.frame(compare = is_converged)
+}
+
+#'
 #' normalize scans
 #'
 #' Given a \code{MasterPeakList} object that has the peaks across scans corresponded,
