@@ -1386,7 +1386,7 @@ compare_object_to_list <- function(object_check, object_list, min_check = 3, exc
   object_compare$index <- seq(1, nrow(object_compare))
   object_compare <- object_compare[-exclude_check, ]
 
-  if (sum(object_compare$compare) > 0) {
+  if ((nrow(object_compare) > 1) && (sum(object_compare$compare) > 0)) {
     min_which_same <- min(object_compare$index[object_compare$compare])
     if (min_which_same >= min_check) {
       is_same <- TRUE
