@@ -1252,7 +1252,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          tmp_models$iteration <- as.character(n_iter)
          offset_models[[n_iter]] <- tmp_models
 
-         tmp_offset_predictions <- df_of_model_predictions(mpl_sd_1$offset_prediction_function, mz_pred_values, corrected_mspl$models)
+         tmp_offset_predictions <- df_of_model_predictions(mpl_sd_1$offset_predict_function, mz_pred_values, corrected_mspl$models)
          tmp_offset_predictions$iteration <- as.character(n_iter)
          offset_predictions[[n_iter]] <- tmp_offset_predictions
 
@@ -1483,10 +1483,10 @@ compare_model_predictions <- function(model_pred_1, model_pred_2, pred_column = 
 df_of_model_predictions <- function(predict_function, x, list_of_models){
   in_x <- vector("list", 1)
   in_x[[1]] <- x
-  generate_df <- function(model, x){
+  generate_df <- function(model, x, predict_function){
     data.frame(x = x, y = predict_function(model, x))
   }
-  purrr::map2_df(list_of_models, in_x, generate_df)
+  purrr::map2_df(list_of_models, in_x, generate_df, predict_function)
 }
 
 #'
