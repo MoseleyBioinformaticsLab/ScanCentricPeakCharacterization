@@ -1244,6 +1244,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          n_iter <- n_iter + 1
          mpl_sd_1$calculate_sd_model()
          all_models[[n_iter + 2]] <- mpl_sd_1$sd_model
+         all_sd_predictions[[n_iter + 2]] <- data.frame(x = mz_pred_values, y = sd_predict_function(mpl_sd_1$sd_model, mz_pred_values))
 
          corrected_mspl <- self$offset_correction_function(mpl_sd_1, offset_multi_scan_peak_list)
 
@@ -1251,7 +1252,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          tmp_models$iteration <- as.character(n_iter)
          offset_models[[n_iter]] <- tmp_models
 
-         tmp_offset_predictions <- df_of_model_predictions(self$offset_correction_function, mz_pred_values, corrected_mspl$models)
+         tmp_offset_predictions <- df_of_model_predictions(mpl_sd_1$offset_prediction_function, mz_pred_values, corrected_mspl$models)
          tmp_offset_predictions$iteration <- as.character(n_iter)
          offset_predictions[[n_iter]] <- tmp_offset_predictions
 
@@ -1286,7 +1287,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
          sd_2_v_others <- compare_object_to_list(mpl_sd_2, all_mpls, exclude_check = n_iter + 2, check_function = compare_master_peak_lists)
          compare_offset_predictions <- compare_object_to_list(offset_predictions[[n_iter]], offset_predictions, exclude_check = n_iter, min_check = 1, check_function = compare_model_predictions)
-         compare_sd_predictions <- compare_object_to_list(sd_predictions[[n_iter + 2]], sd_predictions, exclude_check = n_iter + 2, min_check = 3, check_function = compare_model_predictions)
+         compare_sd_predictions <- compare_object_to_list(all_sd_predictions[[n_iter + 2]], all_sd_predictions, exclude_check = n_iter + 2, min_check = 3, check_function = compare_model_predictions)
 
          if ((compare_offset_predictions && compare_sd_predictions) | sd_2_v_others) {
            converged <- TRUE
@@ -1312,6 +1313,8 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        self$all_master_peak_lists <- all_mpls
        self$offset_correction_models <- offset_models
        self$offset_multi_scan_peak_list <- offset_multi_scan_peak_list
+       self$offset_correction_predictions <- offset_predictions
+       self$sd_predictions <- all_sd_predictions
        if (n_fail_iter >= max_failures) {
          self$converged <- FALSE
        } else {
@@ -1404,6 +1407,7 @@ compare_object_to_list <- function(object_check, object_list, min_check = 3, exc
   object_1 <- vector("list", 1)
   object_1[[1]] <- object_check
   object_compare <- purrr::map2_df(object_list, object_1, check_function)
+  print(object_compare)
   object_compare$index <- seq(1, nrow(object_compare))
   object_compare <- object_compare[-exclude_check, ]
 
@@ -1452,7 +1456,7 @@ compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("scan",
 #'
 #' @export
 #' @return data.frame
-compare_model_predictions <- function(model_pred_1, model_pred_2, pred_column = "y", max_value = 1e-8){
+compare_model_predictions <- function(model_pred_1, model_pred_2, pred_column = "y", max_value = 1e-6){
   pred_diffs <- abs(model_pred_1[[pred_column]] - model_pred_2[[pred_column]])
 
   if (max(pred_diffs) <= max_value) {
@@ -1460,7 +1464,7 @@ compare_model_predictions <- function(model_pred_1, model_pred_2, pred_column = 
   } else {
     is_converged <- FALSE
   }
-  data.frame(compare = is_converged)
+  data.frame(compare = is_converged, diff = max(pred_diffs))
 }
 
 #' all model predictions
