@@ -1422,6 +1422,30 @@ compare_object_to_list <- function(object_check, object_list, min_check = 3, exc
   }
 }
 
+#' compare slopes
+#'
+#' check if subsequent differences show a minima with at least two increasing
+#' points after the minima
+#'
+#' @param values the values to work with
+#'
+#' @export
+#' @return logical
+compare_slopes <- function(values){
+  diff_values <- diff_values[!is.na(diff_values)]
+  diff_values <- diff(values)
+  min_loc <- which.min(diff_values)
+
+  n_greater <- sum(diff_values[seq(min_loc, length(diff_values))] > diff_values[min_loc])
+
+  if (n_greater >= 2) {
+    converged <- TRUE
+  } else {
+    converged <- FALSE
+  }
+  data.frame(converged = converged, min = min_loc)
+}
+
 #' compare two MasterPeakList objects
 #'
 #' Given two MasterPeakList objects, make a determination as to whether they
