@@ -1456,7 +1456,7 @@ compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("scan",
 #'
 #' @export
 #' @return data.frame
-compare_model_predictions <- function(model_pred_1, model_pred_2, pred_column = "y", max_value = 1e-6){
+compare_model_predictions <- function(model_pred_1, model_pred_2, pred_column = "y", max_value = 1e-7){
   pred_diffs <- abs(model_pred_1[[pred_column]] - model_pred_2[[pred_column]])
 
   if (max(pred_diffs) <= max_value) {
