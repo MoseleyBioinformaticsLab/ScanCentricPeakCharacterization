@@ -1198,6 +1198,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        all_models = list(ms_dr = ms_dr_model)
        all_sd_predictions <- list(ms_dr = data.frame(x = mz_pred_values, y = sd_predict_function(ms_dr_model, mz_pred_values)))
 
+
        offset_models = vector(mode = "list", length = 22)
        offset_predictions = vector(mode = "list", length = 22)
 
@@ -1221,6 +1222,8 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        filter_information_content(mpl_sd_1, multi_scan_peak_list, remove_low_ic_scans = remove_low_ic_scans)
 
        offset_multi_scan_peak_list <- multi_scan_peak_list$clone(deep = TRUE)
+
+       allowable_differences <- all_sd_predictions[[1]]$y / length(offset_multi_scan_peak_list$scan_indices) / 2 / 10
 
        all_mpls[[2]] <- mpl_sd_1
 
@@ -1411,17 +1414,12 @@ compare_object_to_list <- function(object_check, object_list, min_check = 3, exc
   object_compare$index <- seq(1, nrow(object_compare))
   object_compare <- object_compare[-exclude_check, ]
 
-  if ((nrow(object_compare) > 1) && (sum(object_compare$compare) > 0)) {
-    min_which_same <- min(object_compare$index[object_compare$compare])
-    if (min_which_same >= min_check) {
-      is_same <- TRUE
-    } else {
-      is_same <- FALSE
-    }
+  if ((nrow(object_compare) > 1) && (min(object_compare$index) >= min_check)) {
+    object_compare <- object_compare[object_compare$index >= min_check, ]
+    min_value <- min(object_compare$diff)
   } else {
-    is_same <- FALSE
+    min_value <- NA
   }
-  is_same
 }
 
 #' compare two MasterPeakList objects
@@ -1452,20 +1450,15 @@ compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("scan",
 #' @param model_pred_1 the first one
 #' @param model_pred_2 the second
 #' @param pred_column which column in the data.frame to use for comparison
-#' @param max_value what is the maximum value that still says the two are the "same"?
 #'
 #' @export
 #' @return data.frame
-compare_model_predictions <- function(model_pred_1, model_pred_2, pred_column = "y", max_value = 1e-7){
-  pred_diffs <- abs(model_pred_1[[pred_column]] - model_pred_2[[pred_column]])
+compare_model_predictions <- function(model_pred_1, model_pred_2, pred_column = "y"){
+  pred_diffs <- sqrt(sum((model_pred_1[[pred_column]] - model_pred_2[[pred_column]])^2) / length(model_pred_1))
 
-  if (max(pred_diffs) <= max_value) {
-    is_converged <- TRUE
-  } else {
-    is_converged <- FALSE
-  }
-  data.frame(compare = is_converged, diff = max(pred_diffs))
+  data.frame(rmsd = pred_diffs)
 }
+
 
 #' all model predictions
 #'
