@@ -1223,7 +1223,8 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
        offset_multi_scan_peak_list <- multi_scan_peak_list$clone(deep = TRUE)
 
-       allowable_differences <- all_sd_predictions[[1]]$y / length(offset_multi_scan_peak_list$scan_indices) / 2 / 10
+       sd_diff_minima <- vector("double", 22)
+       offset_diff_minima <- vector("double", 22)
 
        all_mpls[[2]] <- mpl_sd_1
 
@@ -1289,10 +1290,16 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          }
 
          sd_2_v_others <- compare_object_to_list(mpl_sd_2, all_mpls, exclude_check = n_iter + 2, check_function = compare_master_peak_lists)
-         compare_offset_predictions <- compare_object_to_list(offset_predictions[[n_iter]], offset_predictions, exclude_check = n_iter, min_check = 1, check_function = compare_model_predictions)
-         compare_sd_predictions <- compare_object_to_list(all_sd_predictions[[n_iter + 2]], all_sd_predictions, exclude_check = n_iter + 2, min_check = 3, check_function = compare_model_predictions)
+         offset_diff_minima[[n_iter]] <- compare_object_to_list_diff(offset_predictions[[n_iter]], offset_predictions, exclude_check = n_iter, min_check = 1, check_function = compare_model_predictions)
+         sd_diff_minima[[n_iter]] <- compare_object_to_list_diff(all_sd_predictions[[n_iter + 2]], all_sd_predictions, exclude_check = n_iter + 2, min_check = 3, check_function = compare_model_predictions)
 
-         if ((compare_offset_predictions && compare_sd_predictions) | sd_2_v_others) {
+         offset_converged <- compare_slopes(offset_diff_minima)
+         sd_converged <- compare_slopes(sd_diff_minima)
+
+         print(offset_diff_minima)
+         print(sd_diff_minima)
+
+         if ((any(offset_converged$converged) && any(sd_converged$converged)) | sd_2_v_others) {
            converged <- TRUE
          }
          mpl_sd_1 <- mpl_sd_2
@@ -1381,6 +1388,47 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
 )
 
+#' compare objects to others 2
+#'
+#' Given one object and a list of others, determine if there is a match
+#' to any of the previous ones
+#'
+#' @param object_check the list of things
+#' @param object_list the one to check
+#' @param min_check what value is a minimum valid check
+#' @param exclude_check is there anything to exclude??
+#' @param check_function what function should be used to compare the objects?
+#'
+#' @details this function allows one to check that an object "matches" any of the
+#'   objects in a provided list. How an object "matches" is determined by the
+#'   \emph{check_function}, it should merely return TRUE or FALSE
+#'
+#' @importFrom purrr map2_df
+#'
+#' @export
+compare_object_to_list_diff <- function(object_check, object_list, min_check = 3, exclude_check = NULL, check_function){
+  has_result <- vapply(object_list, length, numeric(1)) > 0
+  object_list <- object_list[1:max(which(has_result))]
+
+  if (is.null(exclude_check)) {
+    exclude_check <- length(object_list)
+  }
+
+  object_1 <- vector("list", 1)
+  object_1[[1]] <- object_check
+  object_compare <- purrr::map2_df(object_list, object_1, check_function)
+  #print(object_compare)
+  object_compare$index <- seq(1, nrow(object_compare))
+  object_compare <- object_compare[-exclude_check, ]
+
+  if ((nrow(object_compare) > 1) && (min(object_compare$index) >= min_check)) {
+    object_compare <- object_compare[object_compare$index >= min_check, ]
+    min_value <- min(object_compare$diff)
+  } else {
+    min_value <- NA
+  }
+}
+
 #' compare objects to others
 #'
 #' Given one object and a list of others, determine if there is a match
@@ -1410,17 +1458,23 @@ compare_object_to_list <- function(object_check, object_list, min_check = 3, exc
   object_1 <- vector("list", 1)
   object_1[[1]] <- object_check
   object_compare <- purrr::map2_df(object_list, object_1, check_function)
-  print(object_compare)
+  #print(object_compare)
   object_compare$index <- seq(1, nrow(object_compare))
   object_compare <- object_compare[-exclude_check, ]
 
-  if ((nrow(object_compare) > 1) && (min(object_compare$index) >= min_check)) {
-    object_compare <- object_compare[object_compare$index >= min_check, ]
-    min_value <- min(object_compare$diff)
+  if ((nrow(object_compare) > 1) && (sum(object_compare$compare) > 0)) {
+    min_which_same <- min(object_compare$index[object_compare$compare])
+    if (min_which_same >= min_check) {
+      is_same <- TRUE
+    } else {
+      is_same <- FALSE
+    }
   } else {
-    min_value <- NA
+    is_same <- FALSE
   }
+  is_same
 }
+
 
 #' compare slopes
 #'
@@ -1432,7 +1486,7 @@ compare_object_to_list <- function(object_check, object_list, min_check = 3, exc
 #' @export
 #' @return logical
 compare_slopes <- function(values){
-  diff_values <- diff_values[!is.na(diff_values)]
+  values <- values[!is.na(values)]
   diff_values <- diff(values)
   min_loc <- which.min(diff_values)
 
