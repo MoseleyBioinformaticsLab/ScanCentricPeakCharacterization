@@ -1195,14 +1195,15 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          message("digital resolution done!")
        }
 
-       all_models = list(ms_dr = ms_dr_model)
+       all_models <- list(ms_dr = ms_dr_model)
        all_sd_predictions <- list(ms_dr = data.frame(x = mz_pred_values, y = sd_predict_function(ms_dr_model, mz_pred_values)))
 
 
-       offset_models = vector(mode = "list", length = 22)
-       offset_predictions = vector(mode = "list", length = 22)
+       offset_models <- vector(mode = "list", length = 22)
+       offset_predictions <- vector(mode = "list", length = 22)
+       offset_mspl <- vector(mode = "list", length = 22)
 
-       all_mpls = vector(mode = "list", length = 22)
+       all_mpls <- vector(mode = "list", length = 22)
        all_mpls[[1]] <- mpl_digital_resolution
 
        mpl_digital_resolution$calculate_sd_model()
@@ -1224,7 +1225,9 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        offset_multi_scan_peak_list <- multi_scan_peak_list$clone(deep = TRUE)
 
        sd_diff_minima <- vector("double", 22)
+       sd_diff_minima[1:22] <- NA
        offset_diff_minima <- vector("double", 22)
+       offset_diff_minima[1:22] <- NA
 
        all_mpls[[2]] <- mpl_sd_1
 
@@ -1255,74 +1258,77 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          tmp_models <- purrr::map_df(corrected_mspl$models, loess_to_df)
          tmp_models$iteration <- as.character(n_iter)
          offset_models[[n_iter]] <- tmp_models
+         offset_mspl[[n_iter]] <- corrected_mspl$multi_scan_peaklist
 
          tmp_offset_predictions <- df_of_model_predictions(mpl_sd_1$offset_predict_function, mz_pred_values, corrected_mspl$models)
          tmp_offset_predictions$iteration <- as.character(n_iter)
          offset_predictions[[n_iter]] <- tmp_offset_predictions
 
-         offset_multi_scan_peak_list <- corrected_mspl$multi_scan_peaklist
-
-         mpl_sd_2 <- MasterPeakList$new(offset_multi_scan_peak_list, peak_calc_type, sd_model = mpl_sd_1$sd_model,
-                                        multiplier = rmsd_multiplier,
-                                        sd_fit_function = sd_fit_function,
-                                        sd_predict_function = sd_predict_function,
-                                        rmsd_min_scans = self$n_scan_peaks)
-
-         mpl_sd_2$calculate_sd_model()
-         all_mpls[[n_iter + 2]] <- mpl_sd_2
-
-         #sd_status <- check_model_sd(sd_predict_function, mpl_sd_1$sd_model, mpl_sd_2$sd_model)
-         sd_status <- TRUE
-
-         if (!sd_status) {
-           self$scan_fraction <- self$scan_fraction + 0.05
-           self$n_scan_peaks <- floor(n_scan * self$scan_fraction)
-           next
-         } else {
-           n_good_iter <- n_good_iter + 1
-         }
-
-         # we wait until 5 iterations here because we want the SD model to be mostly
-         # set before we start collapsing peaks, given that the collapsing is based
-         # on the model SD for a given m/z
-         if (collapse_peaks && (n_good_iter >= 5)) {
-           mpl_sd_2 <- collapse_correspondent_peaks(mpl_sd_2)
-         }
-
-         sd_2_v_others <- compare_object_to_list(mpl_sd_2, all_mpls, exclude_check = n_iter + 2, check_function = compare_master_peak_lists)
          offset_diff_minima[[n_iter]] <- compare_object_to_list_diff(offset_predictions[[n_iter]], offset_predictions, exclude_check = n_iter, min_check = 1, check_function = compare_model_predictions)
-         sd_diff_minima[[n_iter]] <- compare_object_to_list_diff(all_sd_predictions[[n_iter + 2]], all_sd_predictions, exclude_check = n_iter + 2, min_check = 3, check_function = compare_model_predictions)
+         sd_diff_minima[[n_iter + 2]] <- compare_object_to_list_diff(all_sd_predictions[[n_iter + 2]], all_sd_predictions, exclude_check = n_iter + 2, min_check = 3, check_function = compare_model_predictions)
 
          offset_converged <- compare_slopes(offset_diff_minima)
          sd_converged <- compare_slopes(sd_diff_minima)
 
-         print(offset_diff_minima)
-         print(sd_diff_minima)
-
-         if ((any(offset_converged$converged) && any(sd_converged$converged)) | sd_2_v_others) {
+         if ((any(offset_converged$converged) && any(sd_converged$converged))) {
            converged <- TRUE
-         }
-         mpl_sd_1 <- mpl_sd_2
+           # the iteration is to make sure we grab the right offset model
+           converged_iter <- min(c(offset_converged$min, sd_converged$min - 2))
+         } else {
+           offset_multi_scan_peak_list <- corrected_mspl$multi_scan_peaklist
 
-         # mpl_sd_1$calculate_scan_information_content()
-         # mpl_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
-         # multi_scan_peak_list$reorder(mpl_order)
+           mpl_sd_2 <- MasterPeakList$new(offset_multi_scan_peak_list, peak_calc_type, sd_model = mpl_sd_1$sd_model,
+                                          multiplier = rmsd_multiplier,
+                                          sd_fit_function = sd_fit_function,
+                                          sd_predict_function = sd_predict_function,
+                                          rmsd_min_scans = self$n_scan_peaks)
+
+           mpl_sd_2$calculate_sd_model()
+           all_mpls[[n_iter + 2]] <- mpl_sd_2
+
+           #sd_status <- check_model_sd(sd_predict_function, mpl_sd_1$sd_model, mpl_sd_2$sd_model)
+           sd_status <- TRUE
+
+           if (!sd_status) {
+             self$scan_fraction <- self$scan_fraction + 0.05
+             self$n_scan_peaks <- floor(n_scan * self$scan_fraction)
+             next
+           } else {
+             n_good_iter <- n_good_iter + 1
+           }
+
+           # we wait until 5 iterations here because we want the SD model to be mostly
+           # set before we start collapsing peaks, given that the collapsing is based
+           # on the model SD for a given m/z
+           if (collapse_peaks && (n_good_iter >= 5)) {
+             mpl_sd_2 <- collapse_correspondent_peaks(mpl_sd_2)
+           }
+
+           sd_2_v_others <- compare_object_to_list(mpl_sd_2, all_mpls, exclude_check = n_iter + 2, check_function = compare_master_peak_lists)
+           if (sd_2_v_others) {
+             converged <- TRUE
+             converged_iter <- n_iter
+           } else {
+             mpl_sd_1 <- mpl_sd_2
+           }
+         }
+
 
          if (notify_progress) {
-           notify_message <- paste0(as.character(n_iter), " iteration done!")
+           notify_message <- paste0(as.character(n_iter), " iterations done!")
            message(notify_message)
            #save(mpl_sd_1, file = paste0("mpl_sd_", as.character(n_iter), ".RData"))
          }
        }
-       self$master_peak_list <- mpl_sd_1
+       self$master_peak_list <- all_mpls[[converged_iter]]
        self$sd_models <- all_models
        self$compare_mpl_models <- sd_2_v_others
-       self$n_iteration <- n_iter
+       self$n_iteration <- converged_iter
        self$peak_type <- peak_calc_type
        self$final_rmsd_multiplier <- rmsd_multiplier
        self$all_master_peak_lists <- all_mpls
        self$offset_correction_models <- offset_models
-       self$offset_multi_scan_peak_list <- offset_multi_scan_peak_list
+       self$offset_multi_scan_peak_list <- offset_mspl[[converged_iter]]
        self$offset_correction_predictions <- offset_predictions
        self$sd_predictions <- all_sd_predictions
        if (n_fail_iter >= max_failures) {
@@ -1421,7 +1427,7 @@ compare_object_to_list_diff <- function(object_check, object_list, min_check = 3
   object_compare$index <- seq(1, nrow(object_compare))
   object_compare <- object_compare[-exclude_check, ]
 
-  if ((nrow(object_compare) > 1) && (min(object_compare$index) >= min_check)) {
+  if ((nrow(object_compare) >= 1) && (max(object_compare$index) >= min_check)) {
     object_compare <- object_compare[object_compare$index >= min_check, ]
     min_value <- min(object_compare$diff)
   } else {
@@ -1486,17 +1492,28 @@ compare_object_to_list <- function(object_check, object_list, min_check = 3, exc
 #' @export
 #' @return logical
 compare_slopes <- function(values){
-  values <- values[!is.na(values)]
-  diff_values <- diff(values)
-  min_loc <- which.min(diff_values)
+  #values <- values[!is.na(values)]
+  if (sum(!is.na(values)) >= 3) {
+    min_loc <- which.min(values)
 
-  n_greater <- sum(diff_values[seq(min_loc, length(diff_values))] > diff_values[min_loc])
+    max_notna <- max(which(!is.na(values)))
+    if (max_notna > min_loc) {
+      n_greater <- sum(values[seq(min_loc + 1, max_notna)] > values[min_loc])
+    } else {
+      n_greater <- 0
+    }
 
-  if (n_greater >= 2) {
-    converged <- TRUE
+
+    if (n_greater >= 2) {
+      converged <- TRUE
+    } else {
+      converged <- FALSE
+    }
   } else {
     converged <- FALSE
+    min_loc <- 0
   }
+
   data.frame(converged = converged, min = min_loc)
 }
 
@@ -1534,7 +1551,7 @@ compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("scan",
 compare_model_predictions <- function(model_pred_1, model_pred_2, pred_column = "y"){
   pred_diffs <- sqrt(sum((model_pred_1[[pred_column]] - model_pred_2[[pred_column]])^2) / length(model_pred_1))
 
-  data.frame(rmsd = pred_diffs)
+  data.frame(diff = pred_diffs)
 }
 
 
@@ -1662,7 +1679,6 @@ normalize_mspl <- function(normalization_factors, mspl){
 #' PeakList objects for multiple samples
 #'
 #' @export
-
 MultiSamplePeakList <- R6::R6Class("MultiSamplePeakList",
                                  inherit = MultiScansPeakList,
   public = list(
