@@ -93,6 +93,9 @@ PeakFinder <- R6::R6Class("PeakFinder",
     noise_function = NULL,
     sd_fit_function = NULL,
     sd_predict_function = NULL,
+    offset_fit_function = NULL,
+    offset_predict_function = NULL,
+    offset_correct_function = NULL,
     raw_filter = NULL,
     apply_raw_filter = function(){
       if (!is.null(self$raw_filter)) {
@@ -140,20 +143,12 @@ PeakFinder <- R6::R6Class("PeakFinder",
     },
 
     correspondent_peaks = NULL,
-    create_correspondent_peaks = function(median_corrected = FALSE, ...){
+    create_correspondent_peaks = function(...){
       if (self$vocal) {
         message("Peak Correspondence ....")
       }
 
-      if (median_corrected && !is.null(self$median_mz_offsets)) {
-        use_peaklist <- self$median_correct_multi_scan_peaklist()
-      } else {
-        use_peaklist <- self$multi_scan_peaklist$clone(deep = TRUE)
-      }
-
-      if (median_corrected && is.null(self$median_mz_offsets)) {
-        warning("Median corrected peak list requested, but not found, using uncorrected!")
-      }
+      use_peaklist <- self$multi_scan_peaklist$clone(deep = TRUE)
 
       self$correspondent_peaks <-
         SIRM.FTMS.peakCharacterization::FindCorrespondenceScans$new(use_peaklist,
@@ -161,7 +156,10 @@ PeakFinder <- R6::R6Class("PeakFinder",
                                                                     rmsd_multiplier = 3,
                                                                     sd_fit_function = self$sd_fit_function,
                                                                     sd_predict_function = self$sd_predict_function,
-                                                                    ...)
+                                                                    offset_fit_function = self$offset_fit_function,
+                                                                    offset_predict_function = self$offset_predict_function,
+                                                                    offset_correct_function = self$offset_correct_function
+                                                                    )
     },
 
     scan_information_content = NULL,
@@ -171,48 +169,6 @@ PeakFinder <- R6::R6Class("PeakFinder",
         message("Collapsing correspondent peaks ....")
       }
       self$correspondent_peaks$master_peak_list <- collapse_correspondent_peaks(self$correspondent_peaks$master_peak_list)
-    },
-
-    median_mz_offsets = NULL,
-
-    calculate_median_mz_offset = function(min_scan_perc = 0.05){
-      mpl <- self$correspondent_peaks$master_peak_list
-
-      n_col <- ncol(mpl$scan_mz)
-
-      n_min_scan <- round(min_scan_perc * n_col)
-
-      correspond_peaks <- mpl$count_notna() >= n_min_scan
-
-      scan_indices <- mpl$scan_indices
-
-      scan_diff <- lapply(seq(1, n_col), function(in_scan){
-        mz_diffs <- mpl$scan_mz[correspond_peaks, in_scan] -
-          mpl$master[correspond_peaks]
-        mz_diffs <- mz_diffs[!is.na(mz_diffs)]
-
-        data.frame(median = median(mz_diffs),
-                   scan_index = scan_indices[in_scan])
-      })
-      self$median_mz_offsets <- do.call(rbind, scan_diff)
-    },
-
-    # make sure to actually copy multi_scan_peaklist first and **then** modify it
-    median_correct_multi_scan_peaklist = function(){
-      if (self$vocal) {
-        message("Median correcting peaks ....")
-      }
-
-      #self$calculate_median_mz_offset()
-
-      msp <- self$multi_scan_peaklist$clone(deep = TRUE)
-      if (!is.null(self$median_mz_offsets)) {
-        for (irow in seq(1, nrow(self$median_mz_offsets))) {
-          msp$peak_list_by_scans[[self$median_mz_offsets[irow, "scan_index"]]]$peak_list$ObservedMZ <-
-            msp$peak_list_by_scans[[self$median_mz_offsets[irow, "scan_index"]]]$peak_list$ObservedMZ - self$median_mz_offsets[irow, "median"]
-        }
-      }
-      msp
     },
 
     scan_normalized = NULL,
@@ -415,10 +371,6 @@ PeakFinder <- R6::R6Class("PeakFinder",
       self$filter_dr_models()
       self$create_correspondent_peaks(median_corrected = FALSE)
       self$collapse_correspondent_peaks()
-      self$filter_information_content()
-      self$calculate_median_mz_offset()
-      self$create_correspondent_peaks(median_corrected = TRUE)
-      self$collapse_correspondent_peaks()
       self$normalize_scans_by_correspondent_peaks()
       self$save_intermediates()
       self$create_report()
@@ -432,7 +384,8 @@ PeakFinder <- R6::R6Class("PeakFinder",
 
     initialize = function(peak_method = "lm_weighted", noise_function = noise_sorted_peaklist, raw_filter = NULL,
                           report_function = NULL, intermediates = FALSE, sd_fit_function = NULL,
-                          sd_predict_function = NULL){
+                          sd_predict_function = NULL, offset_fit_function = NULL, offset_predict_function = NULL,
+                          offset_correct_function = NULL){
       if (!is.null(peak_method)) {
         self$peak_method <- peak_method
       }
@@ -459,6 +412,24 @@ PeakFinder <- R6::R6Class("PeakFinder",
         self$sd_predict_function <- sd_predict_function
       } else {
         self$sd_predict_function <- default_sd_predict_function
+      }
+
+      if (!is.null(offset_fit_function)) {
+        self$offset_fit_function <- offset_fit_function
+      } else {
+        self$offset_fit_function <- default_offset_fit_function
+      }
+
+      if (!is.null(offset_predict_function)) {
+        self$offset_predict_function <- offset_predict_function
+      } else {
+        self$offset_predict_function <- default_offset_predict_function
+      }
+
+      if (!is.null(offset_correction_function)) {
+        self$offset_correction_function <- offset_correction_function
+      } else {
+        self$offset_correction_function <- default_correct_offset_function
       }
 
       self$intermediates <- intermediates
