@@ -2,6 +2,7 @@
 
 export(AnalyzeMS)
 export(CorrespondentPeakList)
+export(FindCorrespondenceScans)
 export(MasterPeakList)
 export(MasterSampleList)
 export(MultiSamplePeakList)
