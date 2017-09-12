@@ -1081,10 +1081,11 @@ check_model_sd <- function(predict_function, model_1, model_2, reject_frac = 0.1
 #' @param noise_function the noise function to use
 #' @param sd_fit_function function to fit the RMSD
 #' @param sd_predict_function function for predicting RMSD cutoffs
+#' @param offset_fit_function function to fit M/Z offsets across scans (samples)
+#' @param offset_predict_function function to predict M/Z offsets
 #' @param offset_correction_function function for doing offset correction
 #' @param remove_low_ic_scans should low information content scans be removed
 #' @param collapse_peaks whether to collapse the peaks or not
-#' @param stop_tolerance differences between iterations to stop
 #'
 #' @export
 #' @return FindCorrespondenceScans
@@ -1093,10 +1094,10 @@ find_correspondence_scans <- function(multi_scan_peak_list, peak_calc_type = "lm
                                       max_failures = 5,
                                       mz_range = c(-Inf, Inf), notify_progress = FALSE, noise_function = NULL,
                                       sd_fit_function = NULL, sd_predict_function = NULL,
+                                      offset_fit_function = NULL, offset_predict_function = NULL,
                                       offset_correction_function = NULL,
-                                      remove_low_ic_scans = TRUE, collapse_peaks = FALSE,
-                                      stop_tolerance = 1e-10){
-  FindCorrespondenceScans$new(multi_scan_peak_list = multi_scan_peak_list,
+                                      remove_low_ic_scans = TRUE, collapse_peaks = FALSE){
+  fcp <- FindCorrespondenceScans$new(multi_scan_peak_list = multi_scan_peak_list,
                               peak_calc_type = peak_calc_type, max_iteration = max_iteration,
                               digital_resolution_multiplier = digital_resolution_multiplier,
                               rmsd_multiplier = rmsd_multiplier,
@@ -1105,10 +1106,13 @@ find_correspondence_scans <- function(multi_scan_peak_list, peak_calc_type = "lm
                               noise_function = noise_function,
                               sd_fit_function = sd_fit_function,
                               sd_predict_function = sd_predict_function,
+                              offset_fit_function = offset_fit_function,
+                              offset_predict_function = offset_predict_function,
                               offset_correction_function = offset_correction_function,
                               remove_low_ic_scans = remove_low_ic_scans,
-                              collapse_peaks = collapse_peaks,
-                              stop_tolerance = stop_tolerance)
+                              collapse_peaks = collapse_peaks)
+  fcp$iterative_correspondence()
+  fcp
 }
 
 filter_information_content = function(master_peak_list, multi_scan_peak_list, remove_low_ic_scans = TRUE, vocal = FALSE){
@@ -1137,26 +1141,49 @@ filter_information_content = function(master_peak_list, multi_scan_peak_list, re
   return()
 }
 
+#' FindCorrespondenceScans
+#'
+#' @export
+#'
 FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
    public = list(
-     all_master_peak_lists = NULL, # store all of the master peak lists
-     master_peak_list = NULL, # store the final master peak list
-     offset_multi_scan_peak_list = NULL,
-     sd_fit_function = NULL,
-     sd_predict_function = NULL,
-     sd_models = NULL, # store the coefficients for the models
-     sd_predictions = NULL,
-     collapse_peaks = NULL,
-     compare_mpl_models = NULL,
-     n_iteration = NULL,
+     # data needed by others
+     multi_scan_peak_list = NULL,
+     mz_range = c(-Inf, Inf),
      peak_type = NULL,
      digital_resolution_multiplier = NULL,
      initial_rmsd_multiplier = NULL,
+     n_scan_peaks = NULL,
+
+     # functions needed by others
+     sd_fit_function = NULL,
+     sd_predict_function = NULL,
+     offset_predict_function = NULL,
+     offset_fit_function = NULL,
+     offset_correction_function = NULL,
+     noise_function = NULL,
+
+     # control options
+     max_iteration = 20,
+     scan_fraction = 0.1,
+     collapse_peaks = FALSE,
+     remove_low_ic_scans = TRUE,
+     notify_progress = FALSE,
+     max_failures = 5,
+
+     # results
+     all_master_peak_lists = NULL, # store all of the master peak lists
+     offset_multi_scan_peak_list = NULL,
+     master_peak_list = NULL,
+
+     sd_models = NULL, # store the coefficients for the models
+     sd_predictions = NULL,
+     compare_mpl_models = NULL,
+     n_iteration = NULL,
+
+
      final_rmsd_multiplier = NULL,
      converged = NULL,
-     n_scan_peaks = NULL,
-     scan_fraction = NULL,
-     offset_correction_function = NULL,
      offset_correction_models = NULL,
      offset_correction_predictions = NULL,
 
@@ -1164,23 +1191,17 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
      # and then creates a model using the SD of the correspondent peaks themselves,
      # and uses this model to do correspondence across scans, iterating until
      # there are no changes in the master peak lists of the objects
-     iterative_correspondence = function(multi_scan_peak_list, peak_calc_type = "lm_weighted", max_iteration = 20,
-                                         digital_resolution_multiplier = 0.5, rmsd_multiplier = 1, max_failures = 5,
-                                         mz_range = c(-Inf, Inf), sd_fit_function = NULL, sd_predict_function = NULL,
-                                         notify_progress = FALSE,
-                                         noise_function = NULL, collapse_peaks = FALSE,
-                                         remove_low_ic_scans = TRUE){
+     iterative_correspondence = function(){
 
-       n_scan <- length(multi_scan_peak_list$scan_numbers())
+       rmsd_min_scans <- ceiling(self$scan_fraction * length(self$multi_scan_peak_list$scan_numbers()))
 
-       self$scan_fraction <- 0.1
-       self$n_scan_peaks <- floor(n_scan * self$scan_fraction)
-
-       mpl_digital_resolution <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type, sd_model = NULL,
-                                                    multiplier = digital_resolution_multiplier, mz_range = mz_range,
-                                                    sd_fit_function = sd_fit_function,
-                                                    sd_predict_function = sd_predict_function,
-                                                    rmsd_min_scans = self$n_scan_peaks)
+       mpl_digital_resolution <- MasterPeakList$new(self$multi_scan_peak_list, self$peak_calc_type, sd_model = NULL,
+                                                    multiplier = self$digital_resolution_multiplier, mz_range = self$mz_range,
+                                                    sd_fit_function = self$sd_fit_function,
+                                                    sd_predict_function = self$sd_predict_function,
+                                                    offset_fit_function = self$offset_fit_function,
+                                                    offset_predict_function = self$offset_predict_function,
+                                                    rmsd_min_scans = rmsd_min_scans)
 
        # mpl_digital_resolution$calculate_scan_information_content()
        # mpl_order <- order(mpl_digital_resolution$scan_information_content$information_content, decreasing = TRUE)
@@ -1189,14 +1210,14 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        mz_range <- range(mpl_digital_resolution$master)
        mz_pred_values <- seq(mz_range[1], mz_range[2], 0.5)
 
-       ms_dr_model <- multi_scan_peak_list$mz_model
+       ms_dr_model <- self$multi_scan_peak_list$mz_model
 
-       if (notify_progress) {
+       if (self$notify_progress) {
          message("digital resolution done!")
        }
 
        all_models <- list(ms_dr = ms_dr_model)
-       all_sd_predictions <- list(ms_dr = data.frame(x = mz_pred_values, y = sd_predict_function(ms_dr_model, mz_pred_values)))
+       all_sd_predictions <- list(ms_dr = data.frame(x = mz_pred_values, y = self$sd_predict_function(ms_dr_model, mz_pred_values)))
 
 
        offset_models <- vector(mode = "list", length = 22)
@@ -1210,19 +1231,23 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        dr_sd_model <- mpl_digital_resolution$sd_model
 
        all_models[[2]] <- dr_sd_model
-       all_sd_predictions[[2]] <- data.frame(x = mz_pred_values, y = sd_predict_function(dr_sd_model, mz_pred_values))
+       all_sd_predictions[[2]] <- data.frame(x = mz_pred_values, y = self$sd_predict_function(dr_sd_model, mz_pred_values))
 
-       mpl_sd_1 <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type,
+       rmsd_multiplier <- self$initial_rmsd_multiplier
+
+       mpl_sd_1 <- MasterPeakList$new(self$multi_scan_peak_list, self$peak_calc_type,
                                       sd_model = mpl_digital_resolution$sd_model,
-                                      sd_fit_function = sd_fit_function,
-                                      sd_predict_function = sd_predict_function,
+                                      sd_fit_function = self$sd_fit_function,
+                                      sd_predict_function = self$sd_predict_function,
                                       multiplier = rmsd_multiplier,
-                                      rmsd_min_scans = self$n_scan_peaks)
+                                      rmsd_min_scans = rmsd_min_scans)
        mpl_sd_1$calculate_sd_model()
 
-       filter_information_content(mpl_sd_1, multi_scan_peak_list, remove_low_ic_scans = remove_low_ic_scans)
+       filter_information_content(mpl_sd_1, self$multi_scan_peak_list, remove_low_ic_scans = self$remove_low_ic_scans)
 
-       offset_multi_scan_peak_list <- multi_scan_peak_list$clone(deep = TRUE)
+       offset_multi_scan_peak_list <- self$multi_scan_peak_list$clone(deep = TRUE)
+
+       rmsd_min_scans <- ceiling(length(self$multi_scan_peak_list$scan_numbers()) * self$scan_fraction)
 
        sd_diff_minima <- vector("double", 22)
        sd_diff_minima[1:22] <- NA
@@ -1231,7 +1256,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
        all_mpls[[2]] <- mpl_sd_1
 
-       if (notify_progress) {
+       if (self$notify_progress) {
          message("first sd done!")
          #save(mpl_digital_resolution, file = "mpl_dr.RData")
          #save(mpl_sd_1, file = "mpl_sd_0.RData")
@@ -1247,11 +1272,11 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        # mpl_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
        # multi_scan_peak_list$reorder(mpl_order)
 
-       while ((!all(converged)) && (n_good_iter < max_iteration) && (self$scan_fraction <= 0.5)) {
+       while ((!all(converged)) && (n_good_iter < self$max_iteration) && (self$scan_fraction <= 0.5)) {
          n_iter <- n_iter + 1
          mpl_sd_1$calculate_sd_model()
          all_models[[n_iter + 2]] <- mpl_sd_1$sd_model
-         all_sd_predictions[[n_iter + 2]] <- data.frame(x = mz_pred_values, y = sd_predict_function(mpl_sd_1$sd_model, mz_pred_values))
+         all_sd_predictions[[n_iter + 2]] <- data.frame(x = mz_pred_values, y = self$sd_predict_function(mpl_sd_1$sd_model, mz_pred_values))
 
          corrected_mspl <- self$offset_correction_function(mpl_sd_1, offset_multi_scan_peak_list)
 
@@ -1277,11 +1302,11 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          } else {
            offset_multi_scan_peak_list <- corrected_mspl$multi_scan_peaklist
 
-           mpl_sd_2 <- MasterPeakList$new(offset_multi_scan_peak_list, peak_calc_type, sd_model = mpl_sd_1$sd_model,
+           mpl_sd_2 <- MasterPeakList$new(offset_multi_scan_peak_list, self$peak_calc_type, sd_model = mpl_sd_1$sd_model,
                                           multiplier = rmsd_multiplier,
-                                          sd_fit_function = sd_fit_function,
-                                          sd_predict_function = sd_predict_function,
-                                          rmsd_min_scans = self$n_scan_peaks)
+                                          sd_fit_function = self$sd_fit_function,
+                                          sd_predict_function = self$sd_predict_function,
+                                          rmsd_min_scans = rmsd_min_scans)
 
            mpl_sd_2$calculate_sd_model()
            all_mpls[[n_iter + 2]] <- mpl_sd_2
@@ -1300,7 +1325,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
            # we wait until 5 iterations here because we want the SD model to be mostly
            # set before we start collapsing peaks, given that the collapsing is based
            # on the model SD for a given m/z
-           if (collapse_peaks && (n_good_iter >= 5)) {
+           if (self$collapse_peaks && (n_good_iter >= 5)) {
              mpl_sd_2 <- collapse_correspondent_peaks(mpl_sd_2)
            }
 
@@ -1314,7 +1339,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          }
 
 
-         if (notify_progress) {
+         if (self$notify_progress) {
            notify_message <- paste0(as.character(n_iter), " iterations done!")
            message(notify_message)
            #save(mpl_sd_1, file = paste0("mpl_sd_", as.character(n_iter), ".RData"))
@@ -1324,14 +1349,13 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        self$sd_models <- all_models
        self$compare_mpl_models <- sd_2_v_others
        self$n_iteration <- converged_iter
-       self$peak_type <- peak_calc_type
        self$final_rmsd_multiplier <- rmsd_multiplier
        self$all_master_peak_lists <- all_mpls
        self$offset_correction_models <- offset_models
        self$offset_multi_scan_peak_list <- offset_mspl[[converged_iter]]
        self$offset_correction_predictions <- offset_predictions
        self$sd_predictions <- all_sd_predictions
-       if (n_fail_iter >= max_failures) {
+       if (n_fail_iter >= self$max_failures) {
          self$converged <- FALSE
        } else {
          self$converged <- TRUE
@@ -1341,19 +1365,37 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
 
      initialize = function(multi_scan_peak_list, peak_calc_type = "lm_weighted", max_iteration = 20,
-                           digital_resolution_multiplier = 0.5, rmsd_multiplier = 3,
+                           digital_resolution_multiplier = 1, rmsd_multiplier = 3,
                            max_failures = 5,
                            mz_range = c(-Inf, Inf), notify_progress = FALSE, noise_function = NULL,
                            sd_fit_function = NULL, sd_predict_function = NULL, collapse_peaks = FALSE,
+                           scan_fraction = 0.1,
                            remove_low_ic_scans = TRUE,
                            offset_correction_function = NULL,
-                           stop_tolerance = 1e-10){
-       assertthat::assert_that(any(class(multi_scan_peak_list) %in% "MultiScansPeakList"))
+                           offset_fit_function = NULL,
+                           offset_predict_function = NULL){
+       assertthat::assert_that(inherits(multi_scan_peak_list, "MultiScansPeakList"))
 
        self$digital_resolution_multiplier <- digital_resolution_multiplier
        self$initial_rmsd_multiplier <- rmsd_multiplier
 
+       self$multi_scan_peak_list = multi_scan_peak_list$clone(deep = TRUE)
+       self$mz_range = mz_range
+       self$peak_type = peak_calc_type
+       self$digital_resolution_multiplier = digital_resolution_multiplier
+       self$initial_rmsd_multiplier = rmsd_multiplier
+
+       # functions needed by others
+       self$noise_function = noise_function
+
+       # control options
+       self$max_iteration = max_iteration
+       self$scan_fraction = scan_fraction
+       self$remove_low_ic_scans = remove_low_ic_scans
+       self$notify_progress = notify_progress
+
        self$collapse_peaks <- collapse_peaks
+       self$max_failures <- max_failures
 
        if (!is.null(sd_fit_function)) {
          self$sd_fit_function <- sd_fit_function
@@ -1371,24 +1413,24 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          self$sd_predict_function <- default_sd_predict_function
        }
 
+       if (!is.null(offset_fit_function)) {
+         self$offset_fit_function <- offset_fit_function
+       } else {
+         self$offset_fit_function <- default_offset_fit_function
+       }
+
+       if (!is.null(offset_predict_function)) {
+         self$offset_predict_function <- offset_predict_function
+       } else {
+         self$offset_predict_function <- default_offset_predict_function
+       }
+
        if (!is.null(offset_correction_function)) {
          self$offset_correction_function <- offset_correction_function
        } else {
          self$offset_correction_function <- default_correct_offset_function
        }
 
-       # we copy this, because some of the methods applied make changes to the
-       # object, and we don't want to apply them to the original, because otherwise
-       # we get unexpected behavior on the user end.
-       multi_scan_peak_list_copy <- multi_scan_peak_list$clone(deep = TRUE)
-       self$iterative_correspondence(multi_scan_peak_list_copy, peak_calc_type = peak_calc_type,
-                                     max_iteration = max_iteration, digital_resolution_multiplier = digital_resolution_multiplier,
-                                     rmsd_multiplier = rmsd_multiplier,
-                                     max_failures = max_failures,
-                                     mz_range = mz_range, sd_fit_function = self$sd_fit_function,
-                                     sd_predict_function = self$sd_predict_function,
-                                     notify_progress = notify_progress, collapse_peaks = self$collapse_peaks,
-                                     remove_low_ic_scans = remove_low_ic_scans)
      }
    )
 
