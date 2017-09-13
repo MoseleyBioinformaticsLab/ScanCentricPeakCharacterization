@@ -90,12 +90,31 @@ PeakFinder <- R6::R6Class("PeakFinder",
   public = list(
     raw_data = NULL,
     peak_method = NULL,
-    noise_function = NULL,
+
+    # Options for peak correspondence ----
+    mz_range = c(-Inf, Inf),
+    digital_resolution_multiplier = NULL,
+    initial_rmsd_multiplier = NULL,
+    n_scan_peaks = NULL,
+
+    # functions needed by others
     sd_fit_function = NULL,
     sd_predict_function = NULL,
-    offset_fit_function = NULL,
     offset_predict_function = NULL,
-    offset_correct_function = NULL,
+    offset_fit_function = NULL,
+    offset_correction_function = NULL,
+    noise_function = NULL,
+
+    # control options
+    max_iteration = 20,
+    scan_fraction = 0.1,
+    collapse_peaks = FALSE,
+    remove_low_ic_scans = TRUE,
+    notify_progress = FALSE,
+    max_failures = 5,
+    keep_all_master_peak_lists = FALSE,
+
+    # Now the various bits and pieces ----
     raw_filter = NULL,
     apply_raw_filter = function(){
       if (!is.null(self$raw_filter)) {
@@ -152,13 +171,20 @@ PeakFinder <- R6::R6Class("PeakFinder",
 
       self$correspondent_peaks <-
         SIRM.FTMS.peakCharacterization::FindCorrespondenceScans$new(use_peaklist,
-                                                                    digital_resolution_multiplier = 1,
-                                                                    rmsd_multiplier = 3,
+                                                                    peak_calc_type = self$peak_type,
+                                                                    max_iteration = self$max_iteration,
+                                                                    digital_resolution_multiplier = self$digital_resolution_multiplier,
+                                                                    rmsd_multiplier = self$rmsd_multiplier,
+                                                                    max_failures = self$max_failures,
+                                                                    mz_range = self$mz_range,
+                                                                    notify_progress = self$vocal,
+                                                                    noise_function = self$noise_function,
                                                                     sd_fit_function = self$sd_fit_function,
                                                                     sd_predict_function = self$sd_predict_function,
                                                                     offset_fit_function = self$offset_fit_function,
                                                                     offset_predict_function = self$offset_predict_function,
-                                                                    offset_correct_function = self$offset_correct_function
+                                                                    offset_correct_function = self$offset_correct_function,
+                                                                    collapse_peaks = self$collapse_peaks
                                                                     )
     },
 
