@@ -93,9 +93,8 @@ PeakFinder <- R6::R6Class("PeakFinder",
 
     # Options for peak correspondence ----
     mz_range = c(-Inf, Inf),
-    digital_resolution_multiplier = NULL,
-    initial_rmsd_multiplier = NULL,
-    n_scan_peaks = NULL,
+    digital_resolution_multiplier = 1,
+    initial_rmsd_multiplier = 3,
 
     # functions needed by others
     sd_fit_function = NULL,
@@ -174,7 +173,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
                                                                     peak_calc_type = self$peak_type,
                                                                     max_iteration = self$max_iteration,
                                                                     digital_resolution_multiplier = self$digital_resolution_multiplier,
-                                                                    rmsd_multiplier = self$rmsd_multiplier,
+                                                                    rmsd_multiplier = self$initial_rmsd_multiplier,
                                                                     max_failures = self$max_failures,
                                                                     mz_range = self$mz_range,
                                                                     notify_progress = self$vocal,
@@ -183,9 +182,10 @@ PeakFinder <- R6::R6Class("PeakFinder",
                                                                     sd_predict_function = self$sd_predict_function,
                                                                     offset_fit_function = self$offset_fit_function,
                                                                     offset_predict_function = self$offset_predict_function,
-                                                                    offset_correct_function = self$offset_correct_function,
+                                                                    offset_correction_function = self$offset_correction_function,
                                                                     collapse_peaks = self$collapse_peaks
                                                                     )
+      self$correspondent_peaks$iterative_correspondence()
     },
 
     scan_information_content = NULL,
@@ -411,7 +411,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
     initialize = function(peak_method = "lm_weighted", noise_function = noise_sorted_peaklist, raw_filter = NULL,
                           report_function = NULL, intermediates = FALSE, sd_fit_function = NULL,
                           sd_predict_function = NULL, offset_fit_function = NULL, offset_predict_function = NULL,
-                          offset_correct_function = NULL){
+                          offset_correction_function = NULL){
       if (!is.null(peak_method)) {
         self$peak_method <- peak_method
       }

@@ -1363,7 +1363,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        } else {
          self$converged <- TRUE
        }
-
+       invisible(self)
      },
 
 
