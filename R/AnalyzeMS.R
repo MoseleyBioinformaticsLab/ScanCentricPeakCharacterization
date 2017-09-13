@@ -88,8 +88,13 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
 #' @export
 PeakFinder <- R6::R6Class("PeakFinder",
   public = list(
+    # Options for multi_scans ----
     raw_data = NULL,
     peak_method = NULL,
+    min_points = 4,
+    n_peak = Inf,
+    flat_cut = 0.98,
+
 
     # Options for peak correspondence ----
     mz_range = c(-Inf, Inf),
@@ -136,7 +141,10 @@ PeakFinder <- R6::R6Class("PeakFinder",
       if (self$vocal) {
         message("Creating Multi-Scans ....")
       }
-      self$multi_scan <- SIRM.FTMS.peakCharacterization::MultiScans$new(self$raw_data, peak_method = self$peak_method, sd_fit_function = self$sd_fit_function,
+      self$multi_scan <- SIRM.FTMS.peakCharacterization::MultiScans$new(self$raw_data, peak_method = self$peak_method,
+                                                                        min_points = self$min_points,
+                                                                        n_peak = self$n_peak, flat_cut = self$flat_cut,
+                                                                        sd_fit_function = self$sd_fit_function,
                                                                         sd_predict_function = self$sd_predict_function)
       invisible(self)
     },
