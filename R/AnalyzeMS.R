@@ -117,6 +117,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
     notify_progress = FALSE,
     max_failures = 5,
     keep_all_master_peak_lists = FALSE,
+    keep_intermediates = FALSE,
 
     # Now the various bits and pieces ----
     raw_filter = NULL,
@@ -191,7 +192,9 @@ PeakFinder <- R6::R6Class("PeakFinder",
                                                                     offset_fit_function = self$offset_fit_function,
                                                                     offset_predict_function = self$offset_predict_function,
                                                                     offset_correction_function = self$offset_correction_function,
-                                                                    collapse_peaks = self$collapse_peaks
+                                                                    collapse_peaks = self$collapse_peaks,
+                                                                    keep_all_master_peak_lists = self$keep_all_master_peak_lists,
+                                                                    keep_intermediates = self$keep_intermediates
                                                                     )
       self$correspondent_peaks$iterative_correspondence()
     },

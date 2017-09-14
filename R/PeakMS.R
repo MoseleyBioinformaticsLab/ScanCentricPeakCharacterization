@@ -1171,6 +1171,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
      notify_progress = FALSE,
      max_failures = 5,
      keep_all_master_peak_lists = FALSE,
+     keep_intermediates = FALSE,
 
      # results
      all_master_peak_lists = NULL, # store all of the master peak lists
@@ -1347,17 +1348,21 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          }
        }
        self$master_peak_list <- all_mpls[[converged_iter]]
-       self$sd_models <- all_models
        self$compare_mpl_models <- sd_2_v_others
        self$n_iteration <- converged_iter
        self$final_rmsd_multiplier <- rmsd_multiplier
        if (self$keep_all_master_peak_lists) {
          self$all_master_peak_lists <- all_mpls
        }
-       self$offset_correction_models <- offset_models
-       self$offset_multi_scan_peak_list <- offset_mspl[[converged_iter]]
-       self$offset_correction_predictions <- offset_predictions
-       self$sd_predictions <- all_sd_predictions
+       if (self$keep_intermediates) {
+         self$sd_models <- all_models
+         self$offset_correction_models <- offset_models
+         self$offset_multi_scan_peak_list <- offset_mspl[[converged_iter]]
+         self$offset_correction_predictions <- offset_predictions
+         self$sd_predictions <- all_sd_predictions
+       } else {
+         self$multi_scan_peak_list <- NULL
+       }
        if (n_fail_iter >= self$max_failures) {
          self$converged <- FALSE
        } else {
@@ -1377,7 +1382,8 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
                            offset_correction_function = NULL,
                            offset_fit_function = NULL,
                            offset_predict_function = NULL,
-                           keep_all_master_peak_lists = FALSE){
+                           keep_all_master_peak_lists = FALSE,
+                           keep_intermediates = FALSE){
        assertthat::assert_that(inherits(multi_scan_peak_list, "MultiScansPeakList"))
 
        self$digital_resolution_multiplier <- digital_resolution_multiplier
@@ -1398,6 +1404,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        self$remove_low_ic_scans <- remove_low_ic_scans
        self$notify_progress <- notify_progress
        self$keep_all_master_peak_lists <- keep_all_master_peak_lists
+       self$keep_intermediates <- keep_intermediates
 
        self$collapse_peaks <- collapse_peaks
        self$max_failures <- max_failures
