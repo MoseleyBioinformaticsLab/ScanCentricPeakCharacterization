@@ -328,8 +328,12 @@ PeakFinder <- R6::R6Class("PeakFinder",
       if (self$vocal) {
         message("Generating the final peak data ....")
       }
-      sd_model <- self$correspondent_peaks$sd_models[[length(self$correspondent_peaks$sd_models)]] # grab the last model generated from peak correspondence
+
       master_peaks <- self$correspondent_peaks$master_peak_list
+      if (is.null(master_peaks$sd_model)) {
+        master_peaks$calculate_sd_model()
+      }
+      sd_model <- master_peaks$sd_model
       n_peak <- length(master_peaks$master)
 
       peak_data <- lapply(seq(1, n_peak), function(in_peak){
