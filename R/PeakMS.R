@@ -1267,6 +1267,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        n_iter <- 0
        n_good_iter <- 0
        n_fail_iter <- 0
+       converged_iter <- NULL
 
        converged <- FALSE
 
@@ -1346,6 +1347,12 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
            message(notify_message)
            #save(mpl_sd_1, file = paste0("mpl_sd_", as.character(n_iter), ".RData"))
          }
+       }
+
+       # take the last iteration if there was no convergence, so at least it
+       # doesn't error out and next steps can proceed.
+       if (is.null(converged_iter)) {
+         converged_iter <- n_iter
        }
        self$master_peak_list <- all_mpls[[converged_iter]]
        self$compare_mpl_models <- sd_2_v_others
