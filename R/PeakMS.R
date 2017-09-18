@@ -1839,6 +1839,9 @@ CorrespondentPeakList <- R6::R6Class("CorrespondentPeakList",
 
       self$sample_id <- sample_id
       self$n_scans <- length(master_peak_list$scan)
+
+      self$scan_fraction <- scan_fraction
+      invisible(self)
     }
   ))
 
