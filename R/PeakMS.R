@@ -1746,25 +1746,18 @@ MultiSamplePeakList <- R6::R6Class("MultiSamplePeakList",
     sample_id = NULL,
     min_scans = NULL,
     set_min_scans = function(){
-      sample_scans <- vapply(self$peak_list_by_scans, function(in_sample){
-        in_sample$n_scans
-      }, numeric(1))
-      self$min_scans <- floor(mean(sample_scans) * 0.1)
-      self$peak_list_by_scans <- lapply(self$peak_list_by_scans, function(in_sample){
-        in_sample$min_scans <- self$min_scans
-        in_sample
-      })
-    },
-    filter_min_scans = function(){
       if (!is.null(self$min_scans)) {
         self$peak_list_by_scans <- lapply(self$peak_list_by_scans, function(in_sample){
-          in_sample$filter_min_scans()
+          in_sample$min_scans <- self$min_scans
           in_sample
         })
-      } else {
-        warning("Set min_scans first!")
       }
-
+    },
+    filter_min_scans = function(){
+      self$peak_list_by_scans <- lapply(self$peak_list_by_scans, function(in_sample){
+        in_sample$filter_min_scans()
+        in_sample
+      })
     },
     get_sample_id = function(){
       vapply(self$peak_list_by_scans[self$scan_indices], function(in_sample){
