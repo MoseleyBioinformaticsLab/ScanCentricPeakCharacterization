@@ -1818,6 +1818,7 @@ CorrespondentPeakList <- R6::R6Class("CorrespondentPeakList",
         min_scans = self$min_scans
       }
       self$peak_list <- dplyr::filter(self$peak_list, n_scan >= min_scans)
+      self$peak_list$peak <- seq(1, nrow(self$peak_list))
     },
     n_scans = NULL,
     initialize = function(master_peak_list, scan = NULL, sample_id = NULL, min_scans = NULL,
@@ -1850,6 +1851,7 @@ MasterSampleList <- R6::R6Class("MasterSampleList",
   inherit = MasterPeakList,
   public = list(
     sample_id = NULL,
+    n_scan = NULL,
 
     initialize = function(multi_sample_peak_list, peak_calc_type = "lm_weighted", sd_model = NULL, multiplier = 1,
                           mz_range = c(-Inf, Inf), noise_calculator = NULL, sd_fit_function = NULL,
@@ -1886,6 +1888,14 @@ MasterSampleList <- R6::R6Class("MasterSampleList",
       self$sample_id <- multi_sample_peak_list$get_sample_id()
       self$peak_correspondence(multi_sample_peak_list, peak_calc_type, sd_model = sd_model, multiplier = multiplier,
                                mz_range = mz_range)
+      all_samples <- multi_sample_peak_list$get_scan_peak_lists()
+      sample_indices <- self$scan_peak
+      n_scan_per_sample <- lapply(seq(1, length(all_samples)), function(in_sample){
+        use_index <- sample_indices[, in_sample]
+        all_samples[[in_sample]][["n_scan"]][use_index]
+      })
+
+      self$n_scan <- do.call(cbind, n_scan_per_sample)
       invisible(self)
     }
   )
