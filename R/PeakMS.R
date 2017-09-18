@@ -1857,6 +1857,7 @@ MasterSampleList <- R6::R6Class("MasterSampleList",
   public = list(
     sample_id = NULL,
     n_scan = NULL,
+    scans_in_sample = NULL,
 
     initialize = function(multi_sample_peak_list, peak_calc_type = "lm_weighted", sd_model = NULL, multiplier = 1,
                           mz_range = c(-Inf, Inf), noise_calculator = NULL, sd_fit_function = NULL,
@@ -1897,10 +1898,13 @@ MasterSampleList <- R6::R6Class("MasterSampleList",
       sample_indices <- self$scan_peak
       n_scan_per_sample <- lapply(seq(1, length(all_samples)), function(in_sample){
         use_index <- sample_indices[, in_sample]
-        all_samples[[in_sample]][["n_scan"]][use_index]
+        all_samples[[in_sample]]$peak_list[["n_scan"]][use_index]
       })
 
       self$n_scan <- do.call(cbind, n_scan_per_sample)
+      self$scans_in_sample <- vapply(all_samples, function(in_sample){
+        in_sample$n_scans
+      }, numeric(1))
       invisible(self)
     }
   )
