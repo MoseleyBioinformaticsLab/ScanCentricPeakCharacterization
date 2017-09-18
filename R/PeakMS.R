@@ -1810,11 +1810,18 @@ CorrespondentPeakList <- R6::R6Class("CorrespondentPeakList",
   public = list(
     sample_id = NULL,
     min_scans = NULL,
+    scan_fraction = NULL,
     filter_min_scans = function(){
-      self$peak_list <- dplyr::filter(self$peak_list, n_scan >= self$min_scans)
+      if (is.null(self$min_scans)) {
+        min_scans = floor(self$n_scans * self$scan_fraction)
+      } else {
+        min_scans = self$min_scans
+      }
+      self$peak_list <- dplyr::filter(self$peak_list, n_scan >= min_scans)
     },
     n_scans = NULL,
-    initialize = function(master_peak_list, scan = NULL, sample_id = NULL){
+    initialize = function(master_peak_list, scan = NULL, sample_id = NULL, min_scans = NULL,
+                          scan_fraction = 0.1){
 
       n_peak <- length(master_peak_list$master)
       self$peak_list <- data.frame(ObservedMZ = rowMeans(master_peak_list$scan_mz, na.rm = TRUE),
