@@ -1195,7 +1195,12 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
      # there are no changes in the master peak lists of the objects
      iterative_correspondence = function(){
 
-       rmsd_min_scans <- floor(self$scan_fraction * length(self$multi_scan_peak_list$scan_numbers()))
+       if (is.null(self$n_scan_peaks)) {
+         rmsd_min_scans <- floor(self$scan_fraction * length(self$multi_scan_peak_list$scan_numbers()))
+       } else {
+         rmsd_min_scans <- self$n_scan_peaks
+       }
+
 
        mpl_digital_resolution <- MasterPeakList$new(self$multi_scan_peak_list, self$peak_calc_type, sd_model = NULL,
                                                     multiplier = self$digital_resolution_multiplier, mz_range = self$mz_range,
@@ -1249,7 +1254,11 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
        offset_multi_scan_peak_list <- self$multi_scan_peak_list$clone(deep = TRUE)
 
-       rmsd_min_scans <- floor(length(self$multi_scan_peak_list$scan_numbers()) * self$scan_fraction)
+       if (is.null(self$n_scan_peaks)) {
+         rmsd_min_scans <- floor(self$scan_fraction * length(self$multi_scan_peak_list$scan_numbers()))
+       } else {
+         rmsd_min_scans <- self$n_scan_peaks
+       }
 
        sd_diff_minima <- vector("double", 22)
        sd_diff_minima[1:22] <- NA
