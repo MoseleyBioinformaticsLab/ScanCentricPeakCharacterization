@@ -1868,9 +1868,7 @@ MultiSamplePeakList <- R6::R6Class("MultiSamplePeakList",
       })
     },
     get_sample_id = function(){
-      vapply(self$peak_list_by_scans[self$scan_indices], function(in_sample){
-        in_sample$sample_id
-      }, character(1))
+      self$zip_files[self$scan_indices]
     },
     set_zip_files = function(zip_files){
       self$zip_file <- zip_files
@@ -1908,6 +1906,9 @@ MultiSamplePeakList <- R6::R6Class("MultiSamplePeakList",
         self$sample_id <- tmp_ids
       }
       self$scan_indices <- seq(1, length(self$peak_list_by_scans))
+      if (!is.null(zip_files)) {
+        self$zip_file <- zip_files
+      }
 
     }
   )
