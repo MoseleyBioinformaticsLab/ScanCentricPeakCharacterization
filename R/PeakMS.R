@@ -1141,11 +1141,11 @@ filter_information_content = function(master_peak_list, multi_scan_peak_list, re
   return()
 }
 
-#' FindCorrespondenceScans
+#' FindCorrespondence
 #'
 #' @export
 #'
-FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
+FindCorrespondence <- R6::R6Class("FindCorrespondence",
    public = list(
      # data needed by others
      multi_scan_peak_list = NULL,
@@ -1153,7 +1153,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
      peak_type = NULL,
      digital_resolution_multiplier = NULL,
      initial_rmsd_multiplier = NULL,
-     n_scan_peaks = NULL,
+     # n_scan_peaks = NULL,
 
      # functions needed by others
      sd_fit_function = NULL,
@@ -1165,13 +1165,14 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
      # control options
      max_iteration = 20,
-     scan_fraction = 0.1,
+     min_scan = 0.1,
      collapse_peaks = FALSE,
      remove_low_ic_scans = TRUE,
      notify_progress = FALSE,
      max_failures = 5,
      keep_all_master_peak_lists = FALSE,
      keep_intermediates = FALSE,
+     correspondence = NULL,
 
      # results
      all_master_peak_lists = NULL, # store all of the master peak lists
@@ -1195,14 +1196,9 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
      # there are no changes in the master peak lists of the objects
      iterative_correspondence = function(){
 
-       if (is.null(self$n_scan_peaks)) {
-         rmsd_min_scans <- floor(self$scan_fraction * length(self$multi_scan_peak_list$scan_numbers()))
-       } else {
-         rmsd_min_scans <- self$n_scan_peaks
-       }
+       rmsd_min_scans <- correctly_round_numbers(length(self$multi_scan_peak_list$scan_numbers()), self$min_scan)
 
-
-       mpl_digital_resolution <- MasterPeakList$new(self$multi_scan_peak_list, self$peak_calc_type, sd_model = NULL,
+       mpl_digital_resolution <- self$correspondence$new(self$multi_scan_peak_list, self$peak_calc_type, sd_model = NULL,
                                                     multiplier = self$digital_resolution_multiplier, mz_range = self$mz_range,
                                                     sd_fit_function = self$sd_fit_function,
                                                     sd_predict_function = self$sd_predict_function,
@@ -1242,7 +1238,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
        rmsd_multiplier <- self$initial_rmsd_multiplier
 
-       mpl_sd_1 <- MasterPeakList$new(self$multi_scan_peak_list, self$peak_calc_type,
+       mpl_sd_1 <- self$correspondence$new(self$multi_scan_peak_list, self$peak_calc_type,
                                       sd_model = mpl_digital_resolution$sd_model,
                                       sd_fit_function = self$sd_fit_function,
                                       sd_predict_function = self$sd_predict_function,
@@ -1254,11 +1250,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
        offset_multi_scan_peak_list <- self$multi_scan_peak_list$clone(deep = TRUE)
 
-       if (is.null(self$n_scan_peaks)) {
-         rmsd_min_scans <- floor(self$scan_fraction * length(self$multi_scan_peak_list$scan_numbers()))
-       } else {
-         rmsd_min_scans <- self$n_scan_peaks
-       }
+       rmsd_min_scans <- correctly_round_numbers(length(self$multi_scan_peak_list$scan_numbers()), self$min_scan)
 
        sd_diff_minima <- vector("double", 22)
        sd_diff_minima[1:22] <- NA
@@ -1284,7 +1276,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        # mpl_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
        # multi_scan_peak_list$reorder(mpl_order)
 
-       while ((!all(converged)) && (n_good_iter < self$max_iteration) && (self$scan_fraction <= 0.5)) {
+       while ((!all(converged)) && (n_good_iter < self$max_iteration)) {
          n_iter <- n_iter + 1
          mpl_sd_1$calculate_sd_model()
          all_models[[n_iter + 2]] <- mpl_sd_1$sd_model
@@ -1314,7 +1306,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          } else {
            offset_multi_scan_peak_list <- corrected_mspl$multi_scan_peaklist
 
-           mpl_sd_2 <- MasterPeakList$new(offset_multi_scan_peak_list, self$peak_calc_type, sd_model = mpl_sd_1$sd_model,
+           mpl_sd_2 <- self$correspondence$new(offset_multi_scan_peak_list, self$peak_calc_type, sd_model = mpl_sd_1$sd_model,
                                           multiplier = rmsd_multiplier,
                                           sd_fit_function = self$sd_fit_function,
                                           sd_predict_function = self$sd_predict_function,
@@ -1326,13 +1318,13 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
            #sd_status <- check_model_sd(sd_predict_function, mpl_sd_1$sd_model, mpl_sd_2$sd_model)
            sd_status <- TRUE
 
-           if (!sd_status) {
-             self$scan_fraction <- self$scan_fraction + 0.05
-             self$n_scan_peaks <- floor(n_scan * self$scan_fraction)
-             next
-           } else {
+           # if (!sd_status) {
+           #   self$scan_fraction <- self$scan_fraction + 0.05
+           #   self$n_scan_peaks <- floor(n_scan * self$scan_fraction)
+           #   next
+           # } else {
              n_good_iter <- n_good_iter + 1
-           }
+           # }
 
            # we wait until 5 iterations here because we want the SD model to be mostly
            # set before we start collapsing peaks, given that the collapsing is based
@@ -1393,7 +1385,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
                            max_failures = 5,
                            mz_range = c(-Inf, Inf), notify_progress = FALSE, noise_function = NULL,
                            sd_fit_function = NULL, sd_predict_function = NULL, collapse_peaks = FALSE,
-                           scan_fraction = 0.1,
+                           min_scan = 0.1,
                            remove_low_ic_scans = TRUE,
                            offset_correction_function = NULL,
                            offset_fit_function = NULL,
@@ -1416,7 +1408,7 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 
        # control options
        self$max_iteration <- max_iteration
-       self$scan_fraction <- scan_fraction
+       self$min_scan <- min_scan
        self$remove_low_ic_scans <- remove_low_ic_scans
        self$notify_progress <- notify_progress
        self$keep_all_master_peak_lists <- keep_all_master_peak_lists
@@ -1462,6 +1454,18 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
      }
    )
 
+)
+
+#' FindCorrespondenceScans
+#'
+#' @export
+#'
+FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
+        inherit = FindCorrespondence,
+
+        public = list(
+          correspondence = MasterPeakList
+        )
 )
 
 #' compare objects to others 2
@@ -1812,20 +1816,18 @@ CorrespondentPeakList <- R6::R6Class("CorrespondentPeakList",
   public = list(
     sample_id = NULL,
     min_scans = NULL,
-    scan_fraction = NULL,
+
     filter_min_scans = function(){
-      if (is.null(self$min_scans)) {
-        min_scans = floor(self$n_scans * self$scan_fraction)
-      } else {
-        min_scans = self$min_scans
-      }
+      assertthat::assert_that(!is.null(self$min_scans))
+      min_scans <- correctly_round_numbers(self$n_scans, self$min_scans)
+
       self$peak_list <- dplyr::filter(self$peak_list, n_scan >= min_scans)
       self$peak_list$peak <- seq(1, nrow(self$peak_list))
     },
     n_scans = NULL,
-    initialize = function(master_peak_list, scan = NULL, sample_id = NULL, min_scans = NULL,
-                          scan_fraction = 0.1){
+    initialize = function(master_peak_list, scan = NULL, sample_id = NULL, min_scans = 0.1){
 
+      self$min_scans <- min_scans
       n_peak <- length(master_peak_list$master)
       self$peak_list <- data.frame(ObservedMZ = rowMeans(master_peak_list$scan_mz, na.rm = TRUE),
                                    Height = rowMeans(master_peak_list$scan_height, na.rm = TRUE),
@@ -1840,7 +1842,6 @@ CorrespondentPeakList <- R6::R6Class("CorrespondentPeakList",
       self$sample_id <- sample_id
       self$n_scans <- length(master_peak_list$scan)
 
-      self$scan_fraction <- scan_fraction
       invisible(self)
     }
   ))
