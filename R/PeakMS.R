@@ -1143,7 +1143,7 @@ filter_information_content = function(master_peak_list, multi_scan_peak_list, re
 
 #' FindCorrespondence
 #'
-#' @export
+#'
 #'
 FindCorrespondence <- R6::R6Class("FindCorrespondence",
    public = list(
@@ -1461,12 +1461,93 @@ FindCorrespondence <- R6::R6Class("FindCorrespondence",
 #' @export
 #'
 FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
-        inherit = FindCorrespondence,
+  inherit = FindCorrespondence,
 
-        public = list(
-          correspondence = MasterPeakList
-        )
+  public = list(
+    correspondence = MasterPeakList
+  )
 )
+
+#' MasterSampleList
+#'
+#' Holds the correspondence across samples
+#'
+#' @export
+#'
+MasterSampleList <- R6::R6Class("MasterSampleList",
+                                inherit = MasterPeakList,
+                                public = list(
+                                  sample_id = NULL,
+                                  n_scan = NULL,
+                                  scans_in_sample = NULL,
+
+                                  initialize = function(multi_sample_peak_list, peak_calc_type = "lm_weighted", sd_model = NULL, multiplier = 1,
+                                                        mz_range = c(-Inf, Inf), noise_calculator = NULL, sd_fit_function = NULL,
+                                                        sd_predict_function = NULL, rmsd_min_scans = 3){
+                                    assertthat::assert_that(any(class(multi_sample_peak_list) %in% "MultiSamplePeakList"))
+
+                                    if (is.null(sd_model)) {
+                                      sd_model = multi_sample_peak_list$mz_model
+                                    }
+
+                                    self$scan_indices <- multi_sample_peak_list$scan_indices
+
+                                    if (!is.null(sd_fit_function)) {
+                                      self$sd_fit_function <- sd_fit_function
+                                    } else if (!is.null(multi_sample_peak_list$sd_fit_function)) {
+                                      self$sd_fit_function <- multi_sample_peak_list$sd_fit_function
+                                    } else {
+                                      self$sd_fit_function <- default_sd_fit_function
+                                    }
+
+                                    if (!is.null(sd_predict_function)) {
+                                      self$sd_predict_function <- sd_predict_function
+                                    } else if (!is.null(multi_sample_peak_list$sd_predict_function)) {
+                                      self$sd_predict_function <- multi_sample_peak_list$sd_predict_function
+                                    } else {
+                                      self$sd_predict_function <- default_sd_predict_function
+                                    }
+
+                                    if (!is.null(noise_calculator)) {
+                                      self$noise_calculator <- noise_calculator
+                                    }
+
+                                    self$rmsd_min_scans <- rmsd_min_scans
+                                    self$sample_id <- multi_sample_peak_list$get_sample_id()
+                                    self$peak_correspondence(multi_sample_peak_list, peak_calc_type, sd_model = sd_model, multiplier = multiplier,
+                                                             mz_range = mz_range)
+                                    all_samples <- multi_sample_peak_list$get_scan_peak_lists()
+                                    sample_indices <- self$scan_peak
+                                    n_scan_per_sample <- lapply(seq(1, length(all_samples)), function(in_sample){
+                                      use_index <- sample_indices[, in_sample]
+                                      all_samples[[in_sample]]$peak_list[["n_scan"]][use_index]
+                                    })
+
+                                    self$n_scan <- do.call(cbind, n_scan_per_sample)
+                                    self$scans_in_sample <- vapply(all_samples, function(in_sample){
+                                      in_sample$n_scans
+                                    }, numeric(1))
+                                    invisible(self)
+                                  }
+                                )
+)
+
+
+#' FindCorrespondenceSamples
+#'
+#' @export
+#'
+FindCorrespondenceSamples <- R6::R6Class("FindCorrespondenceSamples",
+  inherit = FindCorrespondence,
+
+  public = list(
+    correspondence = MasterSampleList,
+    digital_resolution_multiplier = 3,
+    min_scan = 2,
+    remove_low_ic_scans = FALSE
+  )
+)
+
 
 #' compare objects to others 2
 #'
@@ -1847,66 +1928,3 @@ CorrespondentPeakList <- R6::R6Class("CorrespondentPeakList",
   ))
 
 
-#' MasterSampleList
-#'
-#' Holds the correspondence across samples
-#'
-#' @export
-
-MasterSampleList <- R6::R6Class("MasterSampleList",
-  inherit = MasterPeakList,
-  public = list(
-    sample_id = NULL,
-    n_scan = NULL,
-    scans_in_sample = NULL,
-
-    initialize = function(multi_sample_peak_list, peak_calc_type = "lm_weighted", sd_model = NULL, multiplier = 1,
-                          mz_range = c(-Inf, Inf), noise_calculator = NULL, sd_fit_function = NULL,
-                          sd_predict_function = NULL, rmsd_min_scans = 3){
-      assertthat::assert_that(any(class(multi_sample_peak_list) %in% "MultiSamplePeakList"))
-
-      if (is.null(sd_model)) {
-        sd_model = multi_sample_peak_list$mz_model
-      }
-
-      self$scan_indices <- multi_sample_peak_list$scan_indices
-
-      if (!is.null(sd_fit_function)) {
-        self$sd_fit_function <- sd_fit_function
-      } else if (!is.null(multi_sample_peak_list$sd_fit_function)) {
-        self$sd_fit_function <- multi_sample_peak_list$sd_fit_function
-      } else {
-        self$sd_fit_function <- default_sd_fit_function
-      }
-
-      if (!is.null(sd_predict_function)) {
-        self$sd_predict_function <- sd_predict_function
-      } else if (!is.null(multi_sample_peak_list$sd_predict_function)) {
-        self$sd_predict_function <- multi_sample_peak_list$sd_predict_function
-      } else {
-        self$sd_predict_function <- default_sd_predict_function
-      }
-
-      if (!is.null(noise_calculator)) {
-        self$noise_calculator <- noise_calculator
-      }
-
-      self$rmsd_min_scans <- rmsd_min_scans
-      self$sample_id <- multi_sample_peak_list$get_sample_id()
-      self$peak_correspondence(multi_sample_peak_list, peak_calc_type, sd_model = sd_model, multiplier = multiplier,
-                               mz_range = mz_range)
-      all_samples <- multi_sample_peak_list$get_scan_peak_lists()
-      sample_indices <- self$scan_peak
-      n_scan_per_sample <- lapply(seq(1, length(all_samples)), function(in_sample){
-        use_index <- sample_indices[, in_sample]
-        all_samples[[in_sample]]$peak_list[["n_scan"]][use_index]
-      })
-
-      self$n_scan <- do.call(cbind, n_scan_per_sample)
-      self$scans_in_sample <- vapply(all_samples, function(in_sample){
-        in_sample$n_scans
-      }, numeric(1))
-      invisible(self)
-    }
-  )
-)
