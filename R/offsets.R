@@ -9,6 +9,20 @@ default_offset_predict_function <- function(model, x){
   stats:::predict.loess(model, newdata = x)
 }
 
+correctly_round_numbers <- function(number_of_things, fraction){
+  assertthat::assert_that(number_of_things > 0)
+  assertthat::assert_that(fraction > 0)
+  if (fraction < 1) {
+    floor_value <- floor(number_of_things * fraction)
+  } else {
+    floor_value <- fraction
+  }
+  if (floor_value < 1) {
+    floor_value <- 1
+  }
+  floor_value
+}
+
 #' correct offsets
 #'
 #' Given a MasterPeakList object and the MultiScansPeakList that generated it,
@@ -16,13 +30,14 @@ default_offset_predict_function <- function(model, x){
 #'
 #' @param master_peak_list the MasterPeakList object of correspondent peaks
 #' @param multi_scan_peaklist the MultiScansPeakList to be corrected
+#' @param min_scan what is the minimum number of scans a peak should be in to be used for correction.
 #'
 #' @return list
 #' @export
-default_correct_offset_function <- function(master_peak_list, multi_scan_peaklist, min_scan_perc = 0.05){
+default_correct_offset_function <- function(master_peak_list, multi_scan_peaklist, min_scan = 0.05){
 
   n_col <- ncol(master_peak_list$scan_mz)
-  n_min_scan <- round(min_scan_perc * n_col)
+  n_min_scan <- correctly_round_numbers(n_col, min_scan)
   correspond_peaks <- master_peak_list$count_notna() >= n_min_scan
 
   scan_indices <- master_peak_list$scan_indices
