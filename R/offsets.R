@@ -34,7 +34,7 @@ correctly_round_numbers <- function(number_of_things, fraction){
 #'
 #' @return list
 #' @export
-default_correct_offset_function <- function(master_peak_list, multi_scan_peaklist, min_scan = 0.05){
+default_correct_offset_function <- function(master_peak_list, multi_scan_peaklist, min_scan = 0.1){
 
   n_col <- ncol(master_peak_list$scan_mz)
   n_min_scan <- correctly_round_numbers(n_col, min_scan)
