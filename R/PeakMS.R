@@ -1851,6 +1851,7 @@ MultiSamplePeakList <- R6::R6Class("MultiSamplePeakList",
                                  inherit = MultiScansPeakList,
   public = list(
     sample_id = NULL,
+    zip_file = NULL,
     min_scans = NULL,
     set_min_scans = function(){
       if (!is.null(self$min_scans)) {
@@ -1871,7 +1872,15 @@ MultiSamplePeakList <- R6::R6Class("MultiSamplePeakList",
         in_sample$sample_id
       }, character(1))
     },
-    initialize = function(sample_list = NULL){
+    set_zip_files = function(zip_files){
+      self$zip_file <- zip_files
+    },
+    get_zip_files = function(){
+      if (!is.null(self$zip_file)) {
+        self$zip_file[self$scan_indices]
+      }
+    },
+    initialize = function(sample_list = NULL, zip_files = NULL){
       n_scan <- length(sample_list)
 
       if (class(sample_list) == "character") {
@@ -1889,7 +1898,12 @@ MultiSamplePeakList <- R6::R6Class("MultiSamplePeakList",
           tmp_ids <- as.character(seq(1, n_scan))
         }
         self$peak_list_by_scans <- lapply(seq(1, n_scan), function(in_scan){
-          CorrespondentPeakList$new(sample_list[[in_scan]], scan = in_scan, sample_id = tmp_ids[in_scan])
+          if (!is.null(zip_files)) {
+            in_zip <- zip_files[in_scan]
+          } else {
+            in_zip <- NULL
+          }
+          CorrespondentPeakList$new(sample_list[[in_scan]], scan = in_scan, sample_id = tmp_ids[in_scan], zip_file = in_zip)
         })
         self$sample_id <- tmp_ids
       }
@@ -1910,6 +1924,7 @@ CorrespondentPeakList <- R6::R6Class("CorrespondentPeakList",
   public = list(
     sample_id = NULL,
     min_scans = NULL,
+    zip_file = NULL,
 
     filter_min_scans = function(){
       assertthat::assert_that(!is.null(self$min_scans))
@@ -1919,7 +1934,7 @@ CorrespondentPeakList <- R6::R6Class("CorrespondentPeakList",
       self$peak_list$peak <- seq(1, nrow(self$peak_list))
     },
     n_scans = NULL,
-    initialize = function(master_peak_list, scan = NULL, sample_id = NULL, min_scans = 0.1){
+    initialize = function(master_peak_list, scan = NULL, sample_id = NULL, zip_file = NULL, min_scans = 0.1){
 
       self$min_scans <- min_scans
       n_peak <- length(master_peak_list$master)
@@ -1935,6 +1950,8 @@ CorrespondentPeakList <- R6::R6Class("CorrespondentPeakList",
 
       self$sample_id <- sample_id
       self$n_scans <- length(master_peak_list$scan)
+
+      self$zip_file <- zip_file
 
       invisible(self)
     }
