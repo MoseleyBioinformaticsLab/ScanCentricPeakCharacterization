@@ -1480,6 +1480,7 @@ MasterSampleList <- R6::R6Class("MasterSampleList",
                                   sample_id = NULL,
                                   n_scan = NULL,
                                   scans_in_sample = NULL,
+                                  zip_file = NULL,
 
                                   initialize = function(multi_sample_peak_list, peak_calc_type = "lm_weighted", sd_model = NULL, multiplier = 1,
                                                         mz_range = c(-Inf, Inf), noise_calculator = NULL, sd_fit_function = NULL,
@@ -1527,6 +1528,7 @@ MasterSampleList <- R6::R6Class("MasterSampleList",
 
                                     self$rmsd_min_scans <- rmsd_min_scans
                                     self$sample_id <- multi_sample_peak_list$get_sample_id()
+                                    self$zip_file <- multi_sample_peak_list$get_zip_files()
                                     self$peak_correspondence(multi_sample_peak_list, peak_calc_type, sd_model = sd_model, multiplier = multiplier,
                                                              mz_range = mz_range)
                                     all_samples <- multi_sample_peak_list$get_scan_peak_lists()
@@ -1868,7 +1870,7 @@ MultiSamplePeakList <- R6::R6Class("MultiSamplePeakList",
       })
     },
     get_sample_id = function(){
-      self$zip_files[self$scan_indices]
+      self$sample_id[self$scan_indices]
     },
     set_zip_files = function(zip_files){
       self$zip_file <- zip_files
