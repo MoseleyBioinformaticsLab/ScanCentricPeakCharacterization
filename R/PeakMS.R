@@ -1960,4 +1960,135 @@ CorrespondentPeakList <- R6::R6Class("CorrespondentPeakList",
     }
   ))
 
+#' correspondencelist_to_json
+#'
+#' creates a list of lists, where each list is named according to the json file
+#' it should generate. One list will be the processing information, and then
+#' their will either be a list for each scan (sample) or one list of the average
+#' values
+#'
+#' @param correspondencelist_object the object to make into JSON strings
+#' @param average_values should values be averaged
+#'
+#' @export
+#' @return list
+correspondencelist_to_json <- function(correspondencelist_object, averaged_values = TRUE,
+                                       individual_values = FALSE,
+                                       package_used = "package:SIRM.FTMS.peakCharacterization"){
+  if (inherits(correspondencelist_object, "MasterSampleList")) {
+    averaged_values <- FALSE
+    individual_values <- TRUE
+  }
 
+  if (is.null(correspondencelist_object$sd_model)) {
+    correspondencelist_object$calculate_sd_model()
+  }
+
+  sd_model <- correspondencelist_object$sd_model
+
+  n_peak <- length(correspondencelist_object$master)
+
+  average_height_area <- function(height_area){
+    height_area <- height_area[!is.na(height_area)]
+    mean_ha <- mean(height_area)
+    median_ha <- median(height_area)
+    sd_ha <- sd(height_area)
+    rsd_ha <- sd_ha / mean_ha
+    values <- height_area
+
+    list(Mean = mean_ha,
+         Median = median_ha,
+         SD = sd_ha,
+         RSD = rsd_ha,
+         Values = values)
+  }
+
+  average_mz <- function(mz, sd_model, sd_pred_function){
+    mz <- mz[!is.na(mz)]
+    mean_mz <- mean(mz)
+    median_mz <- median(mz)
+    sd_mz <- sd(mz)
+
+    model_sd <- sd_pred_function(sd_model, mean_mz)
+    values <- mz
+
+    list(Mean = mean_mz,
+         Median = median_mz,
+         SD = sd_mz,
+         ModelSD = model_sd,
+         Values = values)
+  }
+
+  if (averaged_values) {
+    average_peaks <- list(peak_list.json = list(
+      Peaks = purrr::map(seq(1, n_peak), function(in_peak){
+      tmp_index <- !is.na(correspondencelist_object$scan_mz[in_peak, ])
+
+      list(Sample = "Averaged",
+           N = length(sum(tmp_index)),
+           Scans = correspondencelist_object$scan[tmp_index],
+           ObservedMZ = average_mz(correspondencelist_object$scan_mz[in_peak, ],
+                                   sd_model, correspondencelist_object$sd_predict_function),
+           Height = average_height_area(correspondencelist_object$scan_height[in_peak, ]),
+           Area = average_height_area(correspondencelist_object$scan_area[in_peak, ]),
+           NormalizedArea = average_height_area(correspondencelist_object$scan_normalizedarea[in_peak, ])
+           )
+    })))
+
+  } else {
+    average_peaks = list(peak_list.json = NULL)
+  }
+
+  if (individual_values) {
+    notna_indiv <- correspondencelist_object$count_notna()
+    individual_samples_scans <- purrr::map(seq(1, length(correspondencelist_object$scan)), function(in_scan){
+      sample_peaks <- !is.na(correspondencelist_object$scan_mz[, in_scan])
+
+      list(Peaks = purrr::map(which(sample_peaks), function(in_peak){
+          if (inherits(correspondencelist_object, "MasterSampleList")) {
+            sample <- correspondencelist_object$sample_id[in_scan]
+            n_scan <- correspondencelist_object$n_scan[in_peak, in_scan]
+            n_sample <- notna_indiv[in_peak]
+            scan <- NA
+          } else {
+            sample <- NA
+            scan <- correspondencelist_object$scan[in_scan]
+            n_scan <- notna_indiv[in_peak]
+            n_sample <- NA
+          }
+          peak <- in_peak
+
+          list(Sample = sample,
+               Peak = in_peak,
+               Scan = scan,
+               NScan = n_scan,
+               NSample = n_sample,
+               ObservedMZ = average_mz(correspondencelist_object$scan_mz[in_peak, in_scan],
+                                       sd_model, correspondencelist_object$sd_predict_function),
+               Height = average_height_area(correspondencelist_object$scan_height[in_peak, in_scan]),
+               Area = average_height_area(correspondencelist_object$scan_area[in_peak, in_scan]),
+               NormalizedArea = average_height_area(correspondencelist_object$scan_normalizedarea[in_peak, in_scan]))
+        })
+      )
+
+    })
+
+    if (inherits(correspondencelist_object, "MasterSampleList")) {
+      names(individual_samples_scans) <- paste0(correspondencelist_object$sample_id, ".json")
+    } else {
+      names(individual_samples_scans) <- paste0("scan_", correspondencelist_object$scan, ".json")
+    }
+  } else {
+    individual_samples_scans <- list(nothing = NULL)
+  }
+
+  if (inherits(correspondencelist_object, "MasterSampleList")) {
+    samples_zip <- purrr::map(correspondencelist_object$zip_file, function(x){x})
+    names(samples_zip) <- correspondencelist_object$sample_id
+    map_samples_zip <- list(samples_to_zip.json = samples_zip)
+  } else {
+    map_samples_zip <- list(samples_to_zip.json = NULL)
+  }
+
+  out_lists <- c(average_peaks, individual_samples_scans, map_samples_zip)
+}
