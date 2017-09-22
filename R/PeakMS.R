@@ -1960,19 +1960,22 @@ CorrespondentPeakList <- R6::R6Class("CorrespondentPeakList",
     }
   ))
 
-#' correspondencelist_to_json
+#' summarize_correspondencelist
 #'
 #' creates a list of lists, where each list is named according to the json file
 #' it should generate. One list will be the processing information, and then
 #' their will either be a list for each scan (sample) or one list of the average
 #' values
 #'
-#' @param correspondencelist_object the object to make into JSON strings
+#' @param correspondencelist_object the correspondent peaks to summarize
+#' @param peakfinder_obj a PeakFinder that also needs to be summarized
 #' @param average_values should values be averaged
+#' @param individual_values should individual samples / scans be returned
+#' @param package_used which package was used to do summarize
 #'
 #' @export
 #' @return list
-correspondencelist_to_json <- function(correspondencelist_object, averaged_values = TRUE,
+summarize_correspondencelist <- function(correspondencelist_object, peakfinder_obj = NULL, averaged_values = TRUE,
                                        individual_values = FALSE,
                                        package_used = "package:SIRM.FTMS.peakCharacterization"){
   if (inherits(correspondencelist_object, "MasterSampleList")) {
@@ -2085,10 +2088,106 @@ correspondencelist_to_json <- function(correspondencelist_object, averaged_value
   if (inherits(correspondencelist_object, "MasterSampleList")) {
     samples_zip <- purrr::map(correspondencelist_object$zip_file, function(x){x})
     names(samples_zip) <- correspondencelist_object$sample_id
-    map_samples_zip <- list(samples_to_zip.json = samples_zip)
+    map_samples_zip <- list(samples_to_zip.json = list(Samples = samples_zip))
   } else {
     map_samples_zip <- list(samples_to_zip.json = NULL)
   }
 
-  out_lists <- c(average_peaks, individual_samples_scans, map_samples_zip)
+
+
+  processing_info <- list(processing_metadata.json = create_processing_info(package = package_used, peakfinder_obj = peakfinder_obj,
+                                                              sd_model = correspondencelist_object$sd_model))
+
+  out_lists <- c(average_peaks, individual_samples_scans, map_samples_zip, processing_info)
+
+  out_lists
+}
+
+#' lists_2_json
+#'
+#' @param lists_to_save the set of lists to create the json from
+#' @param zip_file should the JSON files be zipped into a zip file? Provide the zip file name
+#' @param digits how many digits to use for the JSON representation
+#' @param temp_dir temp directory to write the JSON files to
+#'
+#' @export
+#' @return character
+lists_2_json <- function(lists_to_save, zip_file = NULL, digits = 8, temp_dir = tempfile(pattern = "json")){
+  if (is.null(names(lists_to_save))) {
+    names(lists_to_save) <- paste0("S", seq(1, length(lists_to_save)), ".json")
+  }
+
+  dir.create(temp_dir)
+
+  not_null_files <- !purrr::map_lgl(lists_to_save, is.null)
+  lists_to_save <- lists_to_save[not_null_files]
+
+  temp_locs <- purrr::map_chr(names(lists_to_save), function(json_file){
+    json_data <- jsonlite::toJSON(lists_to_save[[json_file]], auto_unbox = TRUE, pretty = TRUE, digits = digits)
+    full_file <- file.path(temp_dir, json_file)
+    cat(json_data, sep = "\n", file = full_file)
+    full_file
+  })
+
+  if (!is.null(zip_file)) {
+    zip(zip_file, temp_locs, flags = "-jq")
+    return_value <- zip_file
+  } else {
+    return_value <- temp_locs
+  }
+  return_value
+}
+
+remove_loess_class <- function(sd_model){
+  if (inherits(sd_model, "loess")) {
+    attr(sd_model, "class") <- NULL
+    sd_model$call <- deparse(sd_model$call)
+    sd_model$terms <- NULL
+  }
+  sd_model
+}
+
+create_processing_info = function(package = "package:SIRM.FTMS.peakCharacterization",
+                                  peakfinder_obj = NULL, sd_model = NULL){
+  pkg_description <- utils::packageDescription(substring(package, 9))
+
+  if (!is.null(pkg_description$RemoteSha)) {
+    pkg_sha <- pkg_description$RemoteSha
+  } else {
+    pkg_sha <- NA
+  }
+
+  if (!is.null(peakfinder_obj)) {
+    if (inherits(peakfinder_obj, "PeakFinder")) {
+      document_peakfinder <- as.list(PeakFinder$new(peakfinder_obj$peak_method,
+                                     peakfinder_obj$noise_function, peakfinder_obj$raw_filter,
+                                     peakfinder_obj$create_report))
+      document_peakfinder[[".__enclos_env__"]] <- NULL
+      document_peakfinder$clone <- NULL
+      peak_method <- peakfinder_obj$peak_method
+      scan_range <- peakfinder_obj$raw_data$scan_range
+    }
+
+  } else {
+    document_peakfinder <- NA
+    peak_method <- NA
+    scan_range <- NA
+  }
+
+
+  if (!is.null(sd_model) && (inherits(sd_model, "loess"))) {
+    sd_model <- remove_loess_class(sd_model)
+  } else {
+    sd_model <- NA
+  }
+
+  processing_info <- list(Package = package,
+                          Version = pkg_description$Version,
+                          Sha = pkg_sha,
+                          FunctionCalled = document_peakfinder,
+                               Parameters = list(Method = peak_method,
+                                                 Scans = scan_range),
+                               Models = list(SDModel = sd_model)
+  )
+  processing_info
 }
