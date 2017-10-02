@@ -110,7 +110,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
     noise_function = NULL,
 
     # control options
-    max_iteration = 20,
+    max_iteration = 30,
     scan_fraction = 0.1,
     collapse_peaks = FALSE,
     remove_low_ic_scans = TRUE,
