@@ -281,7 +281,7 @@ ZipMS <- R6::R6Class("ZipMS",
       } else {
         out_file <- private$generate_filename(out_file)
       }
-      zip(out_file, list.files(self$temp_directory, full.names = TRUE), flags = "-j")
+      zip(out_file, list.files(self$temp_directory, full.names = TRUE), flags = "-jq")
     },
 
     cleanup = function(){
