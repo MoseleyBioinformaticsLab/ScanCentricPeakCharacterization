@@ -611,7 +611,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       self$scan_mz <- self$scan_mz[, new_order]
       self$scan_height <- self$scan_height[, new_order]
       self$scan_area <- self$scan_area[, new_order]
-      self$scan_normalizedarea <- self$scan_normalized_area[, new_order]
+      self$scan_normalizedarea <- self$scan_normalizedarea[, new_order]
       self$scan_peak <- self$scan_peak[, new_order]
       self$scan <- self$scan[new_order]
       self$scan_indices <- self$scan_indices[new_order]
