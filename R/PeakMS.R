@@ -2191,3 +2191,46 @@ create_processing_info = function(package = "package:SIRM.FTMS.peakCharacterizat
   )
   processing_info
 }
+
+#' calculate M/Z offsets
+#'
+#' It is useful to be able to compare the original M/Z values for a scan or sample,
+#' and the offset adjusted M/Z values after correspondence. This function facilitates
+#' that calculation.
+#'
+#' @param master_list A master sample or peak list object
+#' @param multi_peaklist A multi sample or multi scan peak list object
+#'
+#' @export
+#' @return data.frame
+#'
+calculate_mz_offsets <- function(master_list, multi_peaklist){
+  mpl_scans <- master_list$scan
+  mspl_scans <- multi_peaklist$scan_numbers()
+
+  use_scans <- intersect(mpl_scans, mspl_scans)
+
+  tmp_peak_lists <- multi_scan_peaklist$get_scan_peak_lists()
+
+  diff_mz <- purrr::map_df(use_scans, function(in_scan){
+    #print(in_scan)
+    mpl_loc <- mpl_scans %in% in_scan
+    mpl_df <- data.frame(peak = mpl$scan_peak[, mpl_loc],
+                         ObservedMZ = mpl$scan_mz[, mpl_loc],
+                         scan = mpl$scan[mpl_loc],
+                         stringsAsFactors = FALSE)
+    if (!is.null(master_peak_list$sample_id)) {
+      mpl_df$sample_id <- master_peak_list$sample_id[mpl_loc]
+    }
+    mpl_df <- dplyr::filter(mpl_df, !is.na(peak))
+
+    mspl_loc <- mspl_scans %in% in_scan
+    mspl_df <- tmp_peak_lists[[which(mspl_loc)]]$peak_list
+    mspl_df$scan <- mspl_scans[mspl_loc]
+
+    mpl_df <- dplyr::left_join(mpl_df, mspl_df, by = "peak", suffix = c(".cor", ".org"))
+    mpl_df <- dplyr::mutate(mpl_df, diffMZ = ObservedMZ.cor - ObservedMZ.org)
+    dplyr::select(mpl_df, peak, ObservedMZ.org, diffMZ, scan.cor, scan.org)
+  })
+  diff_mz
+}
