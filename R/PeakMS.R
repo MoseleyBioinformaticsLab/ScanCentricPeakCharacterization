@@ -457,6 +457,94 @@ ScanMS <- R6::R6Class("ScanMS",
   )
 )
 
+#' noise_detector
+#'
+#' Given a peak_list as a data.frame, classify the peaks as either noise or
+#' signal. See Details for more information.
+#'
+#' @param peaklist data.frame of peaks
+#' @param intensity_measure which column of the data.frame is the intensity to use
+#' @param transform which transform to apply to the data
+#'
+#' @details This noise detections works by assuming that noise and signal
+#'  come from two distinct distributions, and that the noise distribution
+#'  has a lower valued distribution than the signal. So to run, first it calculates
+#'  a density or smoothed histogram on the intensity values. Second, the first
+#'  peak becomes the mean value of the noise. All peak intensities below this value
+#'  are used to calculate the standard deviation of the noise, and then the mean
+#'  + 3 sd is used to define the upper bound of the noise intensity.
+#'
+#'  Very importantly, you should graph a histogram of your intensities to verify
+#'  that a transform is necessary. This is written for data with a Poisson type
+#'  variance structure, so "log10" is appropriate. Check that your data meets these
+#'  assumptions before using this transform.
+#'
+#'  Finally, this will return a list with two components, the original peak_list
+#'  data.frame with a logical column "not_noise" appended, and summary information
+#'  about the noise values themselves.
+#'
+#'  @export
+#'  @return list
+noise_detector <- function(peaklist, intensity_measure = "Height", transform = log10){
+  assertthat::assert_that(class(peaklist) == "data.frame")
+
+
+  intensities <- transform(peaklist[[intensity_measure]])
+  intensities_nona <- intensities[!is.na(intensities)]
+
+  density_data <- density(intensities_nona)
+
+  density_peaks <- pracma::findpeaks(density_data$y, nups = 4)
+
+  mean_loc <- density_data$x[density_peaks[1, 2]]
+
+  left_side_values <- intensities_nona[intensities_nona <= mean_loc]
+  peak_diffs <- sum((left_side_values - mean_loc)^2)
+
+  sd_value <- sqrt(peak_diffs / (length(left_side_values) - 1))
+
+  max_noise <- mean_loc + (3 * sd_value)
+
+  peaklist$not_noise <- intensities > max_noise
+
+  # don't know the transform function directly, so we test for log10 and log2,
+  # and if it doesn't match either of those, then we get the cutoff directly
+  # from the values themselves
+  if (transform(10) == 1) {
+    non_transform_cutoff <- 10^max_noise
+  } else if (transform(2) == 1) {
+    non_transform_cutoff <- 2^max_noise
+  } else {
+    non_transform_cutoff <- max(peaklist[[intensity_measure]][!peaklist$not_noise])
+  }
+
+  mean_noise <- mean_loc
+
+  if (sum(peaklist[["not_noise"]] > 0)) {
+    mean_signal <- mean(transform(peaklist[[intensity_measure]][peaklist$not_noise]), na.rm = TRUE)
+    sum_signal <- sum(transform(peaklist[[intensity_measure]][peaklist$not_noise]) - mean_noise, na.rm = TRUE)
+    n_signal <- sum(peaklist$not_noise)
+    n_noise <- sum(!peaklist$not_noise)
+    signal_noise_ratio <- mean_signal - mean_noise
+  } else {
+    mean_signal <- 0
+    sum_signal <- 0
+    n_signal <- 0
+    n_noise <- sum(!peaklist$not_noise)
+    signal_noise_ratio <- -1 * mean_noise
+  }
+
+  return(list(peak_list = peaklist,
+              noise_info = data.frame(noise = mean_noise,
+                                      signal = mean_signal,
+                                      sum_signal = sum_signal,
+                                      n_signal = n_signal,
+                                      n_noise = n_noise,
+                                      sn_ratio = signal_noise_ratio,
+                                      intensity_measure = intensity_measure,
+                                      threshold = non_transform_cutoff)))
+
+}
 
 #' noise from peaklist
 #'
@@ -468,7 +556,7 @@ ScanMS <- R6::R6Class("ScanMS",
 #' @param sd_mean_ratio the ratio of standard deviation to mean to use as a cutoff
 #' @param noise_multiplier how high above the noise should the cutoff be
 #'
-#' @description This calculation is based on the premise that a distribution of
+#' @details This calculation is based on the premise that a distribution of
 #'  only noise peaks should have a standard deviation to mean ratio of about 1.
 #'  Therefore, but sorting the list of peak intensities, and incrementally adding
 #'  peaks, when the sd to mean ratio becomes larger than the cutoff, we say
