@@ -152,3 +152,39 @@ meta_export_json <- function(meta_list){
   }
   out_polarity
 }
+
+#' json mzML to data.frame
+#'
+#' Given a json file or list of lists, return a data.frame with the most important
+#' bits of the data.
+#'
+#' @param in_file the file to read from
+#'
+#' @export
+#'
+#' @importFrom purrr map_df
+#'
+#' @return data.frame
+#'
+json_mzML_2_df <- function(in_file) {
+  if (inherits(in_file, "character") && file.exists(in_file)) {
+    in_list <- jsonlite::fromJSON(in_file, simplifyVector = FALSE)
+  } else if (inherits(in_file, "list")) {
+    in_list <- in_file
+  }
+
+  out_df <- purrr::map_df(in_list, function(list_entry){
+    data.frame(mzml_id = list_entry$mzML$id,
+               sample_id = gsub(".raw", "", basename(list_entry$file$file)),
+               instrument_serial = list_entry$run$instrument$serial,
+               instrument_model = list_entry$run$instrument$model,
+               start_time = as.POSIXct(list_entry$run$startTimeStamp),
+               raw_file = list_entry$file$file,
+               md5 = list_entry$file$md5,
+               save_path = list_entry$file$saved_path,
+               original_path = unlist(list_entry$file$original_path),
+               stringsAsFactors = FALSE
+    )
+  })
+  out_df
+}
