@@ -2116,7 +2116,7 @@ summarize_correspondencelist <- function(correspondencelist_object, peakfinder_o
       tmp_index <- !is.na(correspondencelist_object$scan_mz[in_peak, ])
 
       list(Sample = "Averaged",
-           N = length(sum(tmp_index)),
+           N = (sum(tmp_index)),
            Scans = correspondencelist_object$scan[tmp_index],
            ObservedMZ = average_mz(correspondencelist_object$scan_mz[in_peak, ],
                                    sd_model, correspondencelist_object$sd_predict_function),
@@ -2298,17 +2298,17 @@ calculate_mz_offsets <- function(master_list, multi_peaklist){
 
   use_scans <- intersect(mpl_scans, mspl_scans)
 
-  tmp_peak_lists <- multi_scan_peaklist$get_scan_peak_lists()
+  tmp_peak_lists <- multi_peaklist$get_scan_peak_lists()
 
   diff_mz <- purrr::map_df(use_scans, function(in_scan){
     #print(in_scan)
     mpl_loc <- mpl_scans %in% in_scan
-    mpl_df <- data.frame(peak = mpl$scan_peak[, mpl_loc],
-                         ObservedMZ = mpl$scan_mz[, mpl_loc],
-                         scan = mpl$scan[mpl_loc],
+    mpl_df <- data.frame(peak = master_list$scan_peak[, mpl_loc],
+                         ObservedMZ = master_list$scan_mz[, mpl_loc],
+                         scan = master_list$scan[mpl_loc],
                          stringsAsFactors = FALSE)
-    if (!is.null(master_peak_list$sample_id)) {
-      mpl_df$sample_id <- master_peak_list$sample_id[mpl_loc]
+    if (!is.null(master_list$sample_id)) {
+      mpl_df$sample_id <- master_list$sample_id[mpl_loc]
     }
     mpl_df <- dplyr::filter(mpl_df, !is.na(peak))
 
@@ -2318,7 +2318,13 @@ calculate_mz_offsets <- function(master_list, multi_peaklist){
 
     mpl_df <- dplyr::left_join(mpl_df, mspl_df, by = "peak", suffix = c(".cor", ".org"))
     mpl_df <- dplyr::mutate(mpl_df, diffMZ = ObservedMZ.cor - ObservedMZ.org)
-    dplyr::select(mpl_df, peak, ObservedMZ.org, diffMZ, scan.cor, scan.org)
+
+    if (!is.null(master_list$sample_id)) {
+      return(dplyr::select(mpl_df, peak, ObservedMZ.org, diffMZ, scan.cor, scan.org, sample_id))
+    } else {
+      return(dplyr::select(mpl_df, peak, ObservedMZ.org, diffMZ, scan.cor, scan.org))
+    }
+
   })
   diff_mz
 }
