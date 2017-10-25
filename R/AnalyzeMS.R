@@ -423,7 +423,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
       SIRM.FTMS.peakCharacterization::PeakPickingAnalysis$new(self$peak_data, self$processing_info)
     },
 
-    initialize = function(peak_method = "lm_weighted", noise_function = noise_sorted_peaklist, raw_filter = NULL,
+    initialize = function(peak_method = "lm_weighted", noise_function = noise_detector, raw_filter = NULL,
                           report_function = NULL, intermediates = FALSE, sd_fit_function = NULL,
                           sd_predict_function = NULL, offset_fit_function = NULL, offset_predict_function = NULL,
                           offset_correction_function = NULL){
