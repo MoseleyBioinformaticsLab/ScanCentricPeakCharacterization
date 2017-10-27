@@ -480,12 +480,34 @@ PeakFinder <- R6::R6Class("PeakFinder",
   )
 )
 
+
+#' default sd fit
+#'
+#' The default fit function for differences and RMSD
+#'
+#' @param x the x values, often M/Z
+#' @param y the y values, normally differences or RMSD
+#'
+#' @export
+#'
+#' @return list
 default_sd_fit_function <- function(x, y){
   loess_frame <- data.frame(x = x, y = y)
-  loess_fit <- stats::loess(y ~ x, data = loess_frame, control = stats::loess.control(surface = "direct"))
+  loess_fit <- stats::loess(y ~ x, data = loess_frame, span = 1.5, control = stats::loess.control(surface = "direct"))
   loess_fit
 }
 
+
+#' default sd predict
+#'
+#' The default predict function for difference and RMSD
+#'
+#' @param model the previously generated model
+#' @param x the new data
+#'
+#' @export
+#'
+#' @return numeric
 default_sd_predict_function <- function(model, x){
   stats:::predict.loess(model, newdata = x)
 }

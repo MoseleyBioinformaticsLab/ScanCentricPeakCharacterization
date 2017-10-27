@@ -5,6 +5,17 @@ default_offset_fit_function <- function(x, y){
   loess_fit
 }
 
+
+#' offset predict function
+#'
+#' The offset predictor using loess
+#'
+#' @param model the model to use
+#' @param x the new values
+#'
+#' @export
+#'
+#' @return numeric
 default_offset_predict_function <- function(model, x){
   stats:::predict.loess(model, newdata = x)
 }
