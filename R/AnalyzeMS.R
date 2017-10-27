@@ -154,8 +154,13 @@ PeakFinder <- R6::R6Class("PeakFinder",
       if (self$vocal) {
         message("Creating Multi-Scan Peaklist ....")
       }
-      self$multi_scan_peaklist <- SIRM.FTMS.peakCharacterization::MultiScansPeakList$new(self$multi_scan, noise_function = self$noise_function,
-                                                                                         sd_predict_function = self$sd_predict_function)
+      self$multi_scan_peaklist <- SIRM.FTMS.peakCharacterization::MultiScansPeakList$new()
+      self$multi_scan_peaklist$noise_function <- self$noise_function
+      self$multi_scan_peaklist$sd_fit_function <- default_sd_fit_function
+      self$multi_scan_peaklist$sd_predict_function <- default_sd_predict_function
+
+      self$multi_scan_peaklist$find_peaks(self$raw_data)
+      self$multi_scan_peaklist$calculate_noise()
     },
 
     scan_start = NULL,
@@ -404,7 +409,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
       # data.
       if (is.null(self$multi_scan) & (!is.null(self$raw_data))) {
         self$apply_raw_filter()
-        self$create_multi_scan()
+        #self$create_multi_scan()
         self$create_multi_scan_peaklist()
       } else if (is.null(self$multi_scan_peaklist)) {
         stop("Need a MultiScanPeakList to work with!", call. = TRUE)
