@@ -2333,180 +2333,182 @@ calculate_mz_offsets <- function(master_list, multi_peaklist){
 
 
 MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
-                                  public = list(
-                                    peak_list_by_scans = NULL,
-                                    peak_type = "lm_weighted",
-                                    mz_range = c(-Inf, Inf),
-                                    min_points = 4,
-                                    max_peaks = Inf,
-                                    flat_cut = 0.98,
-                                    noise_function = NULL,
-                                    sd_fit_function = NULL,
-                                    sd_predict_function = NULL,
+  public = list(
+    peak_list_by_scans = NULL,
+    peak_type = "lm_weighted",
+    mz_range = c(-Inf, Inf),
+    min_points = 4,
+    max_peaks = Inf,
+    flat_cut = 0.98,
+    noise_function = NULL,
+    sd_fit_function = NULL,
+    sd_predict_function = NULL,
 
-                                    find_peaks = function(raw_data){
-                                      self$peak_list_by_scans <- find_peaks_across_scans(raw_ms,
-                                                                                         mz_range = self$mz_range,
-                                                                                         peak_method = self$peak_type,
-                                                                                         min_points = self$min_points,
-                                                                                         n_peak = self$max_peaks, flat_cut = self$flat_cut,
-                                                                                         sd_fit_function = self$sd_fit_function,
-                                                                                         sd_predict_function = self$sd_predict_function,
-                                                                                         noise_function = self$noise_function)
-                                      invisible(self)
-                                    },
+    find_peaks = function(raw_data){
+      self$peak_list_by_scans <- find_peaks_across_scans(raw_data,
+                                                         mz_range = self$mz_range,
+                                                         peak_method = self$peak_type,
+                                                         min_points = self$min_points,
+                                                         n_peak = self$max_peaks, flat_cut = self$flat_cut,
+                                                         sd_fit_function = self$sd_fit_function,
+                                                         sd_predict_function = self$sd_predict_function,
+                                                         noise_function = self$noise_function)
+      invisible(self)
+    },
 
-                                    scan_numbers = function(){
-                                      vapply(self$peak_list_by_scans[self$scan_indices], function(in_scan){
-                                        in_scan$scan
-                                      }, numeric(1))
-                                    },
+    scan_numbers = function(){
+      vapply(self$peak_list_by_scans[self$scan_indices], function(in_scan){
+        in_scan$scan
+      }, numeric(1))
+    },
 
-                                    scan_mz_models = function(){
-                                      all_models <- lapply(self$peak_list_by_scans[self$scan_indices], function(in_scan){
-                                        in_scan$mz_model
-                                      })
+    scan_mz_models = function(){
+      all_models <- lapply(self$peak_list_by_scans[self$scan_indices], function(in_scan){
+        in_scan$mz_model
+      })
 
-                                    },
-                                    mz_model = NULL,
+    },
+    mz_model = NULL,
 
-                                    mz_model_diffs = NULL,
+    mz_model_diffs = NULL,
 
-                                    scan_indices = NULL,
+    scan_indices = NULL,
 
-                                    get_scan_peak_lists = function(){
-                                      self$peak_list_by_scans[self$scan_indices]
-                                    },
+    get_scan_peak_lists = function(){
+      self$peak_list_by_scans[self$scan_indices]
+    },
 
-                                    get_noise_info = function(){
-                                      self$noise_info[self$scan_indices, ]
-                                    },
+    get_noise_info = function(){
+      self$noise_info[self$scan_indices, ]
+    },
 
-                                    reset_scan_indices = function(){
-                                      self$scan_indices <- seq(1, length(self$peak_list_by_scans))
-                                    },
+    reset_scan_indices = function(){
+      self$scan_indices <- seq(1, length(self$peak_list_by_scans))
+    },
 
-                                    # calculates an average model and deviations from that model
-                                    # Assuming LOESS models, a generic set of m/z are created spaced by 0.5 mz,
-                                    # and then predictions of SD made based on m/z. The average model is created
-                                    # by averaging the SDs and fitting average SD ~ m/z.
-                                    #
-                                    # In the process, it also gets the sum of absolute residuals of each model
-                                    # to the average.
-                                    calculate_average_mz_model = function(){
-                                      list_of_models <- self$scan_mz_models()
-                                      mz_ranges <- lapply(list_of_models, function(x){range(round(x$x))})
-                                      mz_ranges <- range(do.call(rbind, mz_ranges))
+    # calculates an average model and deviations from that model
+    # Assuming LOESS models, a generic set of m/z are created spaced by 0.5 mz,
+    # and then predictions of SD made based on m/z. The average model is created
+    # by averaging the SDs and fitting average SD ~ m/z.
+    #
+    # In the process, it also gets the sum of absolute residuals of each model
+    # to the average.
+    calculate_average_mz_model = function(){
+      list_of_models <- self$scan_mz_models()
+      mz_ranges <- lapply(list_of_models, function(x){range(round(x$x))})
+      mz_ranges <- range(do.call(rbind, mz_ranges))
 
-                                      mz_values <- seq(mz_ranges[1], mz_ranges[2], .5)
+      mz_values <- seq(mz_ranges[1], mz_ranges[2], .5)
 
-                                      sd_preds <- lapply(list_of_models, function(in_model){
-                                        self$sd_predict_function(in_model, mz_values)
-                                      })
+      sd_preds <- lapply(list_of_models, function(in_model){
+        self$sd_predict_function(in_model, mz_values)
+      })
 
-                                      mean_sd_preds <- colMeans(do.call(rbind, sd_preds))
+      mean_sd_preds <- colMeans(do.call(rbind, sd_preds))
 
-                                      # generate and set the new model
-                                      mean_model <- self$sd_fit_function(mz_values, mean_sd_preds)
-                                      self$mz_model <- mean_model
+      # generate and set the new model
+      mean_model <- self$sd_fit_function(mz_values, mean_sd_preds)
+      self$mz_model <- mean_model
 
-                                      # get the differences from the model so can look for potential outliers
-                                      scan_nums <- self$scan_numbers()
+      # get the differences from the model so can look for potential outliers
+      scan_nums <- self$scan_numbers()
 
-                                      scan_mz_sd <- lapply(seq(1, length(sd_preds)), function(in_scan){
-                                        scan_sd <- sd_preds[[in_scan]]
-                                        data.frame(mz = mz_values,
-                                                   sd = scan_sd,
-                                                   diff = scan_sd - mean_sd_preds,
-                                                   scan = scan_nums[in_scan])
-                                      })
-                                      scan_mz_sd <- do.call(rbind, scan_mz_sd)
+      scan_mz_sd <- lapply(seq(1, length(sd_preds)), function(in_scan){
+        scan_sd <- sd_preds[[in_scan]]
+        data.frame(mz = mz_values,
+                   sd = scan_sd,
+                   diff = scan_sd - mean_sd_preds,
+                   scan = scan_nums[in_scan])
+      })
+      scan_mz_sd <- do.call(rbind, scan_mz_sd)
 
-                                      dplyr::group_by(scan_mz_sd, scan) %>%
-                                        dplyr::summarise(., sum_diff = sum(abs(diff)), median_diff = median(abs(diff))) %>%
-                                        dplyr::ungroup() -> scan_mz_summaries
+      dplyr::group_by(scan_mz_sd, scan) %>%
+        dplyr::summarise(., sum_diff = sum(abs(diff)), median_diff = median(abs(diff))) %>%
+        dplyr::ungroup() -> scan_mz_summaries
 
-                                      self$mz_model_diffs <- scan_mz_summaries
+      self$mz_model_diffs <- scan_mz_summaries
 
-                                    },
+    },
 
-                                    remove_bad_resolution_scans = function(){
-                                      if (is.null(self$mz_model_diffs)) {
-                                        self$calculate_average_mz_model()
-                                      }
-                                      diff_model <- self$mz_model_diffs
-                                      max_out <- max(grDevices::boxplot.stats(diff_model$sum_diff)$stats)
-                                      keep_scans <- self$scan_numbers() %in% diff_model$scan[diff_model$sum_diff <= max_out]
+    remove_bad_resolution_scans = function(){
+      if (is.null(self$mz_model_diffs)) {
+        self$calculate_average_mz_model()
+      }
+      diff_model <- self$mz_model_diffs
+      max_out <- max(grDevices::boxplot.stats(diff_model$sum_diff)$stats)
+      keep_scans <- self$scan_numbers() %in% diff_model$scan[diff_model$sum_diff <= max_out]
 
-                                      #self$peak_list_by_scans <- self$peak_list_by_scans[keep_scans]
-                                      #self$noise_info <- self$noise_info[keep_scans, ]
+      #self$peak_list_by_scans <- self$peak_list_by_scans[keep_scans]
+      #self$noise_info <- self$noise_info[keep_scans, ]
 
-                                      self$scan_indices <- which(keep_scans)
-                                      self$calculate_average_mz_model()
-                                      invisible(self)
-                                    },
+      self$scan_indices <- which(keep_scans)
+      self$calculate_average_mz_model()
+      invisible(self)
+    },
 
-                                    # it may happen that there are scans with no signal peaks, so we need a way
-                                    # to remove those
-                                    remove_no_signal_scans = function(){
-                                      if (!is.null(self$noise_function)) {
-                                        curr_noise <- self$get_noise_info()
-                                        has_signal <- which(curr_noise$n_signal != 0)
-                                        self$reorder(has_signal)
-                                      }
-                                    },
+    # it may happen that there are scans with no signal peaks, so we need a way
+    # to remove those
+    remove_no_signal_scans = function(){
+      if (!is.null(self$noise_function)) {
+        curr_noise <- self$get_noise_info()
+        has_signal <- which(curr_noise$n_signal != 0)
+        self$reorder(has_signal)
+      }
+    },
 
-                                    noise_info = NULL,
+    noise_info = NULL,
 
-                                    n_peaks = function(){
-                                      vapply(self$get_scan_peak_lists(), function(x){
-                                        if (!is.null(x$noise_function)) {
-                                          return(nrow(x$peak_list[x$peak_list$not_noise, ]))
-                                        } else {
-                                          return(nrow(x$peak_list))
-                                        }
-                                      }, numeric(1))
-                                    },
+    n_peaks = function(){
+      vapply(self$get_scan_peak_lists(), function(x){
+        if (!is.null(x$noise_function)) {
+          return(nrow(x$peak_list[x$peak_list$not_noise, ]))
+        } else {
+          return(nrow(x$peak_list))
+        }
+      }, numeric(1))
+    },
 
-                                    reorder = function(new_order){
-                                      self$scan_indices <- self$scan_indices[new_order]
-                                      invisible(self)
-                                    },
+    reorder = function(new_order){
+      self$scan_indices <- self$scan_indices[new_order]
+      invisible(self)
+    },
 
-                                    calculate_noise = function(...){
-                                      self$peak_list_by_scans <- lapply(self$peak_list_by_scans, function(in_scan){
-                                        #in_scan$noise_function <- self$noise_function
-                                        in_scan$calculate_noise(...)
-                                        in_scan
-                                      })
+    calculate_noise = function(...){
+      self$peak_list_by_scans <- lapply(self$peak_list_by_scans, function(in_scan){
+        #in_scan$noise_function <- self$noise_function
+        if (is.null(in_scan$noise_info)) {
+          in_scan$calculate_noise(...)
+        }
+        in_scan
+      })
 
-                                      noise_info <- lapply(self$get_scan_peak_lists(), function(in_scan){
-                                        in_scan$noise_info
-                                      })
-                                      noise_info <- do.call(rbind, noise_info)
-                                      noise_info$scan <- self$scan_numbers()
-                                      self$noise_info <- noise_info
-                                      invisible(self)
+      noise_info <- lapply(self$get_scan_peak_lists(), function(in_scan){
+        in_scan$noise_info
+      })
+      noise_info <- do.call(rbind, noise_info)
+      noise_info$scan <- self$scan_numbers()
+      self$noise_info <- noise_info
+      invisible(self)
 
-                                    },
+    },
 
-                                    initialize = function(){
+    initialize = function(){
 
-                                      invisible(self)
-                                    }
-                                  ),
-                                  private = list(
-                                    deep_clone = function(name, value){
-                                      if (name == "peak_list_by_scans") {
-                                        value <- lapply(self$peak_list_by_scans, function(in_scan){
-                                          in_scan$clone()
-                                        })
-                                        value
-                                      } else {
-                                        value
-                                      }
-                                    }
-                                  )
+      invisible(self)
+    }
+  ),
+  private = list(
+    deep_clone = function(name, value){
+      if (name == "peak_list_by_scans") {
+        value <- lapply(self$peak_list_by_scans, function(in_scan){
+          in_scan$clone()
+        })
+        value
+      } else {
+        value
+      }
+    }
+  )
 )
 
 find_peaks_across_scans <- function(raw_ms, mz_range = c(-Inf, Inf),
@@ -2515,10 +2517,11 @@ find_peaks_across_scans <- function(raw_ms, mz_range = c(-Inf, Inf),
                                     sd_fit_function = default_sd_fit_function,
                                     sd_predict_function = default_sd_predict_function,
                                     noise_function = noise_detector){
-  peak_lists_by_scans <- purrr::map(raw_ms$scan_range, function(in_scan){
+  scan_range <- raw_ms$scan_range
+  peak_lists_by_scans <- purrr::map(scan_range, function(in_scan){
     scan_data <- as.data.frame(xcms::getScan(raw_ms$raw_data, in_scan))
 
-    peak_list <- PeakList2$new(in_scan)
+    peak_list <- PeakList$new(in_scan)
 
     if (!is.null(mz_range)) {
       peak_list$mz_range <- mz_range
@@ -2574,57 +2577,57 @@ create_mz_model = function(scan_data, sd_fit_function){
 
 
 PeakList <- R6::R6Class("PeakList",
-                         public = list(
-                           peak_list = NULL,
-                           point_list = NULL,
-                           scan = NULL,
-                           mz_range = c(-Inf, Inf),
-                           peak_type = NULL,
-                           max_peaks = Inf,
-                           min_points = 4,
-                           flat_cut = 0.98,
-                           noise = NULL,
-                           noise_info = NULL,
-                           mz_model = NULL,
+  public = list(
+   peak_list = NULL,
+   point_list = NULL,
+   scan = NULL,
+   mz_range = c(-Inf, Inf),
+   peak_type = NULL,
+   max_peaks = Inf,
+   min_points = 4,
+   flat_cut = 0.98,
+   noise = NULL,
+   noise_info = NULL,
+   mz_model = NULL,
 
 
-                           noise_function = NULL,
+   noise_function = NULL,
 
-                           calculate_noise = function(...){
-                             tmp_noise <- self$noise_function(self$peak_list, ...)
-                             self$noise_info <- tmp_noise$noise_info
-                             self$noise <- tmp_noise$noise_info$threshold
-                             self$peak_list <- tmp_noise$peak_list
-                           },
+   calculate_noise = function(...){
+     tmp_noise <- self$noise_function(self$peak_list, ...)
+     self$noise_info <- tmp_noise$noise_info
+     self$noise <- tmp_noise$noise_info$threshold
+     self$peak_list <- tmp_noise$peak_list
+   },
 
-                           sd_predict_function = NULL,
-                           sd_fit_function = NULL,
+   sd_predict_function = NULL,
+   sd_fit_function = NULL,
 
-                           find_peaks = function(scan_data){
-                             self$mz_model <- create_mz_model(scan_data, self$sd_fit_function)
-                             scan_data <- scan_data[((scan_data$mz >= self$mz_range[1]) &
-                                                       (scan_data$mz <= self$mz_range[2])), ]
-                             out_peaks <- generate_peaks(scan_data, peak_method = self$peak_type,
-                                                         min_points = self$min_points,
-                                                         n_peak = self$max_peaks, flat_cut = self$flat_cut)
+   find_peaks = function(scan_data){
+     self$mz_model <- create_mz_model(scan_data, self$sd_fit_function)
+     scan_data <- scan_data[((scan_data$mz >= self$mz_range[1]) &
+                               (scan_data$mz <= self$mz_range[2])), ]
+     out_peaks <- generate_peaks(scan_data, peak_method = self$peak_type,
+                                 min_points = self$min_points,
+                                 n_peak = self$max_peaks, flat_cut = self$flat_cut)
 
-                             peak_cols <- names(out_peaks)
-                             peak_cols <- peak_cols[!(peak_cols %in% "points")]
-                             self$peak_list <- out_peaks[, peak_cols]
-                             self$point_list <- out_peaks[, "points"]
+     peak_cols <- names(out_peaks)
+     peak_cols <- peak_cols[!(peak_cols %in% "points")]
+     self$peak_list <- out_peaks[, peak_cols]
+     self$point_list <- out_peaks[, "points"]
 
-                             if (!is.null(self$peak_list$Area)) {
-                               model_values <- self$sd_predict_function(self$mz_model, self$peak_list$ObservedMZ)
-                               self$peak_list$NormalizedArea <- self$peak_list$Area / model_values
-                             }
+     if (!is.null(self$peak_list$Area)) {
+       model_values <- self$sd_predict_function(self$mz_model, self$peak_list$ObservedMZ)
+       self$peak_list$NormalizedArea <- self$peak_list$Area / model_values
+     }
 
-                             invisible(self)
-                           },
+     invisible(self)
+   },
 
-                           initialize = function(scan){
-                             self$scan <- scan
+   initialize = function(scan){
+     self$scan <- scan
 
-                             invisible(self)
-                           }
+     invisible(self)
+   }
 
-                         ))
+))

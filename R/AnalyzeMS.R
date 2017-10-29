@@ -160,7 +160,13 @@ PeakFinder <- R6::R6Class("PeakFinder",
       self$multi_scan_peaklist$sd_predict_function <- default_sd_predict_function
 
       self$multi_scan_peaklist$find_peaks(self$raw_data)
+      self$multi_scan_peaklist$scan_indices <- seq(1, length(self$multi_scan_peaklist$peak_list_by_scans))
       self$multi_scan_peaklist$calculate_noise()
+
+
+      self$multi_scan_peaklist$remove_no_signal_scans()
+      #
+      #       self$calculate_average_mz_model()
     },
 
     scan_start = NULL,
@@ -498,7 +504,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
 #' @return list
 default_sd_fit_function <- function(x, y){
   loess_frame <- data.frame(x = x, y = y)
-  loess_fit <- stats::loess(y ~ x, data = loess_frame, span = 1.5, control = stats::loess.control(surface = "direct"))
+  loess_fit <- stats::loess(y ~ x, data = loess_frame, control = stats::loess.control(surface = "direct"))
   loess_fit
 }
 
