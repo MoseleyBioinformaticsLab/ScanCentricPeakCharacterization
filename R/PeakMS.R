@@ -2190,7 +2190,103 @@ summarize_correspondencelist <- function(correspondencelist_object, peakfinder_o
 
   out_lists <- c(average_peaks, individual_samples_scans, map_samples_zip, processing_info)
 
-  out_lists
+  summarized_correspondence(out_lists)
+}
+
+summarized_correspondence <- function(x){
+  if (!is.list(x)) {
+    stop("X must be a list!")
+  } else {
+    structure(x, class = "summarized_correspondence")
+  }
+}
+
+as.data.frame.summarized_correspondence <- function(x, keep_peaks = NULL){
+  null_entries <- purrr::map_lgl(x, is.null)
+  x <- x[!null_entries]
+
+  has_peaks <- purrr::map_lgl(x, function(x){!is.null(x$Peaks)})
+  x <- x[has_peaks]
+
+  if (!is.null(keep_peaks)) {
+    x <- x[names(x) %in% keep_peaks]
+  }
+
+  peak_df <- purrr::map_df(x, function(in_peaks){
+    all_peaks <- in_peaks$Peaks
+    peak_index <- seq(1, length(all_peaks))
+    purrr::map_df(peak_index, function(ipeak){
+      #print(ipeak)
+      single_peak <- all_peaks[[ipeak]]
+
+      if (is.null(single_peak$Peak)) {
+        peak_id <- ipeak
+      } else {
+        peak_id <- single_peak$Peak
+      }
+      if (is.na(single_peak$Sample) & !is.null(single_peak$Scan)) {
+        scan <- as.character(single_peak$Scan)
+        nscan <- single_peak$nscan
+      } else {
+        scan <- single_peak$Sample
+        nscan <- single_peak$N
+      }
+
+      extract_values <- c("ObservedMZ", "Height", "Area", "NormalizedArea")
+
+      tmp_df <- purrr::map_df(extract_values, function(in_value){
+        extract_summary <- c("Mean", "Median", "SD", "RSD", "ModelSD")
+        use_summary <- intersect(names(single_peak[[in_value]]), extract_summary)
+        summary_df <- purrr::map_df(use_summary, function(in_summary){
+          data.frame(value = single_peak[[in_value]][[in_summary]],
+                     summary = in_summary, stringsAsFactors = FALSE)
+        })
+        summary_df$extracted <- in_value
+        summary_df
+      })
+      tmp_df$peak_id <- peak_id
+      tmp_df$scan <- scan
+      tmp_df$nscan <- nscan
+
+      tmp_df
+    })
+
+  })
+  peak_df
+}
+
+#' get sample ti
+#'
+#' Calculate total intensity from a sample
+#'
+#' @param x the object
+#'
+#' @export
+sample_ti <- function(x) UseMethod("sample_ti")
+
+
+#' get sample ti
+#'
+#' Calculate the sample total intensities
+#'
+#' @param x the object
+#' @param min_scan how many scans should a peak be in to contribute?
+#'
+#' @export
+#'
+#' @importFrom dplyr filter select '%>%'
+#' @importFrom magrittr extract
+#'
+#' @return data.frame
+sample_ti.MasterPeakList <- function(x, min_scan = 2){
+  summarized_list <- summarize_correspondencelist(x, individual_values = FALSE)
+
+  summarized_df <- as.data.frame(summarized_list, keep_peaks = "peak_list.json")
+
+  sample_tic <- dplyr::filter(summarized_df, extracted %in% "Height", summary %in% "Mean") %>%
+    select(value) %>% extract("value") %>% sum()
+
+  sample_tic
 }
 
 #' lists_2_json
