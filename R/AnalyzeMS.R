@@ -88,6 +88,7 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
 #' @export
 PeakFinder <- R6::R6Class("PeakFinder",
   public = list(
+    run_time = NULL,
     raw_data = NULL,
     peak_method = NULL,
     noise_function = NULL,
@@ -429,6 +430,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
     run_correspondence = function(){
       # only do this stuff if needed, otherwise, start from the already saved
       # data.
+      tictoc::tic()
       if (is.null(self$multi_scan) & (!is.null(self$raw_data))) {
         self$apply_raw_filter()
         self$create_multi_scan()
@@ -448,6 +450,9 @@ PeakFinder <- R6::R6Class("PeakFinder",
       self$create_report()
       self$create_peak_data()
       self$create_processing_info()
+      tmp_time <- tictoc::toc()
+      self$run_time <- tmp_time$toc - tmp_time$tic
+      invisible(self)
     },
 
     export_data = function(){
