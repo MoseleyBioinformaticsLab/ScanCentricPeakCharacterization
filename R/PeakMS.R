@@ -679,6 +679,11 @@ MultiScans <- R6::R6Class("MultiScans",
 
 MasterPeakList <- R6::R6Class("MasterPeakList",
   public = list(
+    summarize = function(averaged_values = TRUE, individual_values = FALSE){
+      summarize_correspondencelist(self, averaged_values = averaged_values,
+                                   individual_values = individual_values)
+    },
+
     scan_mz = NULL,
     scan_height = NULL,
     scan_area = NULL,
@@ -1237,6 +1242,8 @@ filter_information_content = function(master_peak_list, multi_scan_peak_list, re
 #'
 FindCorrespondence <- R6::R6Class("FindCorrespondence",
    public = list(
+
+
      # data needed by others
      multi_scan_peak_list = NULL,
      mz_range = c(-Inf, Inf),
@@ -1567,6 +1574,10 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
 MasterSampleList <- R6::R6Class("MasterSampleList",
                                 inherit = MasterPeakList,
                                 public = list(
+                                  summarize = function(averaged_values = FALSE, individual_values = TRUE){
+                                    summarize_correspondencelist(self, averaged_values = averaged_values,
+                                                                 individual_values = individual_values)
+                                  },
                                   sample_id = NULL,
                                   n_scan = NULL,
                                   scans_in_sample = NULL,
@@ -1576,6 +1587,7 @@ MasterSampleList <- R6::R6Class("MasterSampleList",
                                                         mz_range = c(-Inf, Inf), noise_calculator = NULL, sd_fit_function = NULL,
                                                         sd_predict_function = NULL,
                                                         offset_fit_function = NULL, offset_predict_function = NULL, rmsd_min_scans = 3){
+                                    #browser(expr = TRUE)
                                     assertthat::assert_that(any(class(multi_sample_peak_list) %in% "MultiSamplePeakList"))
 
                                     if (is.null(sd_model)) {
@@ -1618,7 +1630,10 @@ MasterSampleList <- R6::R6Class("MasterSampleList",
 
                                     self$rmsd_min_scans <- rmsd_min_scans
                                     self$sample_id <- multi_sample_peak_list$get_sample_id()
-                                    self$zip_file <- multi_sample_peak_list$get_zip_files()
+                                    if (!is.null(multi_sample_peak_list$get_zip_files)) {
+                                      self$zip_file <- multi_sample_peak_list$get_zip_files()
+                                    }
+
                                     self$peak_correspondence(multi_sample_peak_list, peak_calc_type, sd_model = sd_model, multiplier = multiplier,
                                                              mz_range = mz_range)
                                     all_samples <- multi_sample_peak_list$get_scan_peak_lists()
@@ -2065,13 +2080,8 @@ CorrespondentPeakList <- R6::R6Class("CorrespondentPeakList",
 #'
 #' @export
 #' @return list
-summarize_correspondencelist <- function(correspondencelist_object, peakfinder_obj = NULL, averaged_values = TRUE,
-                                       individual_values = FALSE,
-                                       package_used = "package:SIRM.FTMS.peakCharacterization"){
-  if (inherits(correspondencelist_object, "MasterSampleList")) {
-    averaged_values <- FALSE
-    individual_values <- TRUE
-  }
+summarize_correspondencelist <- function(correspondencelist_object, averaged_values = TRUE,
+                                       individual_values = FALSE){
 
   if (is.null(correspondencelist_object$sd_model)) {
     correspondencelist_object$calculate_sd_model()
@@ -2183,12 +2193,7 @@ summarize_correspondencelist <- function(correspondencelist_object, peakfinder_o
     map_samples_zip <- list(samples_to_zip.json = NULL)
   }
 
-
-
-  processing_info <- list(processing_metadata.json = create_processing_info(package = package_used, peakfinder_obj = peakfinder_obj,
-                                                              sd_model = correspondencelist_object$sd_model))
-
-  out_lists <- c(average_peaks, individual_samples_scans, map_samples_zip, processing_info)
+  out_lists <- c(average_peaks, individual_samples_scans, map_samples_zip)
 
   summarized_correspondence(out_lists)
 }
