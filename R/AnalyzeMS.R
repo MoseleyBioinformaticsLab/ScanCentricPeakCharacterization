@@ -88,6 +88,17 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
 #' @export
 PeakFinder <- R6::R6Class("PeakFinder",
   public = list(
+
+    summarize = function(package_used = "package:SIRM.FTMS.peakCharacterization"){
+      processing_info <- list(processing_metadata.json = create_processing_info(package = package_used,
+                                                                               peakfinder_obj = self,
+                                                                               sd_model = self$correspondent_peaks$master_peak_list$sd_model))
+
+      peak_lists <- self$correspondent_peak$master_peak_list$summarize()
+
+      c(processing_info, peak_lists)
+    },
+
     run_time = NULL,
     # Options for multi_scans ----
     raw_data = NULL,
