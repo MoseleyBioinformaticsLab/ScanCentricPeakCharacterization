@@ -2045,7 +2045,9 @@ lists_2_json <- function(lists_to_save, zip_file = NULL, digits = 8, temp_dir = 
     names(lists_to_save) <- paste0("S", seq(1, length(lists_to_save)), ".json")
   }
 
-  dir.create(temp_dir)
+  if (!dir.exists(temp_dir)) {
+    dir.create(temp_dir)
+  }
 
   not_null_files <- !purrr::map_lgl(lists_to_save, is.null)
   lists_to_save <- lists_to_save[not_null_files]
