@@ -13,19 +13,23 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
 
    find_peaks = function(...){
      if ("R6" %in% class(self$peak_finder)) {
-       self$peak_finder$raw_data <- self$zip_ms$raw_ms
-       self$peak_finder$out_file <- self$zip_ms$out_file
-       self$peak_finder$run_correspondence()
-       self$found_peaks <- self$peak_finder$export_data()
-       self$peak_finder$raw_data <- NULL
-       self$peak_finder$multi_scan <- NULL
-       peak_finder <- self$peak_finder
-       saveRDS(peak_finder, file = file.path(self$zip_ms$temp_directory, "peak_finder.rds"))
-       scans_to_json(peak_finder, file_output = self$zip_ms$temp_directory)
+       self$zip_ms$peak_finder <- self$peak_finder
+       self$zip_ms$peak_finder$raw_data <- self$zip_ms$raw_ms
+
+       self$zip_ms$peak_finder$run_correspondence()
+       self$zip_ms$peak_finder$raw_data <- NULL
      } else if ("function" %in% class(self$peak_finder)) {
        self$found_peaks <- self$peak_finder(self$zip_ms$raw_ms, ...)
      }
-     self$zip_ms$add_peak_list(self$found_peaks)
+   },
+
+   summarize = function(){
+     self$zip_ms$json_summary <- self$zip_ms$peak_finder$summarize()
+   },
+
+   save_peaks = function(){
+     self$zip_ms$save_peak_finder()
+     self$zip_ms$save_json()
    },
 
    write_zip = function(){
@@ -51,6 +55,8 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
    run_all = function(){
      self$load_file()
      self$find_peaks()
+     self$summarize()
+     self$save_peaks()
      self$write_zip()
      self$zip_ms$cleanup()
    },
