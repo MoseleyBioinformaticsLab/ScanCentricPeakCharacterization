@@ -207,6 +207,10 @@ ZipMS <- R6::R6Class("ZipMS",
       }
     },
 
+    save_json = function(){
+      lists_2_json(self$json_summary, temp_dir = self$temp_directory)
+    },
+
     save_peak_finder = function(){
       peak_finder <- self$peak_finder
       saveRDS(peak_finder, file.path(self$temp_directory, "peak_finder.rds"))
