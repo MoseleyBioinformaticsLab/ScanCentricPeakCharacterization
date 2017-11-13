@@ -1,7 +1,7 @@
 Package: SIRM.FTMS.peakCharacterization
 Title: Functionality for Detecting and Characterizing Peaks
-Version: 0.0.392
-Date: 2017-11-10
+Version: 0.0.393
+Date: 2017-11-13
 Authors@R: person(given = c("Robert", "M"), family = c("Flight"), email
         = "rflight79@gmail.com", role = c("aut", "cre"))
 Description: Provides a functions and classes for detecting,
