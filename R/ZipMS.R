@@ -205,7 +205,14 @@ ZipMS <- R6::R6Class("ZipMS",
         }
 
       }
-    }
+    },
+
+    save_peak_finder = function(){
+      peak_finder <- self$peak_finder
+      saveRDS(peak_finder, file.path(self$temp_directory, "peak_finder.rds"))
+      invisible(self)
+    },
+
     load_peak_list = function(){
       if (file.exists(file.path(self$temp_directory, "peak_finder.rds"))) {
         tmp_env <- new.env()
@@ -310,6 +317,10 @@ ZipMS <- R6::R6Class("ZipMS",
     cleanup = function(){
       unlink(self$temp_directory, recursive = TRUE, force = TRUE)
       #file.remove(self$temp_directory)
+    },
+
+    finalize = function(){
+      unlink(self$temp_directory, recursive = TRUE)
     },
 
     add_peak_list = function(peak_list_data){
