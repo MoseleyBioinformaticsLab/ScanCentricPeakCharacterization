@@ -174,6 +174,8 @@ ZipMS <- R6::R6Class("ZipMS",
     metadata_file = NULL,
     raw_ms = NULL,
     peaks = NULL,
+    peak_finder = NULL,
+    json_summary = NULL,
     id = NULL,
     out_file = NULL,
     temp_directory = NULL,
@@ -183,6 +185,27 @@ ZipMS <- R6::R6Class("ZipMS",
                 file.path(self$temp_directory, self$metadata$raw$metadata))
     },
 
+    load_peak_finder = function(){
+      if (file.exists(file.path(self$temp_directory, "peak_finder.rds"))) {
+        peak_finder <- try(readRDS(file.path(self$temp_directory, "peak_finder.rds")))
+
+        if (inherits(peak_finder, "try-error")) {
+          peak_finder <- try({
+            tmp_env <- new.env()
+            load(file.path(self$temp_directory, "peak_finder.rds"), envir = tmp_env)
+            tmp_env$peak_finder
+          })
+        }
+        if (inherits(peak_finder, "PeakFinder")) {
+          self$peak_finder
+          rm(peak_finder)
+          message("Peak Finder Binary File Loaded!")
+        } else {
+          stop("peak_finder.rds is not valid!")
+        }
+
+      }
+    }
     load_peak_list = function(){
       if (file.exists(file.path(self$temp_directory, "peak_finder.rds"))) {
         tmp_env <- new.env()
