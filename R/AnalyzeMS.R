@@ -309,6 +309,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
       mpl$normalization_factors <- normalization_factors
       mpl$normalized_by <- intensity_measure
       self$correspondent_peaks$master_peak_list <- mpl
+      self$correspondent_peaks$master_peak_list$calculate_total_intensity()
       invisible(self)
     },
 
