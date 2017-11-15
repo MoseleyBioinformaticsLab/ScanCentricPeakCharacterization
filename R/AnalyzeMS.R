@@ -100,7 +100,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
                                                                                peakfinder_obj = self,
                                                                                sd_model = self$correspondent_peaks$master_peak_list$sd_model))
 
-      peak_lists <- self$correspondent_peak$master_peak_list$summarize()
+      peak_lists <- self$correspondent_peaks$master_peak_list$summarize()
 
       c(processing_info, peak_lists)
     },
