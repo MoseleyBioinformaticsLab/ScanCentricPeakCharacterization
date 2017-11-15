@@ -1879,7 +1879,13 @@ summarize_correspondencelist <- function(correspondencelist_object, averaged_val
   }
 
   if (averaged_values) {
+    if (!is.null(correspondencelist_object$total_intensity)) {
+      total_intensity <- correspondencelist_object$total_intensity
+    } else {
+      total_intensity <- NA
+    }
     average_peaks <- list(peak_list.json = list(
+      TotalIntensity = total_intensity,
       Peaks = purrr::map(seq(1, n_peak), function(in_peak){
       tmp_index <- !is.na(correspondencelist_object$scan_mz[in_peak, ])
 
