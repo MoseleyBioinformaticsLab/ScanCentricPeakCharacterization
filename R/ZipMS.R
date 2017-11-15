@@ -181,7 +181,7 @@ ZipMS <- R6::R6Class("ZipMS",
     temp_directory = NULL,
 
     load_raw = function(){
-      RawMS$new(file.path(self$temp_directory, self$metadata$raw$raw_data),
+      self$raw_ms <- RawMS$new(file.path(self$temp_directory, self$metadata$raw$raw_data),
                 file.path(self$temp_directory, self$metadata$raw$metadata))
     },
 
@@ -197,7 +197,7 @@ ZipMS <- R6::R6Class("ZipMS",
           })
         }
         if (inherits(peak_finder, "PeakFinder")) {
-          self$peak_finder
+          self$peak_finder <- peak_finder
           rm(peak_finder)
           message("Peak Finder Binary File Loaded!")
         } else {
