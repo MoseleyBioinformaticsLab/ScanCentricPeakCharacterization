@@ -436,7 +436,8 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
       keep_peaks <- peak_scans >= min_scans
 
-      self$total_intensity <- sum(rowMeans(self$scan_height[keep_peaks, ], na.rm = TRUE))
+      self$total_intensity <- list(Value = sum(rowMeans(self$scan_height[keep_peaks, ], na.rm = TRUE)),
+                                   MinimumNumberOfScans = min_scans)
       invisible(self)
     },
 
