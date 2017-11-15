@@ -421,6 +421,25 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
                                    individual_values = individual_values)
     },
 
+    total_intensity = NULL,
+    calculate_total_intensity = function(n_scan = 0.1){
+
+      if (!self$is_normalized) {
+        warning("Total Intensity with out Normalization is a bad idea!")
+      }
+
+      peak_scans <- self$count_notna()
+
+      max_scans <- max(peak_scans)
+
+      min_scans <- correctly_round_numbers(max_scans, n_scan)
+
+      keep_peaks <- peak_scans >= min_scans
+
+      self$total_intensity <- sum(rowMeans(self$scan_height[keep_peaks, ], na.rm = TRUE))
+      invisible(self)
+    },
+
     scan_mz = NULL,
     scan_height = NULL,
     scan_area = NULL,
