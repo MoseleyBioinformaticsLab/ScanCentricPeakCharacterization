@@ -1891,7 +1891,10 @@ summarize_correspondencelist <- function(correspondencelist_object, averaged_val
       tmp_index <- !is.na(correspondencelist_object$scan_mz[in_peak, ])
 
       list(Sample = "Averaged",
-           N = (sum(tmp_index)),
+           # basically assume we only want average when there are scans, as an average
+           # makes no sense across samples, so NScan is used here and in single samples
+           # to be consistent to make it easier for reading data for doing assignment
+           NScan = (sum(tmp_index)),
            Scans = correspondencelist_object$scan[tmp_index],
            ObservedMZ = average_mz(correspondencelist_object$scan_mz[in_peak, ],
                                    sd_model, correspondencelist_object$sd_predict_function),
