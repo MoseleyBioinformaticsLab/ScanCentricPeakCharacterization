@@ -1,0 +1,172 @@
+---
+title: "Transform Raw Data"
+author: "Robert M Flight"
+date: "`r Sys.time()`"
+output: html_document
+---
+
+## Purpose
+
+Hunter has an idea about applying both the normalization and possibly M/Z correction
+to the `raw` scan level data, and see if we can do something about **noise**
+detection in general. See [this issue](https://gitlab.cesb.uky.edu/rmflight/SIRM.FTMS.peakCharacterization/issues/21)
+for some discussion.
+
+To do this, we need to do two things:
+
+1. Verify that we can sum / average scans the same way that `xcms` does after
+extracting the raw data peaks
+
+2. Be able to apply the normalization and/or m/z corrections to the `raw` data
+points.
+
+## Verify Summations
+
+First, lets see if we can do what we need to with the raw data points. Normally,
+we extract each scan by scan, and if we want to do something with the averaged
+spectrum, we let `xcms` do it for us. But now we want to do everything ourselves,
+so we need to verify we can get the same result.
+
+```{r xcms_summation}
+library(SIRM.FTMS.peakCharacterization)
+library(xcms)
+library(cowplot)
+library(dplyr)
+
+zip_data <- zip_ms("test_files/bcal_good_UK001N1exoposb.mzML", load_raw = TRUE, load_peak_list = FALSE)
+
+xcms_sum <- as.data.frame(xcms::getSpec(zip_data$raw_ms$raw_data, scanrange = c(1, 30)))
+```
+
+
+For our own summation, we will borrow from the source code of `xcms` itself.
+
+```{r own_summation}
+all_scans <- purrr::map_df(seq(1, 30), function(in_scan){
+  tmp_frame <- as.data.frame(xcms::getScan(zip_data$raw_ms$raw_data, scan = in_scan))
+  tmp_frame$scan <- in_scan
+  tmp_frame
+})
+
+all_mz <- sort(unique(all_scans$mz))
+
+int_matrix <- matrix(0, nrow = length(all_mz), ncol = length(unique(all_scans$scan)))
+
+for (iscan in unique(all_scans$scan)) {
+  sub_data <- all_scans[all_scans$scan %in% iscan, ]
+  match_mz <- all_mz %in% sub_data$mz
+  int_matrix[match_mz, iscan] <- sub_data$intensity
+}
+
+all_int <- rowMeans(int_matrix)
+
+own_sum <- data.frame(mz = all_mz, intensity = all_int)
+```
+
+```{r compare_sums}
+xcms_sum[is.na(xcms_sum$intensity), "intensity"] <- 0
+
+all.equal(xcms_sum, own_sum)
+all.equal(xcms_sum$mz, own_sum$mz)
+
+use_points <- sample(seq(1, nrow(own_sum)), 10000)
+plot(xcms_sum$intensity[use_points], own_sum$intensity[use_points])
+```
+
+OK, not quite what I expected. Looking at the source code of the `getSpec` method,
+there is a call to `approx`, which looks like it does some linear interpolation.
+The question is: **is that the correct thing to do?**. Only one way to find out.
+
+## Check Whether Linear Interpolation is Good Idea
+
+To verify if using `approx` makes sense, lets do peak detection on the `xcms_sum`,
+and then compare the point intensities to see if `xcms` or our method makes more
+sense.
+
+```{r find_peaks_compare}
+found_peaks <- pracma::findpeaks(xcms_sum$intensity, nups = 4)
+peak_index <- seq(found_peaks[1, 3], found_peaks[1, 4])
+
+test_peak <- xcms_sum[peak_index, ]
+test_peak$type <- "xcms"
+own_sum$type <- "own"
+test_peak <- rbind(test_peak, own_sum[peak_index, ])
+
+ggplot(test_peak, aes(x = mz, y = intensity, color = type)) + geom_point() + geom_line()
+```
+
+OK, so based on this plot, it **definitely makes sense** to use `approx` and do
+some form of linear interpolation.
+
+But lets also evaluate what are the individual peaks from each scan underneath this thing.
+
+```{r indiv_peaks}
+mz_range <- range(test_peak$mz)
+
+test_scans <- filter(all_scans, (mz >= mz_range[1]) & (mz <= mz_range[2]))
+
+ggplot(test_scans, aes(x = mz, y = intensity, color = as.factor(scan))) + geom_point() + geom_line()
+```
+
+Now lets look at what `approx` does using our little test peak.
+
+```{r use_approx}
+test_mz <- all_mz[(all_mz >= mz_range[1]) & (all_mz <= mz_range[2])]
+
+int_df <- purrr::map_df(unique(test_scans$scan), function(in_scan){
+  scan_df <- filter(test_scans, scan %in% in_scan)
+  out_int <- approx(x = scan_df$mz, y = scan_df$intensity, xout = test_mz)$y
+  data.frame(mz = test_mz, intensity = out_int, scan = in_scan)
+})
+
+ggplot(int_df, aes(x = mz, y = intensity, color = as.factor(scan))) + geom_point() + geom_line()
+```
+
+So, we definitely need to use `approx` to interpolate the values. This is useful 
+to know. We at least need to do this when we try to average the points together.
+
+```{r averave_approx}
+int_matrix2 <- matrix(0, nrow = length(test_mz), ncol = length(unique(test_scans$scan)))
+colnames(int_matrix2) <- unique(test_scans$scan)
+
+for (iscan in unique(test_scans$scan)) {
+  scan_df <- filter(test_scans, scan %in% iscan)
+  int_matrix2[, as.character(iscan)] <- approx(x = scan_df$mz, y = scan_df$intensity, xout = test_mz)$y
+}
+int_matrix2[is.na(int_matrix2)] <- 0
+
+own_sum2 <- data.frame(mz = test_mz, intensity = rowMeans(int_matrix2, na.rm = TRUE))
+
+xcms_sum2 <- as.data.frame(xcms::getSpec(zip_data$raw_ms$raw_data, scanrange = unique(test_scans$scan)))
+xcms_sum2 <- filter(xcms_sum2, (mz >= mz_range[1]) & (mz <= mz_range[2]))
+xcms_sum2$type <- "xcms"
+own_sum2$type <- "own"
+test_avg <- rbind(own_sum2, xcms_sum2)
+
+ggplot(test_avg, aes(x = mz, y = intensity, color = type)) + geom_line() + geom_point()
+```
+
+Hmmm, still have an issue with difference in intensities, lets try doing it for
+the 30 scans and see what happens instead.
+
+```{r own_sum_approx}
+int_matrix3 <- matrix(nrow = length(all_mz), ncol = length(unique(all_scans$scan)))
+
+for (iscan in unique(all_scans$scan)) {
+  sub_data <- all_scans[all_scans$scan %in% iscan, ]
+  int_matrix3[, iscan] <- approx(x = sub_data$mz, y = sub_data$intensity, xout = all_mz)$y
+}
+
+all_int3 <- rowMeans(int_matrix3)
+
+own_sum3 <- data.frame(mz = all_mz, intensity = all_int3)
+
+xcms_sum2 <- as.data.frame(xcms::getSpec(zip_data$raw_ms$raw_data, scanrange = c(1, 30)))
+
+all.equal(own_sum3, xcms_sum2)
+```
+
+WooHoo! Got the exact same results, working from the extracted scans. And it
+sort of makes sense, in that we add data points to each scan that are interpolated
+from the full set of points. So, based on this, we should be able to normalize
+the scan to scan intensities rather easily and then do a new average.
