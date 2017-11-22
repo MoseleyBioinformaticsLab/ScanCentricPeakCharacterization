@@ -57,7 +57,7 @@ all_scans <- purrr::map_df(seq(1, 30), function(in_scan){
 
 all_mz <- sort(unique(all_scans$mz))
 
-int_matrix <- matrix(0, nrow = length(all_mz), ncol = length(unique(all_scans$scan)))
+int_matrix <- matrix(NA, nrow = length(all_mz), ncol = length(unique(all_scans$scan)))
 
 for (iscan in unique(all_scans$scan)) {
   sub_data <- all_scans[all_scans$scan %in% iscan, ]
@@ -320,3 +320,106 @@ ggplot(all_data, aes(x = log10(Height))) + geom_histogram(bins = 200, position =
 OK, this is interesting. We definitely broadened the distribution. I think this
 will take a bit more investigation to figure out if the noise peaks are just in
 the very smallest bit of the distribution, or the broad one ranging from 0 to 2.
+
+
+## Alternative Averaging
+
+I actually think part of the problem here is that we are not averaging the
+point intensities properly. Unfortunately, due to the interpolation,
+it is a bit convoluted to do it properly, as you have to sum them once, 
+detect the peaks, and then check if a scan has all original `NA`s over that
+region of M/Z space, and then divide the values by the right number, and then
+do peak characterization on that number.
+
+```{r alternative_averaging}
+another_average <- function(scans_list, min_points = 4){
+  scans <- scans_list$scans
+  unique_mz <- scans_list$mz
+  scan_indices <- seq_along(scans)
+  
+  intensity_matrix <- matrix(nrow = length(unique_mz), ncol = length(scan_indices))
+  original_matrix <- matrix(NA, nrow = length(unique_mz), ncol = length(scan_indices))
+  
+  for (iscan in scan_indices) {
+    intensity_matrix[, iscan] <- approx(x = scans[[iscan]][, "mz"], y = scans[[iscan]][, "intensity"],
+                                        xout = unique_mz)$y
+    
+    match_mz <- unique_mz %in% scans[[iscan]][, "mz"]
+    original_matrix[match_mz, iscan] <- scans[[iscan]][, "intensity"]
+  }
+  
+  sum_matrix <- rowSums(intensity_matrix, na.rm = TRUE)
+  
+  peak_locations <- pracma::findpeaks(sum_matrix, nups = floor(min_points/2),
+                                      ndowns = floor(min_points/2))
+  
+  n_divide <- rep(iscan, length(sum_matrix))
+  
+  n_peak <- nrow(peak_locations)
+  
+  scan_divider <- purrr::map_df(seq(1, n_peak), function(in_peak) {
+    peak_loc <- seq(peak_locations[in_peak, 3], peak_locations[in_peak, 4])
+    tmp_original <- original_matrix[peak_loc, ]
+    
+    na_sums <- colSums(is.na(tmp_original))
+    
+    data.frame(loc = peak_loc, n_divide = sum(na_sums != length(peak_loc)))
+  })
+  
+  n_divide[scan_divider$loc] <- scan_divider$n_divide
+  
+  avg_matrix <- sum_matrix / n_divide
+  
+  scan_data <- data.frame(mz = unique_mz, intensity = avg_matrix)
+  
+  scan_data$log_int <- metabolomicsUtilities::log_with_min(scan_data$intensity)
+
+  peak_locations <- pracma::findpeaks(scan_data$intensity, nups = floor(min_points/2),
+                                      ndowns = floor(min_points/2))
+  
+  if (is.infinite(n_peak)) {
+    n_peak <- nrow(peak_locations)
+  } else {
+    n_peak <- min(c(nrow(peak_locations), n_peak))
+  }
+
+  peaks <- purrr::map_df(seq(1, n_peak), function(in_peak){
+    #print(in_peak)
+    "!DEBUG Peak `in_peak`"
+    peak_loc <- seq(peak_locations[in_peak, 3], peak_locations[in_peak, 4])
+    out_peak <- get_peak_info(scan_data[peak_loc, ], peak_method = "lm_weighted", min_points = min_points)
+    out_peak$n_point <- length(peak_loc)
+    mz_width <- max(scan_data[peak_loc, "mz"]) - min(scan_data[peak_loc, "mz"])
+    out_peak$mz_width <- mz_width
+    out_peak$peak <- in_peak
+    out_peak$points <- I(list(scan_data[peak_loc, ]))
+    out_peak
+  })
+  peaks
+}
+```
+
+
+```{r use_another}
+raw_another <- another_average(raw_scans)
+norm_another <- another_average(norm_scans)
+```
+
+
+```{r plot_another}
+raw_another$type <- "raw"
+norm_another$type <- "normalized"
+
+all_another <- rbind(raw_another, norm_another)
+ggplot(all_another, aes(x = log10(Height))) + geom_histogram(bins = 200) + facet_wrap(~ type, nrow = 2)
+```
+
+OK, that still doesn't really look *right*. It looks better, but not *right*.
+
+## Try Normalizing Initial Peaks From Each Scan
+
+Finally, here is something else to see if we get the same distributions we are
+seeing. Take the scan level set of peaks, and just munge them together, both
+non-normalized and normalized, and see if those distributions look like what
+we are seeing from the averaged case.
+
