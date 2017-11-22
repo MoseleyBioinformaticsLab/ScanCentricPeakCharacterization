@@ -258,9 +258,65 @@ normalize_scans_list <- function(scans_list, normalization_factors, scan_indices
   })
   
   scans_list$scans <- normalized_scans
+  scans_list
 }
 ```
 
 ## Comparisons
 
-Now that we have all of our functions defined, lets
+Now that we have all of our functions defined, lets compare what happens when
+we average raw and normalized data.
+
+```{r load_processed_data}
+zip_processed <- zip_ms("test_files/zip_files_profiling_X2017.11.15.16.04.25/bcal_good_UK001N1exoposb.zip")
+raw_data <- zip_processed$raw_ms$raw_data
+scan_range <- range(zip_processed$raw_ms$scan_range)
+
+zip_processed$load_peak_finder()
+normalization_factors <- zip_processed$peak_finder$correspondent_peaks$master_peak_list$normalization_factors
+scan_indices <- zip_processed$peak_finder$correspondent_peaks$master_peak_list$scan_indices
+```
+
+```{r raw_data_averaging}
+raw_scans <- extract_scans_list(raw_data, scan_range = scan_range)
+
+# need to make the set of scans that get averaged the same
+raw_scans$scans <- raw_scans$scans[scan_indices]
+
+raw_average <- average_scans_list(raw_scans)
+```
+
+```{r average_normalized_data}
+norm_scans <- extract_scans_list(raw_data, scan_range = scan_range)
+
+norm_scans <- normalize_scans_list(norm_scans, normalization_factors, scan_indices)
+
+norm_average <- average_scans_list(norm_scans)
+```
+
+## Compare Peaks & Distributions
+
+```{r raw_peaks}
+raw_average <- filter(raw_average, !is.na(intensity))
+raw_peaks <- SIRM.FTMS.peakCharacterization:::generate_peaks(raw_average, n_peak = Inf)
+```
+
+```{r norm_peaks}
+norm_average <- filter(norm_average, !is.na(intensity))
+norm_peaks <- SIRM.FTMS.peakCharacterization:::generate_peaks(norm_average, n_peak = Inf)
+```
+
+
+```{r plot_them, fig.width=8, fig.height = 6}
+raw_peaks$type <- "raw"
+norm_peaks$type <- "normalized"
+
+all_data <- rbind(raw_peaks, norm_peaks)
+all_data$type <- forcats::fct_relevel(all_data$type, "raw", "normalized")
+
+ggplot(all_data, aes(x = log10(Height))) + geom_histogram(bins = 200, position = "identity") + facet_wrap(~ type, nrow = 2, ncol = 1) + xlim(c(-.6, 6))
+```
+
+OK, this is interesting. We definitely broadened the distribution. I think this
+will take a bit more investigation to figure out if the noise peaks are just in
+the very smallest bit of the distribution, or the broad one ranging from 0 to 2.
