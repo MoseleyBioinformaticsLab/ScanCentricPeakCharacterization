@@ -11,34 +11,63 @@
 #'
 #' @importFrom purrr map_lgl
 #' @importFrom waitcopy import_json
+#' @importFrom R.utils isAbsolutePath getAbsolutePath
 #'
 #' @export
 raw_metadata_mzml <- function(mzml_files, raw_file_loc, recursive = TRUE){
   # mzml_files <- dir("/home/rmflight/data/test_json_meta/mzml_data", full.names = TRUE)
   # raw_file_loc <- "/home/rmflight/data/test_json_meta"
   # recursive <- TRUE
-  all_json_files <- dir(raw_file_loc, pattern = "json", full.names = TRUE, recursive = recursive)
-  json_data <- data.frame(json_file = all_json_files, id = basename_no_file_ext(all_json_files), stringsAsFactors = FALSE)
+  #
+  if (!isAbsolutePath(mzml_files[1])) {
+    mzml_files <- getAbsolutePath(mzml_files)
+    names(mzml_files) <- NULL
+  }
+
+
+  raw_json_files <- dir(raw_file_loc, pattern = "json$", full.names = TRUE, recursive = recursive)
+  if (!isAbsolutePath(raw_json_files[1])) {
+    raw_json_files <- getAbsolutePath(raw_json_files)
+    names(raw_json_files) <- NULL
+  }
+
+  raw_json_data <- data.frame(json_file = raw_json_files, id = basename_no_file_ext(raw_json_files), stringsAsFactors = FALSE)
   mzml_data <- data.frame(mzml_file = mzml_files, id = basename_no_file_ext(mzml_files), stringsAsFactors = FALSE)
   mzml_data <- mzml_data[file.exists(mzml_files), ]
 
-  json_mzml_match <- dplyr::inner_join(json_data, mzml_data, by = "id")
+
+  json_mzml_match <- dplyr::inner_join(raw_json_data, mzml_data, by = "id")
   json_mzml_match$mzml_meta <- FALSE
 
   did_write_mzml_meta <- purrr::map_lgl(seq(1, nrow(json_mzml_match)), function(in_row){
-    file_meta <- waitcopy::import_json(json_mzml_match[in_row, "json_file"])
+    raw_meta <- waitcopy::import_json(json_mzml_match[in_row, "json_file"])
     #print(json_mzml_match[in_row, "mzml_file"])
     mzml_meta <- try(get_mzml_metadata(json_mzml_match[in_row, "mzml_file"]))
+
+    source_file_data <- mzml_meta$fileDescription$sourceFileList$sourceFile
     if (class(mzml_meta) != "try-error") {
       tmp_model <- as.character(mzml_meta$referenceableParamGroupList$referenceableParamGroup[[1]]$name)
       tmp_serial <- as.character(mzml_meta$referenceableParamGroupList$referenceableParamGroup[[2]]$value)
+      tmp_sha1 <- as.character(mzml_meta$fileDescription$sourceFileList$sourceFile[[3]]$value)
       mzml_meta$run$instrument <- list(model = tmp_model,
                                        serial = tmp_serial)
-      mzml_meta$file <- file_meta
+      if (tmp_sha1 == raw_meta$sha1) {
+        mzml_file <- json_mzml_match[in_row, "mzml_file"]
+        mzml_meta_file <- list(file = basename(mzml_file),
+                               saved_path = mzml_file,
+                               sha1 = digest::digest(mzml_file, algo = "sha1", file = TRUE))
+        mzml_meta$file <- list(raw = raw_meta,
+                               mzml = mzml_meta_file)
 
-      outfile <- paste0(tools::file_path_sans_ext(json_mzml_match[in_row, "mzml_file"]), ".json")
-      cat(jsonlite::toJSON(mzml_meta, pretty = TRUE, auto_unbox = TRUE), file = outfile)
-      did_write <- TRUE
+        outfile <- paste0(tools::file_path_sans_ext(json_mzml_match[in_row, "mzml_file"]), ".json")
+        cat(jsonlite::toJSON(mzml_meta, pretty = TRUE, auto_unbox = TRUE), file = outfile)
+        did_write <- TRUE
+      } else {
+        warning("SHA-1 of Files does not match! Not writing JSON metadata!")
+        did_write <- FALSE
+      }
+
+
     } else {
       did_write <- FALSE
     }
