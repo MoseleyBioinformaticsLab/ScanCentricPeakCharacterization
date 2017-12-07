@@ -175,14 +175,14 @@ json_mzML_2_df <- function(in_file) {
 
   out_df <- purrr::map_df(in_list, function(list_entry){
     data.frame(mzml_id = list_entry$mzML$id,
-               sample_id = gsub(".raw", "", basename(list_entry$file$file)),
+               sample_id = gsub(".raw", "", basename(list_entry$file$raw$file)),
                instrument_serial = list_entry$run$instrument$serial,
                instrument_model = list_entry$run$instrument$model,
                start_time = as.POSIXct(list_entry$run$startTimeStamp),
-               raw_file = list_entry$file$file,
-               md5 = list_entry$file$md5,
-               save_path = list_entry$file$saved_path,
-               original_path = unlist(list_entry$file$original_path),
+               raw_file = list_entry$file$raw$saved_path,
+               sha1 = list_entry$file$sha1,
+               mzml_file = list_entry$file$mzml$saved_path,
+               original_path = paste(unlist(list_entry$file$raw$original_path), collapse = ";"),
                stringsAsFactors = FALSE
     )
   })
