@@ -179,6 +179,7 @@ json_mzML_2_df <- function(in_file) {
                instrument_serial = list_entry$run$instrument$serial,
                instrument_model = list_entry$run$instrument$model,
                start_time = as.POSIXct(list_entry$run$startTimeStamp),
+               polarity = list_entry$run$scanPolarity,
                raw_file = list_entry$file$raw$saved_path,
                sha1 = list_entry$file$raw$sha1,
                mzml_file = list_entry$file$mzml$saved_path,
