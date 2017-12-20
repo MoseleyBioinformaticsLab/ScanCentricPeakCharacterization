@@ -246,13 +246,13 @@ noise_detector <- function(peaklist, intensity_measure = "Height", transform = l
 
   peaklist$not_noise <- intensities > max_noise
 
-  # don't know the transform function directly, so we test for log10 and log2,
+  # don't know the transform function directly, so we test for log10 and log,
   # and if it doesn't match either of those, then we get the cutoff directly
   # from the values themselves
   if (transform(10) == 1) {
     non_transform_cutoff <- 10^max_noise
-  } else if (transform(2) == 1) {
-    non_transform_cutoff <- 2^max_noise
+  } else if (transform(exp(1)) == 1) {
+    non_transform_cutoff <- exp(max_noise)
   } else {
     non_transform_cutoff <- max(peaklist[[intensity_measure]][!peaklist$not_noise])
   }
