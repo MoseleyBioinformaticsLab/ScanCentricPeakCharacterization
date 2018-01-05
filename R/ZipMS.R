@@ -495,6 +495,65 @@ write_zip_file_metadata <- function(zip_obj){
   }
 }
 
+#' plot raw peaks
+#'
+#' Given the raw_ms object, generate a plot of the peaks that are generated from
+#' averaging the scans in the currently set scan-range.
+#'
+#' @param raw_ms either a RawMS object, or data.frame of mz / intensity
+#' @param scan_range which scans to use
+#' @param mz_range the range of M/z's to consider
+#' @param log should the intensities by log10 transformed?
+#'
+#' @return ggplot2 object
+#' @export
+#'
+plot_raw_peaks <- function(raw_ms, scan_range = NULL, mz_range = NULL, log = FALSE) {
+  if (inherits(raw_ms, "RawMS")) {
+    if (is.null(scan_range)) {
+      scan_range <- raw_ms$scan_range
+    }
+    peaks <- raw_peak_intensity(raw_ms, scanrange = scan_range)
+
+  } else if (inherits(raw_ms, "data.frame")) {
+    peaks <- raw_ms
+
+  }
+  if (!is.null(mz_range)) {
+    peaks <- peaks[(peaks$mz >= mz_range[1]) & (peaks$mz <= mz_range[2]), ]
+  }
+
+  if (log) {
+    peaks$intensity <- log10(peaks$intensity + 1)
+  }
+
+  ggplot(peaks, aes(x = mz, xend = mz, y = 0, yend = intensity)) + geom_segment() +
+    labs(x = "M/Z", y = "Intensity")
+}
+
+#' raw peaks intensities
+#'
+#' generate raw peaks from just averaging scans via xcms
+#'
+#' @param raw_ms an RawMS object
+#' @param scanrange the range of scans to use, default is derived from raw_ms
+#'
+#' @export
+#' @importFrom xcms getSpec
+#' @importFrom pracma findpeaks
+#' @return data.frame of mz and intensity
+#'
+raw_peak_intensity <- function(raw_ms, scanrange = raw_ms$scan_range) {
+  mean_scan <- xcms::getSpec(raw_ms$raw_data, scanrange = scanrange)
+  mean_scan <- mean_scan[!is.na(mean_scan[, 2]), ]
+  mean_peaks <- pracma::findpeaks(mean_scan[, 2], nups = 2)
+
+  mean_peak_intensity <- data.frame(mz = mean_scan[mean_peaks[, 2], 1],
+                             intensity = mean_scan[mean_peaks[, 2], 2])
+  mean_peak_intensity
+}
+
+
 #' raw peaks
 #'
 #' generate raw peaks from just averaging scans via xcms
