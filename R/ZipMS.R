@@ -503,12 +503,12 @@ write_zip_file_metadata <- function(zip_obj){
 #' @param raw_ms either a RawMS object, or data.frame of mz / intensity
 #' @param scan_range which scans to use
 #' @param mz_range the range of M/z's to consider
-#' @param log should the intensities by log10 transformed?
+#' @param transform apply a transform to the data
 #'
 #' @return ggplot2 object
 #' @export
 #'
-plot_raw_peaks <- function(raw_ms, scan_range = NULL, mz_range = NULL, log = FALSE) {
+plot_raw_peaks <- function(raw_ms, scan_range = NULL, mz_range = NULL, transform = NULL) {
   if (inherits(raw_ms, "RawMS")) {
     if (is.null(scan_range)) {
       scan_range <- raw_ms$scan_range
@@ -523,8 +523,8 @@ plot_raw_peaks <- function(raw_ms, scan_range = NULL, mz_range = NULL, log = FAL
     peaks <- peaks[(peaks$mz >= mz_range[1]) & (peaks$mz <= mz_range[2]), ]
   }
 
-  if (log) {
-    peaks$intensity <- log10(peaks$intensity + 1)
+  if (!is.null(transform)) {
+    peaks$intensity <- transform(peaks$intensity + 1)
   }
 
   ggplot(peaks, aes(x = mz, xend = mz, y = 0, yend = intensity)) + geom_segment() +
