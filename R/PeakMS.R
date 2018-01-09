@@ -2125,6 +2125,7 @@ create_processing_info = function(package = "package:SIRM.FTMS.peakCharacterizat
       document_peakfinder$clone <- NULL
       peak_method <- peakfinder_obj$peak_method
       scan_range <- peakfinder_obj$raw_data$scan_range
+      run_time <- peakfinder_obj$run_time
     }
 
   } else {
@@ -2143,6 +2144,7 @@ create_processing_info = function(package = "package:SIRM.FTMS.peakCharacterizat
   processing_info <- list(Package = package,
                           Version = pkg_description$Version,
                           Sha = pkg_sha,
+                          RunTime = run_time,
                           FunctionCalled = document_peakfinder,
                                Parameters = list(Method = peak_method,
                                                  Scans = scan_range),
