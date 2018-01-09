@@ -2026,6 +2026,160 @@ as.data.frame.summarized_correspondence <- function(x, keep_peaks = NULL){
   peak_df
 }
 
+peak_list_2_df <- function(peak_list,
+                           summary_values = c("ObservedMZ", "Height", "Area", "NormalizedArea"),
+                           summary_types = c("Mean", "Median", "SD", "RSD", "ModelSD")) {
+  n_peaks <- length(peak_list)
+  peak_index <- seq(1, n_peaks)
+
+  purrr::map_df(peak_index, function(ipeak){
+    #print(ipeak)
+    single_peak <- peak_list[[ipeak]]
+
+    if (is.null(single_peak$Peak)) {
+      peak_id <- ipeak
+    } else {
+      peak_id <- single_peak$Peak
+    }
+    if (is.na(single_peak$Sample) & !is.null(single_peak$Scan)) {
+      scan <- as.character(single_peak$Scan)
+    } else {
+      scan <- single_peak$Sample
+    }
+    nscan <- single_peak$NScan
+
+    tmp_df <- purrr::map_df(summary_values, function(in_value){
+      use_summary <- intersect(names(single_peak[[in_value]]), summary_types)
+      summary_df <- purrr::map_df(use_summary, function(in_summary){
+        data.frame(value = single_peak[[in_value]][[in_summary]],
+                   summary = in_summary, stringsAsFactors = FALSE)
+      })
+      summary_df$extracted <- in_value
+      summary_df
+    })
+    tmp_df$peak_id <- peak_id
+    tmp_df$scan <- scan
+    tmp_df$nscan <- nscan
+
+    tmp_df
+  })
+}
+
+split_adduct <- function(emf, split_chr = "_"){
+  emf_split <- strsplit(emf, split = split_chr, fixed = TRUE)
+  purrr::map_df(emf_split, function(x){
+    data.frame(Adduct = x[1], EMF2 = x[2], stringsAsFactors = FALSE)
+  })
+}
+
+replace_null <- function(in_list, replace_value = NA) {
+  purrr::map(in_list, function(x){
+    if (is.null(x)) {
+      replace_value
+    } else {
+      x
+    }
+  })
+}
+
+assignment_list_2_df <- function(in_assignment, include_non_primary = TRUE){
+  assign_types <- purrr::map_chr(in_assignment, "Type")
+
+  if (!include_non_primary) {
+    in_assignment <- in_assignment[assign_types %in% "Primary"]
+  }
+
+  in_assignment <- purrr::map(in_assignment, replace_null)
+
+  assign_df <- purrr::map_df(in_assignment, as.data.frame, stringsAsFactors = FALSE)
+
+}
+
+peak_assignments_2_df <- function(peak_list, include_non_primary = TRUE) {
+  n_peaks <- length(peak_list)
+  peak_index <- seq(1, n_peaks)
+
+  assignments <- purrr::map(peak_index, function(ipeak){
+    #print(ipeak)
+    single_peak <- peak_list[[ipeak]]
+
+    if (is.null(single_peak$Peak)) {
+      peak_id <- ipeak
+    } else {
+      peak_id <- single_peak$Peak
+    }
+
+    if (length(single_peak$Assignments) != 0) {
+      assign_df <- assignment_list_2_df(single_peak$Assignments)
+      assign_df$peak_id <- peak_id
+    } else {
+      assign_df <- NULL
+    }
+    assign_df
+  })
+
+  null_assignments <- purrr::map_lgl(assignments, is.null)
+  assignments <- assignments[!null_assignments]
+  assignments <- purrr::map_df(assignments, function(x){x})
+  assignments <- cbind(assignments, split_adduct(assignments[["EMF"]]))
+  assignments
+}
+
+extract_peak_characteristics <- function(peak_df, extract_variables = c("ObservedMZ", "Height"), extract_summary = c("Mean")){
+  expanded_combinations <- expand.grid(extract_variables, extract_summary)
+  expected_variables <- paste0(expanded_combinations[,1], ".", expanded_combinations[,2])
+
+  peak_df <- peak_df[(peak_df$extracted %in% extract_variables) & (peak_df$summary %in% extract_summary), ]
+  peak_df$extract_variable <- paste0(peak_df$extracted, ".", peak_df$summary)
+
+  split_by_id <- split(peak_df, peak_df$peak_id)
+  purrr::map_df(split_by_id, function(x){
+    tmp_vector <- x$value
+    names(tmp_vector) <- x$extract_variable
+    out_vector <- tmp_vector[expected_variables]
+    names(out_vector) <- expected_variables
+    out_frame <- as.data.frame(as.list(out_vector), stringsAsFactors = FALSE)
+    out_frame$peak_id <- x$peak_id[1]
+    out_frame$nscan <- x$nscan[1]
+    out_frame$scan <- x$scan[1]
+    out_frame
+  })
+}
+
+merge_peak_characteristics_assignments <- function(extracted_characteristics, assignment_df, keep_only = "assignments"){
+  join_type <- switch(keep_only,
+                      assignments = dplyr::right_join,
+                      peaks = dplyr::left_join,
+                      both = dplyr::full_join)
+
+  out_df <- join_type(extracted_characteristics, assignment_df, by = c("peak_id"))
+
+  out_df
+}
+
+#' peak mz, height, assignments
+#'
+#' @param peak_list the peak list from reading some JSON
+#' @param variables which variables to extract (default: ObservedMZ, Height)
+#' @param summaries which summary variables to extract (default: Mean)
+#' @param include_non_primary include non-primary assignments (default: TRUE)
+#' @param keep_peaks keep "both" original and assigned peaks, "assignments" only, or original "peaks"
+#'
+#' @export
+#' @return data.frame
+#'
+assigned_peak_info <- function(peak_list, variables = c("ObservedMZ", "Height"),
+                               summaries = "Mean", include_non_primary = TRUE,
+                               keep_peaks = "assignments"){
+
+  peak_df_1 <- peak_list_2_df(peak_list, summary_values = variables, summary_types = summaries)
+  peak_df_2 <- extract_peak_characteristics(peak_df_1, extract_variables = variables, extract_summary = summaries)
+
+  peak_assignments <- peak_assignments_2_df(peak_list, include_non_primary = include_non_primary)
+
+  merge_peak_characteristics_assignments(peak_df_2, peak_assignments, keep_only = keep_peaks)
+}
+
 #' get sample ti
 #'
 #' Calculate total intensity from a sample
