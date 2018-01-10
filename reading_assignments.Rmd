@@ -1,0 +1,72 @@
+# Purpose
+
+To work out how to read in and work with the assignments.
+
+# Test Assignment
+
+```{r assignment_file}
+test_peaks <- jsonlite::read_json("~/data/cesb_data/assignments/lung_cancer_matched_tissue/2018-01-04-000000/100Cpos.json.output", simplifyVector = FALSE)$Peaks
+
+assignments <- purrr::map(test_peaks, "Assignments")
+no_assign <- purrr::map_lgl(assignments, is.null)
+assignments <- assignments[!no_assign]
+
+replace_null <- function(in_list, replace_value = NA) {
+  purrr::map(in_list, function(x){
+    if (is.null(x)) {
+      replace_value
+    } else {
+      x
+    }
+  })
+}
+
+split_adduct <- function(emf, split_chr = "_"){
+  emf_split <- strsplit(emf, split = split_chr, fixed = TRUE)
+  purrr::map_df(emf_split, function(x){
+    data.frame(Adduct = x[1], EMF2 = x[2], stringsAsFactors = FALSE)
+  })
+}
+
+assignment_list_2_df <- function(in_assignment, include_non_primary = FALSE){
+  assign_types <- purrr::map_chr(in_assignment, "Type")
+  
+  if (!non_primary) {
+    in_assignment <- in_assignment[assign_types %in% "Primary"]
+  }
+  
+  in_assignment <- purrr::map(in_assignment, replace_null)
+  
+  assign_df <- purrr::map_df(in_assignment, as.data.frame, stringsAsFactors = FALSE)
+  
+}
+
+assign_df1 <- purrr::map_df(assignments, assignment_list_2_df)
+assign_df1 <- cbind(assign_df1, split_adduct(assign_df1$EMF))
+```
+
+
+```{r}
+read_assignments <- function(json_file, peak_obj = "Peaks", adduct_split_chr = "_", include_non_primary = FALSE){
+  json_peaks <- jsonlite::read_json(json_file, simplifyVector = FALSE)[[peak_obj]]
+  
+  assignments <- purrr::map(json_peaks, "Assignments")
+  
+  have_assignments <- !purrr::map_lgl(assignments, is.null)
+  
+  assignments <- assignments[have_assignments]
+  
+  assign_df <- purrr::map_df(assignments, assignment_list_2_df, include_non_primary)
+  
+  assign_df <- cbind(assign_df, split_adduct(assign_df[["EMF"]]))
+  
+  assign_df
+}
+```
+
+
+```{r}
+c_pos <- read_assignments("~/data/cesb_data/assignments/lung_cancer_matched_tissue/2017-12-11-000000/100Cpos.json.output")
+n_pos <- read_assignments("~/data/cesb_data/assignments/lung_cancer_matched_tissue/2017-12-11-000000/100Npos.json.output")
+```
+
