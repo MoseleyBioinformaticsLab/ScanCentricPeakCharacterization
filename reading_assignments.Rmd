@@ -2,71 +2,118 @@
 
 To work out how to read in and work with the assignments.
 
-# Test Assignment
+# Lots of Assignments
 
-```{r assignment_file}
-test_peaks <- jsonlite::read_json("~/data/cesb_data/assignments/lung_cancer_matched_tissue/2018-01-04-000000/100Cpos.json.output", simplifyVector = FALSE)$Peaks
+```{r assignment_files}
+library(SIRM.FTMS.peakCharacterization)
+assigned_files <- dir("~/data/cesb_data/assignments/lung_cancer_matched_tissue/2018-01-04-000000", full.names = TRUE)
+assigned_files <- assigned_files[1:20]
+assigned_data <- purrr::map(assigned_files, function(in_file){
+  tmp_list <- jsonlite::fromJSON(in_file, simplifyVector = FALSE)
+  sample <- gsub(".json.output", "", basename(in_file))
+  print(sample)
+  list(tic = tmp_list$TotalIntensity$Value,
+       assignments = get_assigned_peak_info(tmp_list$Peaks),
+       sample = sample)
+})
+```
 
-assignments <- purrr::map(test_peaks, "Assignments")
-no_assign <- purrr::map_lgl(assignments, is.null)
-assignments <- assignments[!no_assign]
+# Get all of the IMFs
 
-replace_null <- function(in_list, replace_value = NA) {
-  purrr::map(in_list, function(x){
-    if (is.null(x)) {
-      replace_value
-    } else {
-      x
-    }
-  })
+```{r all_imfs}
+all_imfs <- purrr::map(assigned_data, function(x){x$assignments$IMF})
+all_imfs <- unique(unlist(all_imfs))
+
+imf_index <- data.frame(IMF = all_imfs, stringsAsFactors = FALSE)
+```
+
+## Join Method to make Matrix
+
+We need a method to do correspondence using the IMF's. This has the danger of
+picking up peaks more than once, these should be able to be removed by correlation.
+
+But the other problem is IMF's that have multiple peaks. This happens a bunch via
+secondary assignments. 
+
+However, it seems that if we strip them out, then what
+is left 
+
+```{r imf_evaluation}
+check_imfs <- function(assignment_list){
+  assignments <- assignment_list$assignments
+  assignments <- dplyr::filter(assignments, Type %in% "Primary")
+  split_imf <- split(assignments, assignments$IMF)
+  count_peaks <- purrr::map_dbl(split_imf, function(x){length(unique(x$peak_id))})
+  unique(count_peaks)
 }
 
-split_adduct <- function(emf, split_chr = "_"){
-  emf_split <- strsplit(emf, split = split_chr, fixed = TRUE)
-  purrr::map_df(emf_split, function(x){
-    data.frame(Adduct = x[1], EMF2 = x[2], stringsAsFactors = FALSE)
-  })
-}
+purrr::map(assigned_data, check_imfs)
+```
 
-assignment_list_2_df <- function(in_assignment, include_non_primary = FALSE){
-  assign_types <- purrr::map_chr(in_assignment, "Type")
-  
-  if (!non_primary) {
-    in_assignment <- in_assignment[assign_types %in% "Primary"]
+```{r check_single}
+assignment_list <- assigned_data[[3]]
+assignments <- assignment_list$assignments
+assignments <- dplyr::filter(assignments, Type %in% "Primary")
+split_imf <- split(assignments, assignments$IMF)
+count_peaks <- purrr::map_dbl(split_imf, function(x){length(unique(x$peak_id))})
+
+head(split_imf[count_peaks == 2])
+```
+
+
+This one is weird. Let spit out some data so Josh can see it easier.
+
+```{r format_results}
+order_to_display <- c("12C50,13C1,14N4,1H87,32S2,39K1_z=1", "12C52,13C1,14N7,16O3,1H76_z=1", "12C51,14N4,1H87,32S2,39K1_z=1", "12C53,14N7,16O3,1H76_z=1")
+what_to_display <- c("ObservedMZ.Mean", "peak_id", "Assigned.M.Z",  "IMF.Prob", "IMF")
+
+purrr::map(split_imf[order_to_display], function(x){
+  x <- x[, what_to_display]
+  unique(x)
+})
+```
+
+are some things where it can't decide what should be what. So, we need to make a
+choice. The easiest thing to do here is probably to evaluate on `IMF.E.Value`,
+and if those are all the same, then take the one closes to the theoretical value.
+
+```{r choose_peak}
+choose_peak <- function(peak_frame){
+  uniq_frame <- peak_frame[!duplicated(peak_frame[, c("peak_id", "IMF")]), ]
+  if (sum(uniq_frame$EMF.E.Value == max(uniq_frame$EMF.E.Value)) > 1) {
+    mz_diff <- abs(uniq_frame$ObservedMZ.Mean - uniq_frame$Assigned.M.Z)
+    peak_frame <- peak_frame[peak_frame$peak_id %in% uniq_frame$peak_id[which.min(mz_diff)], ]
+  } else {
+    peak_frame <- peak_frame[peak_frame$peak_id %in% uniq_frame$peak_id[which.max(uniq_frame$EMF.E.Value)], ]
   }
-  
-  in_assignment <- purrr::map(in_assignment, replace_null)
-  
-  assign_df <- purrr::map_df(in_assignment, as.data.frame, stringsAsFactors = FALSE)
-  
+  peak_frame
 }
 
-assign_df1 <- purrr::map_df(assignments, assignment_list_2_df)
-assign_df1 <- cbind(assign_df1, split_adduct(assign_df1$EMF))
+purrr::map(split_imf[count_peaks == 2], choose_peak)
 ```
 
+### How Many EMFs per Peak
 
-```{r}
-read_assignments <- function(json_file, peak_obj = "Peaks", adduct_split_chr = "_", include_non_primary = FALSE){
-  json_peaks <- jsonlite::read_json(json_file, simplifyVector = FALSE)[[peak_obj]]
+Lets first evaluate how many EMFs each peak has. Ideally, each peak should only
+be a part of one EMF, with possibly having multiple peaks to the same IMF, due to
+split peaks. That we can handle by having a criteria to choose only one.
+
+
+
+```{r join_method}
+join_function <- function(assigned_list){
+  all_imfs <- purrr::map(assigned_list, function(x){x$assignments$IMF})
+  all_imfs <- unique(unlist(all_imfs))
+  imf_index <- data.frame(IMF = all_imfs, stringsAsFactors = FALSE)
+  join_matrix <- matrix(NA, nrow = nrow(imf_index), ncol = length(assigned_list))
   
-  assignments <- purrr::map(json_peaks, "Assignments")
-  
-  have_assignments <- !purrr::map_lgl(assignments, is.null)
-  
-  assignments <- assignments[have_assignments]
-  
-  assign_df <- purrr::map_df(assignments, assignment_list_2_df, include_non_primary)
-  
-  assign_df <- cbind(assign_df, split_adduct(assign_df[["EMF"]]))
-  
-  assign_df
+  for (ifile in seq(1, length(assigned_data))) {
+    tmp_data <- dplyr::left_join(imf_index, assigned_list[[ifile]]$assignments)
+    join_matrix[, ifile] <- tmp_data$Height.Mean
+  }
 }
+
+
+
+
 ```
-
-
-```{r}
-c_pos <- read_assignments("~/data/cesb_data/assignments/lung_cancer_matched_tissue/2017-12-11-000000/100Cpos.json.output")
-n_pos <- read_assignments("~/data/cesb_data/assignments/lung_cancer_matched_tissue/2017-12-11-000000/100Npos.json.output")
-```
-
