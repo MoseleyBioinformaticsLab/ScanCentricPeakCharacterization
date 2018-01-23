@@ -2,198 +2,26 @@
 
 To work out how to read in and work with the assignments.
 
+```{r setup}
+knitr::opts_chunk$set(cache = TRUE, warning = FALSE, message = FALSE, verbose = TRUE)
+```
+
 # Lots of Assignments
 
 ```{r assignment_files}
 library(SIRM.FTMS.peakCharacterization)
+print(interactive())
+print(options("dplyr.show_progress"))
+```
+
+```{r read_them_in}
 assigned_files <- dir("~/data/cesb_data/assignments/lung_cancer_matched_tissue/2018-01-04-000000", full.names = TRUE)
-assigned_files <- assigned_files[1:20]
-assigned_data <- purrr::map(assigned_files, function(in_file){
-  tmp_list <- jsonlite::fromJSON(in_file, simplifyVector = FALSE)
-  sample <- gsub(".json.output", "", basename(in_file))
-  print(sample)
-  list(tic = tmp_list$TotalIntensity$Value,
-       assignments = get_assigned_peak_info(tmp_list$Peaks),
-       sample = sample)
-})
-```
 
-# Get all of the IMFs
-
-```{r all_imfs}
-all_imfs <- purrr::map(assigned_data, function(x){x$assignments$IMF})
-all_imfs <- unique(unlist(all_imfs))
-
-imf_index <- data.frame(IMF = all_imfs, stringsAsFactors = FALSE)
-```
-
-## Join Method to make Matrix
-
-We need a method to do correspondence using the IMF's. This has the danger of
-picking up peaks more than once, these should be able to be removed by correlation.
-
-But the other problem is IMF's that have multiple peaks. This happens a bunch via
-secondary assignments. 
-
-However, it seems that if we strip them out, then what
-is left 
-
-```{r imf_evaluation}
-check_imfs <- function(assignment_list){
-  assignments <- assignment_list$assignments
-  assignments <- dplyr::filter(assignments, Type %in% "Primary")
-  split_imf <- split(assignments, assignments$IMF)
-  count_peaks <- purrr::map_dbl(split_imf, function(x){length(unique(x$peak_id))})
-  unique(count_peaks)
-}
-
-purrr::map(assigned_data, check_imfs)
-```
-
-```{r check_single}
-assignment_list <- assigned_data[[3]]
-assignments <- assignment_list$assignments
-assignments <- dplyr::filter(assignments, Type %in% "Primary")
-split_imf <- split(assignments, assignments$IMF)
-count_peaks <- purrr::map_dbl(split_imf, function(x){length(unique(x$peak_id))})
-
-head(split_imf[count_peaks == 2])
-```
-
-
-This one is weird. Let spit out some data so Josh can see it easier.
-
-```{r format_results}
-order_to_display <- c("12C50,13C1,14N4,1H87,32S2,39K1_z=1", "12C52,13C1,14N7,16O3,1H76_z=1", "12C51,14N4,1H87,32S2,39K1_z=1", "12C53,14N7,16O3,1H76_z=1")
-what_to_display <- c("ObservedMZ.Mean", "peak_id", "Assigned.M.Z",  "IMF.Prob", "IMF")
-
-purrr::map(split_imf[order_to_display], function(x){
-  x <- x[, what_to_display]
-  unique(x)
-})
-```
-
-are some things where it can't decide what should be what. So, we need to make a
-choice. The easiest thing to do here is probably to evaluate on `IMF.E.Value`,
-and if those are all the same, then take the one closes to the theoretical value.
-
-```{r choose_peak}
-choose_peak <- function(peak_frame){
-  primary_frame <- peak_frame[peak_frame$Type %in% "Primary", ] # in case it is due to having secondary assignments
-  if (nrow(primary_frame) > 0) {
-    uniq_frame <- primary_frame[!duplicated(primary_frame[, c("peak_id", "IMF")]), ]
-  } else {
-    uniq_frame <- peak_frame[!duplicated(peak_frame[, c("peak_id", "IMF")]), ]
-    if (all(is.na(uniq_frame$IMF.E.Value))) {
-      uniq_frame$IMF.E.Value <- 1
-    }
-  }
-  
-  if (length(uniq_frame$peak_id) == 1) {
-    peak_frame <- peak_frame[peak_frame$peak_id %in% uniq_frame$peak_id, ]
-  } else if (sum(uniq_frame$IMF.E.Value == max(uniq_frame$IMF.E.Value)) > 1) {
-    mz_diff <- abs(uniq_frame$ObservedMZ.Mean - uniq_frame$Assigned.M.Z)
-    peak_frame <- peak_frame[peak_frame$peak_id %in% uniq_frame$peak_id[which.min(mz_diff)], ]
-  } else {
-    peak_frame <- peak_frame[peak_frame$peak_id %in% uniq_frame$peak_id[which.max(uniq_frame$IMF.E.Value)], ]
-  }
-  peak_frame
-}
-
-purrr::map(split_imf[count_peaks == 2], choose_peak)
-```
-
-So, now lets go through and design this to return a single peak for each IMF.
-
-```{r design_choosing}
-count_peaks <- function(x){
-  length(unique(x$peak_id))
-}
-
-one_peak_from_imfs <- function(peak_assignments){
-  split_imfs <- split(peak_assignments, peak_assignments$IMF)
-  n_peak <- purrr::map_dbl(split_imfs, count_peaks)
-  
-  single_peaks <- split_imfs[n_peak == 1]
-  other_peaks <- purrr::map(split_imfs[n_peak > 1], choose_peak)
-  
-  all_peaks <- c(single_peaks, other_peaks)
-  all_peaks
-}
+assigned_data <- purrr::map(assigned_files, read_smirfe_assignment, .pb = pb)
 ```
 
 And now we can grab the information for peaks associated with each IMF.
 
 ```{r extract_peaks}
-extract_peaks <- function(assignment_list){
-  get_imfs <- function(x){x$assignments$IMF}
-  get_tic <- function(x){x$tic}
-  get_sample <- function(x){x$sample}
-  names(assignment_list) <- purrr::map_chr(assignment_list, get_sample)
-  
-  all_imfs <- purrr::map(assignment_list, get_imfs)
-  all_imfs <- unique(unlist(all_imfs))
-  imf_index <- data.frame(IMF = all_imfs, stringsAsFactors = FALSE)
-  
-  height_matrix <- matrix(NA, nrow = nrow(imf_index), ncol = length(assignment_list))
-  emf_matrix <- matrix(list(), nrow = nrow(imf_index), ncol = length(assignment_list))
-  peak_matrix <- matrix(NA, nrow = nrow(imf_index), ncol = length(assignment_list))
-  type_matrix <- matrix("NA", nrow = nrow(imf_index), ncol = length(assignment_list))
-  emf_imf_mappings <- vector(mode = "list", length = length(assignment_list))
-  names(emf_imf_mappings) <- names(assignment_list)
-  
-  rownames(height_matrix) <- rownames(emf_matrix) <- rownames(peak_matrix) <- rownames(type_matrix) <- all_imfs
-  colnames(height_matrix) <- colnames(emf_matrix) <- colnames(peak_matrix) <- colnames(type_matrix) <- names(assignment_list)
-  
-  for (isample in names(assignment_list)) {
-    imfs <- one_peak_from_imfs(assignment_list[[isample]]$assignments)
-    
-    for (iimf in seq_along(imfs)) {
-      #print(iimf)
-      use_imf <- imfs[[iimf]]
-      height_matrix[use_imf$IMF[1], isample] <- use_imf$Height.Mean[1]
-      emf_matrix[use_imf$IMF[1], isample][[1]] <- use_imf$EMF
-      peak_matrix[use_imf$IMF[1], isample] <- use_imf$peak_id[1]
-      type_matrix[use_imf$IMF[1], isample] <- use_imf$Type[1]
-    }
-    
-    joined_imfs <- purrr::map_df(imfs, function(x){x})
-    emf_imf_mappings[[isample]] <- split(joined_imfs$IMF, joined_imfs$EMF)
-  }
-  list(height = height_matrix,
-       emf = emf_matrix,
-       peaks = peak_matrix,
-       type = type_matrix,
-       tic = purrr::map_dbl(assignment_list, get_tic),
-       samples = names(assignment_list),
-       emf_imf = emf_imf_mappings)
-}
-
 extracted_data <- extract_peaks(assigned_data)
-```
-
-### How Many EMFs per Peak
-
-Lets first evaluate how many EMFs each peak has. Ideally, each peak should only
-be a part of one EMF, with possibly having multiple peaks to the same IMF, due to
-split peaks. That we can handle by having a criteria to choose only one.
-
-
-
-```{r join_method}
-join_function <- function(assigned_list){
-  all_imfs <- purrr::map(assigned_list, function(x){x$assignments$IMF})
-  all_imfs <- unique(unlist(all_imfs))
-  imf_index <- data.frame(IMF = all_imfs, stringsAsFactors = FALSE)
-  join_matrix <- matrix(NA, nrow = nrow(imf_index), ncol = length(assigned_list))
-  
-  for (ifile in seq(1, length(assigned_data))) {
-    tmp_data <- dplyr::left_join(imf_index, assigned_list[[ifile]]$assignments)
-    join_matrix[, ifile] <- tmp_data$Height.Mean
-  }
-}
-
-
-
-
 ```
