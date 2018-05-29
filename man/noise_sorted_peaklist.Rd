@@ -20,6 +20,10 @@ noise_sorted_peaklist(peaklist, intensity_measure = "Height",
 list
 }
 \description{
+Given a peak list data.frame object, determines a noise cutoff and classifies
+peaks as to whether they are "not_noise".
+}
+\details{
 This calculation is based on the premise that a distribution of
  only noise peaks should have a standard deviation to mean ratio of about 1.
  Therefore, but sorting the list of peak intensities, and incrementally adding
@@ -31,8 +35,4 @@ This calculation is based on the premise that a distribution of
 
  A list is returned, with the original data.frame with a new column "not_noise",
  and the actual noise cutoff that was used to determine whether peaks are noise.
-}
-\details{
-Given a peak list data.frame object, determines a noise cutoff and classifies
-peaks as to whether they are "not_noise".
 }

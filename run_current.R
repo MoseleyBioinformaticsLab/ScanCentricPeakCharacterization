@@ -57,16 +57,16 @@ zip_files <- mclapply(use_files, function(ifile) {
     peak_finder$collapse_correspondent_peaks()
     peak_finder$correspondent_peaks$master_peak_list$calculate_scan_information_content()
     save(peak_finder, file = file.path(mspl_dir, "scan_information_content.rds"))
-    peak_finder$filter_information_content()
+    #peak_finder$filter_information_content()
 
-    peak_finder$calculate_median_mz_offset()
-    peak_finder$create_correspondent_peaks(median_corrected = TRUE)
+    #peak_finder$calculate_median_mz_offset()
+    #peak_finder$create_correspondent_peaks(median_corrected = TRUE)
     #peak_finder$median_correct_multi_scan_peaklist()
     #peak_finder$create_correspondent_peaks()
     save(peak_finder, file = file.path(mspl_dir, "correspondent_peaklist2.rds"))
-    peak_finder$collapse_correspondent_peaks()
-    peak_finder$correspondent_peaks$master_peak_list$calculate_scan_information_content()
-    save(peak_finder, file = file.path(mspl_dir, "scan_information_content2.rds"))
+    #peak_finder$collapse_correspondent_peaks()
+    #peak_finder$correspondent_peaks$master_peak_list$calculate_scan_information_content()
+    #save(peak_finder, file = file.path(mspl_dir, "scan_information_content2.rds"))
     peak_finder$normalize_scans_by_correspondent_peaks()
     save(peak_finder, file = file.path(mspl_dir, "normalized_peaks.rds"))
     peak_finder$save_intermediates()
@@ -74,15 +74,21 @@ zip_files <- mclapply(use_files, function(ifile) {
     peak_finder$create_peak_data()
     peak_finder$create_processing_info()
 
+    anal_ms$found_peaks <- anal_ms$peak_finder$export_data()
+    anal_ms$peak_finder$raw_data <- NULL
+    anal_ms$peak_finder$multi_scan <- NULL
+
+    save(peak_finder, file = file.path(anal_ms$zip_ms$temp_directory, "peak_finder.rds"))
+    scans_to_json(peak_finder, file_output = self$zip_ms$temp_directory)
+    anal_ms$zip_ms$add_peak_list(anal_ms$found_peaks)
+    anal_ms$write_zip()
+    anal_ms$zip_ms$cleanup()
+
 
   } else {
     message("file already exists, skipping!")
   }
 
-  peak_finder <- anal_ms$peak_finder
-  peak_finder$multi_scan <- NULL
-
-  save(peak_finder, file = mspl_file)
   out_file
 
 })

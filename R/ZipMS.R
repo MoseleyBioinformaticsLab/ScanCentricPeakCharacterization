@@ -11,34 +11,62 @@
 #'
 #' @importFrom purrr map_lgl
 #' @importFrom waitcopy import_json
+#' @importFrom R.utils isAbsolutePath getAbsolutePath
 #'
 #' @export
 raw_metadata_mzml <- function(mzml_files, raw_file_loc, recursive = TRUE){
   # mzml_files <- dir("/home/rmflight/data/test_json_meta/mzml_data", full.names = TRUE)
   # raw_file_loc <- "/home/rmflight/data/test_json_meta"
   # recursive <- TRUE
-  all_json_files <- dir(raw_file_loc, pattern = "json", full.names = TRUE, recursive = recursive)
-  json_data <- data.frame(json_file = all_json_files, id = basename_no_file_ext(all_json_files), stringsAsFactors = FALSE)
+  #
+  if (!isAbsolutePath(mzml_files[1])) {
+    mzml_files <- getAbsolutePath(mzml_files)
+    names(mzml_files) <- NULL
+  }
+
+
+  raw_json_files <- dir(raw_file_loc, pattern = "json$", full.names = TRUE, recursive = recursive)
+  if (!isAbsolutePath(raw_json_files[1])) {
+    raw_json_files <- getAbsolutePath(raw_json_files)
+    names(raw_json_files) <- NULL
+  }
+
+  raw_json_data <- data.frame(json_file = raw_json_files, id = basename_no_file_ext(raw_json_files), stringsAsFactors = FALSE)
   mzml_data <- data.frame(mzml_file = mzml_files, id = basename_no_file_ext(mzml_files), stringsAsFactors = FALSE)
   mzml_data <- mzml_data[file.exists(mzml_files), ]
 
-  json_mzml_match <- dplyr::inner_join(json_data, mzml_data, by = "id")
+
+  json_mzml_match <- dplyr::inner_join(raw_json_data, mzml_data, by = "id")
   json_mzml_match$mzml_meta <- FALSE
 
   did_write_mzml_meta <- purrr::map_lgl(seq(1, nrow(json_mzml_match)), function(in_row){
-    file_meta <- waitcopy::import_json(json_mzml_match[in_row, "json_file"])
+    raw_meta <- waitcopy::import_json(json_mzml_match[in_row, "json_file"])
     #print(json_mzml_match[in_row, "mzml_file"])
     mzml_meta <- try(get_mzml_metadata(json_mzml_match[in_row, "mzml_file"]))
-    if (class(mzml_meta) != "try-error") {
+    if (!inherits(mzml_meta, "try-error")) {
+      source_file_data <- mzml_meta$fileDescription$sourceFileList$sourceFile
       tmp_model <- as.character(mzml_meta$referenceableParamGroupList$referenceableParamGroup[[1]]$name)
       tmp_serial <- as.character(mzml_meta$referenceableParamGroupList$referenceableParamGroup[[2]]$value)
+      tmp_sha1 <- as.character(mzml_meta$fileDescription$sourceFileList$sourceFile[[3]]$value)
       mzml_meta$run$instrument <- list(model = tmp_model,
                                        serial = tmp_serial)
-      mzml_meta$file <- file_meta
+      if (tmp_sha1 == raw_meta$sha1) {
+        mzml_file <- json_mzml_match[in_row, "mzml_file"]
+        mzml_meta_file <- list(file = basename(mzml_file),
+                               saved_path = mzml_file,
+                               sha1 = digest::digest(mzml_file, algo = "sha1", file = TRUE))
+        mzml_meta$file <- list(raw = raw_meta,
+                               mzml = mzml_meta_file)
 
-      outfile <- paste0(tools::file_path_sans_ext(json_mzml_match[in_row, "mzml_file"]), ".json")
-      cat(jsonlite::toJSON(mzml_meta, pretty = TRUE, auto_unbox = TRUE), file = outfile)
-      did_write <- TRUE
+        outfile <- paste0(tools::file_path_sans_ext(json_mzml_match[in_row, "mzml_file"]), ".json")
+        cat(jsonlite::toJSON(mzml_meta, pretty = TRUE, auto_unbox = TRUE), file = outfile)
+        did_write <- TRUE
+      } else {
+        warning("SHA-1 of Files does not match! Not writing JSON metadata!")
+        did_write <- FALSE
+      }
+
+
     } else {
       did_write <- FALSE
     }
@@ -170,17 +198,53 @@ NULL
 ZipMS <- R6::R6Class("ZipMS",
   public = list(
     zip_file = NULL,
+    zip_metadata = NULL,
     metadata = NULL,
     metadata_file = NULL,
     raw_ms = NULL,
     peaks = NULL,
+    peak_finder = NULL,
+    json_summary = NULL,
     id = NULL,
     out_file = NULL,
     temp_directory = NULL,
 
     load_raw = function(){
-      RawMS$new(file.path(self$temp_directory, self$metadata$raw$raw_data),
+      self$raw_ms <- RawMS$new(file.path(self$temp_directory, self$metadata$raw$raw_data),
                 file.path(self$temp_directory, self$metadata$raw$metadata))
+
+    },
+
+    load_peak_finder = function(){
+      if (file.exists(file.path(self$temp_directory, "peak_finder.rds"))) {
+        peak_finder <- try(readRDS(file.path(self$temp_directory, "peak_finder.rds")))
+
+        if (inherits(peak_finder, "try-error")) {
+          peak_finder <- try({
+            tmp_env <- new.env()
+            load(file.path(self$temp_directory, "peak_finder.rds"), envir = tmp_env)
+            tmp_env$peak_finder
+          })
+        }
+        if (inherits(peak_finder, "PeakFinder")) {
+          self$peak_finder <- peak_finder
+          rm(peak_finder)
+          message("Peak Finder Binary File Loaded!")
+        } else {
+          stop("peak_finder.rds is not valid!")
+        }
+
+      }
+    },
+
+    save_json = function(){
+      lists_2_json(self$json_summary, temp_dir = self$temp_directory)
+    },
+
+    save_peak_finder = function(){
+      peak_finder <- self$peak_finder
+      saveRDS(peak_finder, file.path(self$temp_directory, "peak_finder.rds"))
+      invisible(self)
     },
 
     load_peak_list = function(){
@@ -250,6 +314,8 @@ ZipMS <- R6::R6Class("ZipMS",
         self$zip_file <- in_file
       }
 
+      get_zip_raw_metdata(self)
+
       check_zip_file(self$temp_directory)
 
       self$metadata_file <- "metadata.json"
@@ -280,13 +346,19 @@ ZipMS <- R6::R6Class("ZipMS",
         out_file <- self$out_file
       } else {
         out_file <- private$generate_filename(out_file)
+        self$out_file <- out_file
       }
-      zip(out_file, list.files(self$temp_directory, full.names = TRUE), flags = "-j")
+      zip(out_file, list.files(self$temp_directory, full.names = TRUE), flags = "-jq")
+      write_zip_file_metadata(self)
     },
 
     cleanup = function(){
       unlink(self$temp_directory, recursive = TRUE, force = TRUE)
       #file.remove(self$temp_directory)
+    },
+
+    finalize = function(){
+      unlink(self$temp_directory, recursive = TRUE)
     },
 
     add_peak_list = function(peak_list_data){
@@ -366,6 +438,121 @@ ZipMS <- R6::R6Class("ZipMS",
 
   )
 )
+
+get_zip_raw_metdata <- function(zip_obj){
+  zip_file_path <- dirname(zip_obj$zip_file)
+  zip_file <- basename_no_file_ext(zip_obj$zip_file)
+  json_file <- file.path(zip_file_path, paste0(zip_file, ".json"))
+
+  # this first case should actually happen *almost* all the time, as the instantiation
+  # of the zip container entails copying the meta-data (if present) into the raw
+  # _metadata file and putting it into the temp directory that is the proxy of
+  # our zip file
+  if (file.exists(file.path(zip_obj$temp_directory, "raw_metadata.json"))) {
+    file.path(zip_obj$temp_directory, "raw_metadata.json")
+    raw_metadata <- waitcopy::import_json(file.path(zip_obj$temp_directory, "raw_metadata.json"))
+
+    if (!is.null(raw_metadata$file)) {
+      file_metadata <- raw_metadata$file
+    } else {
+      file_metadata <- list()
+    }
+  } else if (file.exists(json_file)) {
+    json_metadata <- waitcopy::import_json(json_file)
+
+    if (!is.null(json_metadata$file)) {
+      file_metadata <- json_metadata$file
+    } else {
+      file_metadata <- list()
+    }
+  } else {
+    file_metadata <- list()
+  }
+
+  zip_obj$zip_metadata <- file_metadata
+
+  zip_obj
+
+}
+
+write_zip_file_metadata <- function(zip_obj){
+  zip_metadata <- zip_obj$zip_metadata
+
+  if (file.exists(zip_obj$out_file)) {
+    sha1 <- digest::digest(zip_obj$out_file, algo = "sha1", file = TRUE)
+
+    zip_file_metadata <- list(file = basename(zip_obj$out_file),
+                              saved_path = zip_obj$out_file,
+                              sha1 = sha1)
+
+    json_loc <- paste0(tools::file_path_sans_ext(zip_obj$out_file), ".json")
+
+    zip_metadata$zip <- zip_file_metadata
+    cat(jsonlite::toJSON(zip_metadata, pretty = TRUE, auto_unbox = TRUE), file = json_loc)
+
+  } else {
+    stop("File path does not exist, cannot write JSON metadata!")
+  }
+}
+
+#' plot raw peaks
+#'
+#' Given the raw_ms object, generate a plot of the peaks that are generated from
+#' averaging the scans in the currently set scan-range.
+#'
+#' @param raw_ms either a RawMS object, or data.frame of mz / intensity
+#' @param scan_range which scans to use
+#' @param mz_range the range of M/z's to consider
+#' @param transform apply a transform to the data
+#'
+#' @return ggplot2 object
+#' @export
+#'
+plot_raw_peaks <- function(raw_ms, scan_range = NULL, mz_range = NULL, transform = NULL) {
+  if (inherits(raw_ms, "RawMS")) {
+    if (is.null(scan_range)) {
+      scan_range <- raw_ms$scan_range
+    }
+    peaks <- raw_peak_intensity(raw_ms, scanrange = scan_range)
+
+  } else if (inherits(raw_ms, "data.frame")) {
+    peaks <- raw_ms
+
+  }
+  if (!is.null(mz_range)) {
+    peaks <- peaks[(peaks$mz >= mz_range[1]) & (peaks$mz <= mz_range[2]), ]
+  }
+
+  if (!is.null(transform)) {
+    peaks$intensity <- transform(peaks$intensity + 1)
+  }
+
+  ggplot(peaks, aes(x = mz, xend = mz, y = 0, yend = intensity)) + geom_segment() +
+    labs(x = "M/Z", y = "Intensity")
+}
+
+#' raw peaks intensities
+#'
+#' generate raw peaks from just averaging scans via xcms
+#'
+#' @param raw_ms an RawMS object
+#' @param scanrange the range of scans to use, default is derived from raw_ms
+#'
+#' @export
+#' @importFrom xcms getSpec
+#' @importFrom pracma findpeaks
+#' @return data.frame of mz and intensity
+#'
+raw_peak_intensity <- function(raw_ms, scanrange = raw_ms$scan_range) {
+  mean_scan <- xcms::getSpec(raw_ms$raw_data, scanrange = scanrange)
+  mean_scan <- mean_scan[!is.na(mean_scan[, 2]), ]
+  mean_peaks <- pracma::findpeaks(mean_scan[, 2], nups = 2)
+
+  mean_peak_intensity <- data.frame(mz = mean_scan[mean_peaks[, 2], 1],
+                             intensity = mean_scan[mean_peaks[, 2], 2])
+  mean_peak_intensity
+}
+
 
 #' raw peaks
 #'

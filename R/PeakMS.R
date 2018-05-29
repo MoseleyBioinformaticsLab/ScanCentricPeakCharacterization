@@ -80,71 +80,6 @@ get_scan_nozeros <- function(rawdata, cutoff = 2.5e-3){
 #' @export
 "PeakList"
 
-PeakList <- R6::R6Class("PeakList",
-  public = list(
-    peak_list = NULL,
-    scan = NULL,
-    noise = NULL,
-    noise_info = NULL,
-    mz_model = NULL,
-    peak_type = NULL,
-
-    noise_function = NULL,
-
-    calculate_noise = function(...){
-      tmp_noise <- self$noise_function(self$peak_list, ...)
-      self$noise_info <- tmp_noise$noise_info
-      self$noise <- tmp_noise$noise_info$threshold
-      self$peak_list <- tmp_noise$peak_list
-    },
-
-    sd_predict_function = NULL,
-
-    initialize = function(scan_ms, peak_type = "lm_weighted", mz_range = NULL, noise_function = NULL, scan = NULL,
-                          sd_predict_function = NULL){
-      self$noise_function <- noise_function
-      self$scan = scan
-      self$peak_type = peak_type
-
-      if (!is.null(sd_predict_function)) {
-        self$sd_predict_function <- sd_predict_function
-      } else {
-        self$sd_predict_function <- default_sd_predict_function
-      }
-
-      if (is.data.frame(scan_ms)) {
-        assertthat::has_name(scan_ms, "ObservedMZ")
-        assertthat::has_name(scan_ms, "Height")
-        assertthat::has_name(scan_ms, "Area")
-
-        self$peak_list <- scan_ms
-      } else {
-        if (assertthat::assert_that(any(class(scan_ms) %in% "ScanMS"))) {
-          self$peak_list <- scan_ms$get_peak_info(calc_type = peak_type)
-          self$mz_model <- scan_ms$res_mz_model
-        }
-      }
-
-      if ("Area" %in% names(self$peak_list)) {
-        model_values <- self$sd_predict_function(self$mz_model, self$peak_list$ObservedMZ)
-        self$peak_list$NormalizedArea <- self$peak_list$Area / model_values
-      }
-
-      if (!is.null(self$noise_function)) {
-        tmp <- self$noise_function(self$peak_list)
-        self$peak_list <- tmp$peak_list
-        self$noise <- tmp$noise_info$threshold
-        self$noise_info <- tmp$noise_info
-      }
-
-      if (!is.null(mz_range)) {
-        keep_peaks <- (self$peak_list$ObservedMZ >= min(mz_range)) & (self$peak_list$ObservedMZ <= max(mz_range))
-        self$peak_list <- self$peak_list[keep_peaks, ]
-      }
-      self
-    }
-
-))
 
 #' multiple scans peak lists
 #'
@@ -153,205 +88,7 @@ PeakList <- R6::R6Class("PeakList",
 #' @export
 "MultiScansPeakList"
 
-MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
-  public = list(
-    peak_list_by_scans = NULL,
-    peak_type = NULL,
 
-    scan_numbers = function(){
-      vapply(self$peak_list_by_scans[self$scan_indices], function(in_scan){
-        in_scan$scan
-      }, numeric(1))
-    },
-
-    scan_mz_models = function(){
-      all_models <- lapply(self$peak_list_by_scans[self$scan_indices], function(in_scan){
-        in_scan$mz_model
-      })
-
-    },
-    mz_model = NULL,
-
-    mz_model_diffs = NULL,
-
-    scan_indices = NULL,
-
-    get_scan_peak_lists = function(){
-      self$peak_list_by_scans[self$scan_indices]
-    },
-
-    get_noise_info = function(){
-      self$noise_info[self$scan_indices, ]
-    },
-
-    reset_scan_indices = function(){
-      self$scan_indices <- seq(1, length(self$peak_list_by_scans))
-    },
-
-    # calculates an average model and deviations from that model
-    # Assuming LOESS models, a generic set of m/z are created spaced by 0.5 mz,
-    # and then predictions of SD made based on m/z. The average model is created
-    # by averaging the SDs and fitting average SD ~ m/z.
-    #
-    # In the process, it also gets the sum of absolute residuals of each model
-    # to the average.
-    calculate_average_mz_model = function(){
-      list_of_models <- self$scan_mz_models()
-      mz_ranges <- lapply(list_of_models, function(x){range(round(x$x))})
-      mz_ranges <- range(do.call(rbind, mz_ranges))
-
-      mz_values <- seq(mz_ranges[1], mz_ranges[2], .5)
-
-      sd_preds <- lapply(list_of_models, function(in_model){
-        self$sd_predict_function(in_model, mz_values)
-      })
-
-      mean_sd_preds <- colMeans(do.call(rbind, sd_preds))
-
-      # generate and set the new model
-      mean_model <- self$sd_fit_function(mz_values, mean_sd_preds)
-      self$mz_model <- mean_model
-
-      # get the differences from the model so can look for potential outliers
-      scan_nums <- self$scan_numbers()
-
-      scan_mz_sd <- lapply(seq(1, length(sd_preds)), function(in_scan){
-        scan_sd <- sd_preds[[in_scan]]
-        data.frame(mz = mz_values,
-                   sd = scan_sd,
-                   diff = scan_sd - mean_sd_preds,
-                   scan = scan_nums[in_scan])
-      })
-      scan_mz_sd <- do.call(rbind, scan_mz_sd)
-
-      dplyr::group_by(scan_mz_sd, scan) %>%
-        dplyr::summarise(., sum_diff = sum(abs(diff)), median_diff = median(abs(diff))) %>%
-        dplyr::ungroup() -> scan_mz_summaries
-
-      self$mz_model_diffs <- scan_mz_summaries
-
-    },
-
-    sd_predict_function = NULL,
-    sd_fit_function = NULL,
-
-    remove_bad_resolution_scans = function(){
-      if (is.null(self$mz_model_diffs)) {
-        self$calculate_average_mz_model()
-      }
-      diff_model <- self$mz_model_diffs
-      max_out <- max(grDevices::boxplot.stats(diff_model$sum_diff)$stats)
-      keep_scans <- self$scan_numbers() %in% diff_model$scan[diff_model$sum_diff <= max_out]
-
-      #self$peak_list_by_scans <- self$peak_list_by_scans[keep_scans]
-      #self$noise_info <- self$noise_info[keep_scans, ]
-
-      self$scan_indices <- which(keep_scans)
-      self$calculate_average_mz_model()
-      invisible(self)
-    },
-
-    # it may happen that there are scans with no signal peaks, so we need a way
-    # to remove those
-    remove_no_signal_scans = function(){
-      if (!is.null(self$noise_function)) {
-        curr_noise <- self$get_noise_info()
-        has_signal <- which(curr_noise$n_signal != 0)
-        self$reorder(has_signal)
-      }
-    },
-
-    noise_function = NULL,
-    noise_info = NULL,
-
-    n_peaks = function(){
-      vapply(self$get_scan_peak_lists(), function(x){
-        if (!is.null(x$noise_function)) {
-          return(nrow(x$peak_list[x$peak_list$not_noise, ]))
-        } else {
-          return(nrow(x$peak_list))
-        }
-      }, numeric(1))
-    },
-
-    reorder = function(new_order){
-      self$scan_indices <- self$scan_indices[new_order]
-      invisible(self)
-    },
-
-    calculate_noise = function(...){
-      self$peak_list_by_scans <- lapply(self$peak_list_by_scans, function(in_scan){
-        #in_scan$noise_function <- self$noise_function
-        in_scan$calculate_noise(...)
-        in_scan
-      })
-
-      noise_info <- lapply(self$get_scan_peak_lists(), function(in_scan){
-        in_scan$noise_info
-      })
-      noise_info <- do.call(rbind, noise_info)
-      noise_info$scan <- self$scan_numbers()
-      self$noise_info <- noise_info
-      invisible(self)
-
-    },
-
-    initialize = function(multi_scans, peak_type = "lm_weighted", mz_range = NULL, noise_function = NULL,
-                          sd_fit_function = NULL, sd_predict_function = NULL){
-      self$noise_function <- noise_function
-      self$peak_type <- peak_type
-
-      assertthat::assert_that(any(class(multi_scans) %in% "MultiScans"))
-
-      if (!is.null(sd_predict_function)) {
-        self$sd_predict_function <- sd_predict_function
-      } else if (!is.null(multi_scans$sd_predict_function)) {
-        self$sd_predict_function <- multi_scans$sd_predict_function
-      } else {
-        self$sd_predict_function <- default_sd_predict_function
-      }
-
-      if (!is.null(sd_fit_function)) {
-        self$sd_fit_function <- sd_fit_function
-      } else if (!is.null(multi_scans$sd_fit_function)) {
-        self$sd_fit_function <- multi_scans$sd_fit_function
-      } else {
-        self$sd_fit_function <- default_sd_fit_function
-      }
-
-      self$peak_list_by_scans <- lapply(seq(1, length(multi_scans$scans)), function(in_scan){
-        PeakList$new(multi_scans$scans[[in_scan]], peak_type = peak_type, mz_range = mz_range,
-                     noise_function = self$noise_function, scan = multi_scans$scans[[in_scan]]$scan,
-                     sd_predict_function = self$sd_predict_function)
-      })
-
-      self$scan_indices <- seq(1, length(self$peak_list_by_scans))
-      if (!is.null(noise_function)) {
-        self$calculate_noise()
-      }
-
-      # we remove these during initialization so that they are less likely to
-      # be used by anything later.
-      self$remove_no_signal_scans()
-
-      self$calculate_average_mz_model()
-
-      invisible(self)
-    }
-  ),
-  private = list(
-    deep_clone = function(name, value){
-      if (name == "peak_list_by_scans") {
-        value <- lapply(self$peak_list_by_scans, function(in_scan){
-          in_scan$clone()
-        })
-        value
-      } else {
-        value
-      }
-    }
-  )
-)
 
 #' Storing all of the peaks associated with a scan
 #'
@@ -457,6 +194,96 @@ ScanMS <- R6::R6Class("ScanMS",
   )
 )
 
+#' noise_detector
+#'
+#' Given a peak_list as a data.frame, classify the peaks as either noise or
+#' signal. See Details for more information.
+#'
+#' @param peaklist data.frame of peaks
+#' @param intensity_measure which column of the data.frame is the intensity to use
+#' @param transform which transform to apply to the data
+#'
+#' @details This noise detections works by assuming that noise and signal
+#'  come from two distinct distributions, and that the noise distribution
+#'  has a lower valued distribution than the signal. So to run, first it calculates
+#'  a density or smoothed histogram on the intensity values. Second, the first
+#'  peak becomes the mean value of the noise. All peak intensities below this value
+#'  are used to calculate the standard deviation of the noise, and then the mean
+#'  + 3 sd is used to define the upper bound of the noise intensity.
+#'
+#'  Very importantly, you should graph a histogram of your intensities to verify
+#'  that a transform is necessary. This is written for data with a Poisson type
+#'  variance structure, so "log10" is appropriate. Check that your data meets these
+#'  assumptions before using this transform.
+#'
+#'  Finally, this will return a list with two components, the original peak_list
+#'  data.frame with a logical column "not_noise" appended, and summary information
+#'  about the noise values themselves.
+#'
+#'
+#' @export
+#'
+#' @return list
+noise_detector <- function(peaklist, intensity_measure = "Height", transform = log10){
+  assertthat::assert_that(class(peaklist) == "data.frame")
+
+
+  intensities <- transform(peaklist[[intensity_measure]])
+  intensities_nona <- intensities[!is.na(intensities)]
+
+  density_data <- density(intensities_nona)
+
+  density_peaks <- pracma::findpeaks(density_data$y, nups = 4)
+
+  mean_loc <- density_data$x[density_peaks[1, 2]]
+
+  left_side_values <- intensities_nona[intensities_nona <= mean_loc]
+  peak_diffs <- sum((left_side_values - mean_loc)^2)
+
+  sd_value <- sqrt(peak_diffs / (length(left_side_values) - 1))
+
+  max_noise <- mean_loc + (3 * sd_value)
+
+  peaklist$not_noise <- intensities > max_noise
+
+  # don't know the transform function directly, so we test for log10 and log,
+  # and if it doesn't match either of those, then we get the cutoff directly
+  # from the values themselves
+  if (transform(10) == 1) {
+    non_transform_cutoff <- 10^max_noise
+  } else if (transform(exp(1)) == 1) {
+    non_transform_cutoff <- exp(max_noise)
+  } else {
+    non_transform_cutoff <- max(peaklist[[intensity_measure]][!peaklist$not_noise])
+  }
+
+  mean_noise <- mean_loc
+
+  if (sum(peaklist[["not_noise"]] > 0)) {
+    mean_signal <- mean(transform(peaklist[[intensity_measure]][peaklist$not_noise]), na.rm = TRUE)
+    sum_signal <- sum(transform(peaklist[[intensity_measure]][peaklist$not_noise]) - mean_noise, na.rm = TRUE)
+    n_signal <- sum(peaklist$not_noise)
+    n_noise <- sum(!peaklist$not_noise)
+    signal_noise_ratio <- mean_signal - mean_noise
+  } else {
+    mean_signal <- 0
+    sum_signal <- 0
+    n_signal <- 0
+    n_noise <- sum(!peaklist$not_noise)
+    signal_noise_ratio <- -1 * mean_noise
+  }
+
+  return(list(peak_list = peaklist,
+              noise_info = data.frame(noise = mean_noise,
+                                      signal = mean_signal,
+                                      sum_signal = sum_signal,
+                                      n_signal = n_signal,
+                                      n_noise = n_noise,
+                                      sn_ratio = signal_noise_ratio,
+                                      intensity_measure = intensity_measure,
+                                      threshold = non_transform_cutoff)))
+
+}
 
 #' noise from peaklist
 #'
@@ -468,7 +295,7 @@ ScanMS <- R6::R6Class("ScanMS",
 #' @param sd_mean_ratio the ratio of standard deviation to mean to use as a cutoff
 #' @param noise_multiplier how high above the noise should the cutoff be
 #'
-#' @description This calculation is based on the premise that a distribution of
+#' @details This calculation is based on the premise that a distribution of
 #'  only noise peaks should have a standard deviation to mean ratio of about 1.
 #'  Therefore, but sorting the list of peak intensities, and incrementally adding
 #'  peaks, when the sd to mean ratio becomes larger than the cutoff, we say
@@ -589,6 +416,31 @@ MultiScans <- R6::R6Class("MultiScans",
 
 MasterPeakList <- R6::R6Class("MasterPeakList",
   public = list(
+    summarize = function(averaged_values = TRUE, individual_values = FALSE){
+      summarize_correspondencelist(self, averaged_values = averaged_values,
+                                   individual_values = individual_values)
+    },
+
+    total_intensity = NULL,
+    calculate_total_intensity = function(n_scan = 0.1){
+
+      if (!self$is_normalized) {
+        warning("Total Intensity with out Normalization is a bad idea!")
+      }
+
+      peak_scans <- self$count_notna()
+
+      max_scans <- max(peak_scans)
+
+      min_scans <- correctly_round_numbers(max_scans, n_scan)
+
+      keep_peaks <- peak_scans >= min_scans
+
+      self$total_intensity <- list(Value = sum(rowMeans(self$scan_height[keep_peaks, ], na.rm = TRUE)),
+                                   MinimumNumberOfScans = min_scans)
+      invisible(self)
+    },
+
     scan_mz = NULL,
     scan_height = NULL,
     scan_area = NULL,
@@ -611,7 +463,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       self$scan_mz <- self$scan_mz[, new_order]
       self$scan_height <- self$scan_height[, new_order]
       self$scan_area <- self$scan_area[, new_order]
-      self$scan_normalizedarea <- self$scan_normalized_area[, new_order]
+      self$scan_normalizedarea <- self$scan_normalizedarea[, new_order]
       self$scan_peak <- self$scan_peak[, new_order]
       self$scan <- self$scan[new_order]
       self$scan_indices <- self$scan_indices[new_order]
@@ -686,6 +538,9 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
       }
 
     },
+
+    offset_predict_function = NULL,
+    offset_fit_function = NULL,
 
     count_notna = function(){
       apply(self$scan_mz, 1, function(x){sum(!is.na(x))})
@@ -860,7 +715,8 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
     initialize = function(multi_scan_peak_list, peak_calc_type = "lm_weighted", sd_model = NULL, multiplier = 1,
                           mz_range = c(-Inf, Inf), noise_calculator = NULL, sd_fit_function = NULL,
-                          sd_predict_function = NULL, rmsd_min_scans = 3){
+                          sd_predict_function = NULL,
+                          offset_fit_function = NULL, offset_predict_function = NULL, rmsd_min_scans = 3){
       assertthat::assert_that(any(class(multi_scan_peak_list) %in% "MultiScansPeakList"))
 
       if (is.null(sd_model)) {
@@ -883,6 +739,18 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
         self$sd_predict_function <- multi_scan_peak_list$sd_predict_function
       } else {
         self$sd_predict_function <- default_sd_predict_function
+      }
+
+      if (!is.null(offset_fit_function)) {
+        self$offset_fit_function <- offset_fit_function
+      } else {
+        self$offset_fit_function <- default_offset_fit_function
+      }
+
+      if (!is.null(offset_predict_function)) {
+        self$offset_predict_function <- offset_predict_function
+      } else {
+        self$offset_predict_function <- default_offset_predict_function
       }
 
       if (!is.null(noise_calculator)) {
@@ -1050,77 +918,203 @@ check_model_sd <- function(predict_function, model_1, model_2, reject_frac = 0.1
 #'
 #' @export FindCorrespondenceScans
 
-FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
+#' find_correspondence_scans
+#'
+#' Initializes a FindCorrespondenceScans object to actually do correspondence.
+#'
+#' @param multi_scan_peak_list the MultiScansPeakList object to work with
+#' @param peak_calc_type what type of peaks are being used
+#' @param max_iteration how many iterations to allow before quitting?
+#' @param digital_resolution_multiplier multiplier on the digital resolution
+#' @param rmsd_multiplier the multiplier on the RMSD
+#' @param max_failures how many times can things fail before quitting
+#' @param mz_range the range of mz's to use
+#' @param notify_progress provide informative messages on progress
+#' @param noise_function the noise function to use
+#' @param sd_fit_function function to fit the RMSD
+#' @param sd_predict_function function for predicting RMSD cutoffs
+#' @param offset_fit_function function to fit M/Z offsets across scans (samples)
+#' @param offset_predict_function function to predict M/Z offsets
+#' @param offset_correction_function function for doing offset correction
+#' @param remove_low_ic_scans should low information content scans be removed
+#' @param collapse_peaks whether to collapse the peaks or not
+#'
+#' @export
+#' @return FindCorrespondenceScans
+find_correspondence_scans <- function(multi_scan_peak_list, peak_calc_type = "lm_weighted", max_iteration = 20,
+                                      digital_resolution_multiplier = 0.5, rmsd_multiplier = 3,
+                                      max_failures = 5,
+                                      mz_range = c(-Inf, Inf), notify_progress = FALSE, noise_function = NULL,
+                                      sd_fit_function = NULL, sd_predict_function = NULL,
+                                      offset_fit_function = NULL, offset_predict_function = NULL,
+                                      offset_correction_function = NULL,
+                                      remove_low_ic_scans = TRUE, collapse_peaks = FALSE){
+  fcp <- FindCorrespondenceScans$new(multi_scan_peak_list = multi_scan_peak_list,
+                              peak_calc_type = peak_calc_type, max_iteration = max_iteration,
+                              digital_resolution_multiplier = digital_resolution_multiplier,
+                              rmsd_multiplier = rmsd_multiplier,
+                              max_failures = max_failures,
+                              mz_range = mz_range, notify_progress = notify_progress,
+                              noise_function = noise_function,
+                              sd_fit_function = sd_fit_function,
+                              sd_predict_function = sd_predict_function,
+                              offset_fit_function = offset_fit_function,
+                              offset_predict_function = offset_predict_function,
+                              offset_correction_function = offset_correction_function,
+                              remove_low_ic_scans = remove_low_ic_scans,
+                              collapse_peaks = collapse_peaks)
+  fcp$iterative_correspondence()
+  fcp
+}
+
+filter_information_content = function(master_peak_list, multi_scan_peak_list, remove_low_ic_scans = TRUE, vocal = FALSE){
+  if (vocal) {
+    message("Filtering based on information content ....")
+  }
+  # this function removes scans by outlier information content values, and
+  # then subsequently re-orders the remaining scans by information content values
+  master_peak_list$calculate_scan_information_content()
+  tmp_information <- master_peak_list$scan_information_content
+
+  tmp_information$scan_order <- seq(1, nrow(tmp_information))
+
+  if (remove_low_ic_scans) {
+    # determine outliers
+    outlier_values <- grDevices::boxplot.stats(tmp_information$information_content)$out
+    # remove them
+    tmp_information <- tmp_information[!(tmp_information$information_content %in% outlier_values), ]
+  }
+
+  # order by information content so we can reorder everything else
+  tmp_information <- tmp_information[order(tmp_information$information_content, decreasing = TRUE), ]
+
+  multi_scan_peak_list <- multi_scan_peak_list$reorder(tmp_information$scan_order)
+  master_peak_list <- master_peak_list$reorder(tmp_information$scan_order)
+  return()
+}
+
+#' FindCorrespondence
+#'
+#'
+#'
+FindCorrespondence <- R6::R6Class("FindCorrespondence",
    public = list(
-     all_master_peak_lists = NULL, # store all of the master peak lists
-     master_peak_list = NULL, # store the final master peak list
-     sd_fit_function = NULL,
-     sd_predict_function = NULL,
-     sd_models = NULL, # store the coefficients for the models
-     collapse_peaks = NULL,
-     compare_mpl_models = NULL,
-     n_iteration = NULL,
+
+
+     # data needed by others
+     multi_scan_peak_list = NULL,
+     mz_range = c(-Inf, Inf),
      peak_type = NULL,
      digital_resolution_multiplier = NULL,
      initial_rmsd_multiplier = NULL,
+     # n_scan_peaks = NULL,
+
+     # functions needed by others
+     sd_fit_function = NULL,
+     sd_predict_function = NULL,
+     offset_predict_function = NULL,
+     offset_fit_function = NULL,
+     offset_correction_function = NULL,
+     noise_function = NULL,
+
+     # control options
+     max_iteration = 20,
+     min_scan = 0.1,
+     collapse_peaks = FALSE,
+     remove_low_ic_scans = TRUE,
+     notify_progress = FALSE,
+     max_failures = 5,
+     keep_all_master_peak_lists = FALSE,
+     keep_intermediates = FALSE,
+     correspondence = NULL,
+
+     # results
+     all_master_peak_lists = NULL, # store all of the master peak lists
+     offset_multi_scan_peak_list = NULL,
+     master_peak_list = NULL,
+
+     sd_models = NULL, # store the coefficients for the models
+     sd_predictions = NULL,
+     compare_mpl_models = NULL,
+     n_iteration = NULL,
+
+
      final_rmsd_multiplier = NULL,
      converged = NULL,
-     n_scan_peaks = NULL,
-     scan_fraction = NULL,
+     offset_correction_models = NULL,
+     offset_correction_predictions = NULL,
 
      # iterative correspondence first does correspondence based on the digital resolution,
      # and then creates a model using the SD of the correspondent peaks themselves,
      # and uses this model to do correspondence across scans, iterating until
      # there are no changes in the master peak lists of the objects
-     iterative_correspondence = function(multi_scan_peak_list, peak_calc_type = "lm_weighted", max_iteration = 20,
-                                         digital_resolution_multiplier = 0.5, rmsd_multiplier = 1, max_failures = 5,
-                                         mz_range = c(-Inf, Inf), sd_fit_function = NULL, sd_predict_function = NULL,
-                                         notify_progress = FALSE,
-                                         noise_function = NULL, collapse_peaks = FALSE){
+     iterative_correspondence = function(){
 
-       n_scan <- length(multi_scan_peak_list$scan_numbers())
+       rmsd_min_scans <- correctly_round_numbers(length(self$multi_scan_peak_list$scan_numbers()), self$min_scan)
 
-       self$scan_fraction <- 0.1
-       self$n_scan_peaks <- floor(n_scan * self$scan_fraction)
-
-       mpl_digital_resolution <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type, sd_model = NULL,
-                                                    multiplier = digital_resolution_multiplier, mz_range = mz_range,
-                                                    sd_fit_function = sd_fit_function,
-                                                    sd_predict_function = sd_predict_function,
-                                                    rmsd_min_scans = self$n_scan_peaks)
+       mpl_digital_resolution <- self$correspondence$new(self$multi_scan_peak_list, self$peak_calc_type, sd_model = NULL,
+                                                    multiplier = self$digital_resolution_multiplier, mz_range = self$mz_range,
+                                                    sd_fit_function = self$sd_fit_function,
+                                                    sd_predict_function = self$sd_predict_function,
+                                                    offset_fit_function = self$offset_fit_function,
+                                                    offset_predict_function = self$offset_predict_function,
+                                                    rmsd_min_scans = rmsd_min_scans)
 
        # mpl_digital_resolution$calculate_scan_information_content()
        # mpl_order <- order(mpl_digital_resolution$scan_information_content$information_content, decreasing = TRUE)
        # multi_scan_peak_list$reorder(mpl_order)
+       #
+       mz_range <- range(mpl_digital_resolution$master)
+       mz_pred_values <- seq(mz_range[1], mz_range[2], 0.5)
 
-       ms_dr_model <- multi_scan_peak_list$mz_model
+       ms_dr_model <- self$multi_scan_peak_list$mz_model
 
-       if (notify_progress) {
-         print("digital resolution done!")
+       if (self$notify_progress) {
+         message("digital resolution done!")
        }
 
-       all_models = list(ms_dr = ms_dr_model)
+       all_models <- list(ms_dr = ms_dr_model)
+       all_sd_predictions <- list(ms_dr = data.frame(x = mz_pred_values, y = self$sd_predict_function(ms_dr_model, mz_pred_values)))
 
-       all_mpls = vector(mode = "list", length = 22)
+
+       offset_models <- vector(mode = "list", length = 22)
+       offset_predictions <- vector(mode = "list", length = 22)
+       offset_mspl <- vector(mode = "list", length = 22)
+
+       all_mpls <- vector(mode = "list", length = 22)
        all_mpls[[1]] <- mpl_digital_resolution
 
        mpl_digital_resolution$calculate_sd_model()
        dr_sd_model <- mpl_digital_resolution$sd_model
 
        all_models[[2]] <- dr_sd_model
+       all_sd_predictions[[2]] <- data.frame(x = mz_pred_values, y = self$sd_predict_function(dr_sd_model, mz_pred_values))
 
-       mpl_sd_1 <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type,
+       rmsd_multiplier <- self$initial_rmsd_multiplier
+
+       mpl_sd_1 <- self$correspondence$new(self$multi_scan_peak_list, self$peak_calc_type,
                                       sd_model = mpl_digital_resolution$sd_model,
-                                      sd_fit_function = sd_fit_function,
-                                      sd_predict_function = sd_predict_function,
+                                      sd_fit_function = self$sd_fit_function,
+                                      sd_predict_function = self$sd_predict_function,
                                       multiplier = rmsd_multiplier,
-                                      rmsd_min_scans = self$n_scan_peaks)
+                                      rmsd_min_scans = rmsd_min_scans)
        mpl_sd_1$calculate_sd_model()
+
+       filter_information_content(mpl_sd_1, self$multi_scan_peak_list, remove_low_ic_scans = self$remove_low_ic_scans)
+
+       offset_multi_scan_peak_list <- self$multi_scan_peak_list$clone(deep = TRUE)
+
+       rmsd_min_scans <- correctly_round_numbers(length(self$multi_scan_peak_list$scan_numbers()), self$min_scan)
+
+       sd_diff_minima <- vector("double", 22)
+       sd_diff_minima[1:22] <- NA
+       offset_diff_minima <- vector("double", 22)
+       offset_diff_minima[1:22] <- NA
 
        all_mpls[[2]] <- mpl_sd_1
 
-       if (notify_progress) {
-         print("first sd done!")
+       if (self$notify_progress) {
+         message("first sd done!")
          #save(mpl_digital_resolution, file = "mpl_dr.RData")
          #save(mpl_sd_1, file = "mpl_sd_0.RData")
        }
@@ -1128,83 +1122,154 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
        n_iter <- 0
        n_good_iter <- 0
        n_fail_iter <- 0
-       sd_2_v_others <- compare_mpl_to_list(mpl_sd_1, all_mpls, exclude_check = 2)
+       converged_iter <- NULL
+
+       converged <- FALSE
 
        # mpl_sd_1$calculate_scan_information_content()
        # mpl_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
        # multi_scan_peak_list$reorder(mpl_order)
 
-       while ((!all(sd_2_v_others)) && (n_good_iter < max_iteration) && (self$scan_fraction <= 0.5)) {
+       while ((!all(converged)) && (n_good_iter < self$max_iteration)) {
          n_iter <- n_iter + 1
          mpl_sd_1$calculate_sd_model()
          all_models[[n_iter + 2]] <- mpl_sd_1$sd_model
+         all_sd_predictions[[n_iter + 2]] <- data.frame(x = mz_pred_values, y = self$sd_predict_function(mpl_sd_1$sd_model, mz_pred_values))
 
-         mpl_sd_2 <- MasterPeakList$new(multi_scan_peak_list, peak_calc_type, sd_model = mpl_sd_1$sd_model,
-                                        multiplier = rmsd_multiplier,
-                                        sd_fit_function = sd_fit_function,
-                                        sd_predict_function = sd_predict_function,
-                                        rmsd_min_scans = self$n_scan_peaks)
+         corrected_mspl <- self$offset_correction_function(mpl_sd_1, offset_multi_scan_peak_list)
 
-         mpl_sd_2$calculate_sd_model()
-         all_mpls[[n_iter + 2]] <- mpl_sd_2
+         tmp_models <- purrr::map_df(corrected_mspl$models, loess_to_df)
+         tmp_models$iteration <- as.character(n_iter)
+         offset_models[[n_iter]] <- tmp_models
+         offset_mspl[[n_iter]] <- corrected_mspl$multi_scan_peaklist
 
-         #sd_status <- check_model_sd(sd_predict_function, mpl_sd_1$sd_model, mpl_sd_2$sd_model)
-         sd_status <- TRUE
+         tmp_offset_predictions <- df_of_model_predictions(mpl_sd_1$offset_predict_function, mz_pred_values, corrected_mspl$models)
+         tmp_offset_predictions$iteration <- as.character(n_iter)
+         offset_predictions[[n_iter]] <- tmp_offset_predictions
 
-         if (!sd_status) {
-           self$scan_fraction <- self$scan_fraction + 0.05
-           self$n_scan_peaks <- floor(n_scan * self$scan_fraction)
-           next
+         offset_diff_minima[[n_iter]] <- compare_object_to_list_diff(offset_predictions[[n_iter]], offset_predictions, exclude_check = n_iter, min_check = 1, check_function = compare_model_predictions)
+         sd_diff_minima[[n_iter + 2]] <- compare_object_to_list_diff(all_sd_predictions[[n_iter + 2]], all_sd_predictions, exclude_check = n_iter + 2, min_check = 3, check_function = compare_model_predictions)
+
+         offset_converged <- compare_slopes(offset_diff_minima)
+         sd_converged <- compare_slopes(sd_diff_minima)
+
+         if ((any(offset_converged$converged) && any(sd_converged$converged))) {
+           converged <- TRUE
+           # the iteration is to make sure we grab the right offset model
+           converged_iter <- min(c(offset_converged$min, sd_converged$min - 2))
          } else {
-           n_good_iter <- n_good_iter + 1
+           offset_multi_scan_peak_list <- corrected_mspl$multi_scan_peaklist
+
+           mpl_sd_2 <- self$correspondence$new(offset_multi_scan_peak_list, self$peak_calc_type, sd_model = mpl_sd_1$sd_model,
+                                          multiplier = rmsd_multiplier,
+                                          sd_fit_function = self$sd_fit_function,
+                                          sd_predict_function = self$sd_predict_function,
+                                          rmsd_min_scans = rmsd_min_scans)
+
+           mpl_sd_2$calculate_sd_model()
+           all_mpls[[n_iter + 2]] <- mpl_sd_2
+
+           #sd_status <- check_model_sd(sd_predict_function, mpl_sd_1$sd_model, mpl_sd_2$sd_model)
+           sd_status <- TRUE
+
+           # if (!sd_status) {
+           #   self$scan_fraction <- self$scan_fraction + 0.05
+           #   self$n_scan_peaks <- floor(n_scan * self$scan_fraction)
+           #   next
+           # } else {
+             n_good_iter <- n_good_iter + 1
+           # }
+
+           # we wait until 5 iterations here because we want the SD model to be mostly
+           # set before we start collapsing peaks, given that the collapsing is based
+           # on the model SD for a given m/z
+           if (self$collapse_peaks && (n_good_iter >= 5)) {
+             mpl_sd_2 <- collapse_correspondent_peaks(mpl_sd_2)
+           }
+
+           sd_2_v_others <- compare_object_to_list(mpl_sd_2, all_mpls, exclude_check = n_iter + 2, check_function = compare_master_peak_lists)
+           if (sd_2_v_others) {
+             converged <- TRUE
+             converged_iter <- n_iter
+           } else {
+             mpl_sd_1 <- mpl_sd_2
+           }
          }
 
-         # we wait until 5 iterations here because we want the SD model to be mostly
-         # set before we start collapsing peaks, given that the collapsing is based
-         # on the model SD for a given m/z
-         if (collapse_peaks && (n_good_iter >= 5)) {
-           mpl_sd_2 <- collapse_correspondent_peaks(mpl_sd_2)
-         }
 
-         sd_2_v_others <- compare_mpl_to_list(mpl_sd_2, all_mpls, exclude_check = n_iter + 2)
-         mpl_sd_1 <- mpl_sd_2
-         # mpl_sd_1$calculate_scan_information_content()
-         # mpl_order <- order(mpl_sd_1$scan_information_content$information_content, decreasing = TRUE)
-         # multi_scan_peak_list$reorder(mpl_order)
-
-         if (notify_progress) {
-           notify_message <- paste0(as.character(n_iter), " iteration done!")
-           print(notify_message)
+         if (self$notify_progress) {
+           notify_message <- paste0(as.character(n_iter), " iterations done!")
+           message(notify_message)
            #save(mpl_sd_1, file = paste0("mpl_sd_", as.character(n_iter), ".RData"))
          }
        }
-       self$master_peak_list <- mpl_sd_1
-       self$sd_models <- all_models
+
+       # take the last iteration if there was no convergence, so at least it
+       # doesn't error out and next steps can proceed.
+       if (is.null(converged_iter)) {
+         converged_iter <- n_iter
+       }
+       self$master_peak_list <- all_mpls[[converged_iter]]
        self$compare_mpl_models <- sd_2_v_others
-       self$n_iteration <- n_iter
-       self$peak_type <- peak_calc_type
+       self$n_iteration <- converged_iter
        self$final_rmsd_multiplier <- rmsd_multiplier
-       self$all_master_peak_lists <- all_mpls
-       if (n_fail_iter >= max_failures) {
+       if (self$keep_all_master_peak_lists) {
+         self$all_master_peak_lists <- all_mpls
+       }
+       if (self$keep_intermediates) {
+         self$sd_models <- all_models
+         self$offset_correction_models <- offset_models
+         self$offset_multi_scan_peak_list <- offset_mspl[[converged_iter]]
+         self$offset_correction_predictions <- offset_predictions
+         self$sd_predictions <- all_sd_predictions
+       } else {
+         self$multi_scan_peak_list <- NULL
+       }
+       if (n_fail_iter >= self$max_failures) {
          self$converged <- FALSE
        } else {
          self$converged <- TRUE
        }
-
+       invisible(self)
      },
 
 
      initialize = function(multi_scan_peak_list, peak_calc_type = "lm_weighted", max_iteration = 20,
-                           digital_resolution_multiplier = 0.5, rmsd_multiplier = 3,
+                           digital_resolution_multiplier = 1, rmsd_multiplier = 3,
                            max_failures = 5,
                            mz_range = c(-Inf, Inf), notify_progress = FALSE, noise_function = NULL,
-                           sd_fit_function = NULL, sd_predict_function = NULL, collapse_peaks = FALSE){
-       assertthat::assert_that(any(class(multi_scan_peak_list) %in% "MultiScansPeakList"))
+                           sd_fit_function = NULL, sd_predict_function = NULL, collapse_peaks = FALSE,
+                           min_scan = 0.1,
+                           remove_low_ic_scans = TRUE,
+                           offset_correction_function = NULL,
+                           offset_fit_function = NULL,
+                           offset_predict_function = NULL,
+                           keep_all_master_peak_lists = FALSE,
+                           keep_intermediates = FALSE){
+       assertthat::assert_that(inherits(multi_scan_peak_list, "MultiScansPeakList"))
 
        self$digital_resolution_multiplier <- digital_resolution_multiplier
        self$initial_rmsd_multiplier <- rmsd_multiplier
 
+       self$multi_scan_peak_list <- multi_scan_peak_list$clone(deep = TRUE)
+       self$mz_range <- mz_range
+       self$peak_type <- peak_calc_type
+       self$digital_resolution_multiplier <- digital_resolution_multiplier
+       self$initial_rmsd_multiplier <- rmsd_multiplier
+
+       # functions needed by others
+       self$noise_function <- noise_function
+
+       # control options
+       self$max_iteration <- max_iteration
+       self$min_scan <- min_scan
+       self$remove_low_ic_scans <- remove_low_ic_scans
+       self$notify_progress <- notify_progress
+       self$keep_all_master_peak_lists <- keep_all_master_peak_lists
+       self$keep_intermediates <- keep_intermediates
+
        self$collapse_peaks <- collapse_peaks
+       self$max_failures <- max_failures
 
        if (!is.null(sd_fit_function)) {
          self$sd_fit_function <- sd_fit_function
@@ -1222,56 +1287,266 @@ FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
          self$sd_predict_function <- default_sd_predict_function
        }
 
-       self$iterative_correspondence(multi_scan_peak_list, peak_calc_type = peak_calc_type,
-                                     max_iteration = max_iteration, digital_resolution_multiplier = digital_resolution_multiplier,
-                                     rmsd_multiplier = rmsd_multiplier,
-                                     max_failures = max_failures,
-                                     mz_range = mz_range, sd_fit_function = self$sd_fit_function,
-                                     sd_predict_function = self$sd_predict_function,
-                                     notify_progress = notify_progress, collapse_peaks = self$collapse_peaks)
+       if (!is.null(offset_fit_function)) {
+         self$offset_fit_function <- offset_fit_function
+       } else {
+         self$offset_fit_function <- default_offset_fit_function
+       }
 
+       if (!is.null(offset_predict_function)) {
+         self$offset_predict_function <- offset_predict_function
+       } else {
+         self$offset_predict_function <- default_offset_predict_function
+       }
+
+       if (!is.null(offset_correction_function)) {
+         self$offset_correction_function <- offset_correction_function
+       } else {
+         self$offset_correction_function <- default_correct_offset_function
+       }
 
      }
    )
 
 )
 
-#' compare MasterPeakList to others
-#'
-#' Given one MasterPeakList and a bunch of others, determine if there is a match
-#' to any of the previous ones
-#'
-#' @param mpl_check the list of things
-#' @param mpl_list the one to check
-#' @param min_check what value is a minimum valid check
-#' @param exclude_check is there anything to exclude??
+#' FindCorrespondenceScans
 #'
 #' @export
-compare_mpl_to_list <- function(mpl_check, mpl_list, min_check = 3, exclude_check = NULL){
-  has_result <- vapply(mpl_list, length, numeric(1)) > 0
-  mpl_list <- mpl_list[1:max(which(has_result))]
+#'
+FindCorrespondenceScans <- R6::R6Class("FindCorrespondenceScans",
+  inherit = FindCorrespondence,
+
+  public = list(
+    correspondence = MasterPeakList
+  )
+)
+
+#' MasterSampleList
+#'
+#' Holds the correspondence across samples
+#'
+#' @export
+#'
+MasterSampleList <- R6::R6Class("MasterSampleList",
+                                inherit = MasterPeakList,
+                                public = list(
+                                  summarize = function(averaged_values = FALSE, individual_values = TRUE){
+                                    summarize_correspondencelist(self, averaged_values = averaged_values,
+                                                                 individual_values = individual_values)
+                                  },
+                                  sample_id = NULL,
+                                  n_scan = NULL,
+                                  scans_in_sample = NULL,
+                                  zip_file = NULL,
+
+                                  initialize = function(multi_sample_peak_list, peak_calc_type = "lm_weighted", sd_model = NULL, multiplier = 1,
+                                                        mz_range = c(-Inf, Inf), noise_calculator = NULL, sd_fit_function = NULL,
+                                                        sd_predict_function = NULL,
+                                                        offset_fit_function = NULL, offset_predict_function = NULL, rmsd_min_scans = 3){
+                                    #browser(expr = TRUE)
+                                    assertthat::assert_that(any(class(multi_sample_peak_list) %in% "MultiSamplePeakList"))
+
+                                    if (is.null(sd_model)) {
+                                      sd_model = multi_sample_peak_list$mz_model
+                                    }
+
+                                    self$scan_indices <- multi_sample_peak_list$scan_indices
+
+                                    if (!is.null(sd_fit_function)) {
+                                      self$sd_fit_function <- sd_fit_function
+                                    } else if (!is.null(multi_sample_peak_list$sd_fit_function)) {
+                                      self$sd_fit_function <- multi_sample_peak_list$sd_fit_function
+                                    } else {
+                                      self$sd_fit_function <- default_sd_fit_function
+                                    }
+
+                                    if (!is.null(sd_predict_function)) {
+                                      self$sd_predict_function <- sd_predict_function
+                                    } else if (!is.null(multi_sample_peak_list$sd_predict_function)) {
+                                      self$sd_predict_function <- multi_sample_peak_list$sd_predict_function
+                                    } else {
+                                      self$sd_predict_function <- default_sd_predict_function
+                                    }
+
+                                    if (!is.null(offset_fit_function)) {
+                                      self$offset_fit_function <- offset_fit_function
+                                    } else {
+                                      self$offset_fit_function <- default_offset_fit_function
+                                    }
+
+                                    if (!is.null(offset_predict_function)) {
+                                      self$offset_predict_function <- offset_predict_function
+                                    } else {
+                                      self$offset_predict_function <- default_offset_predict_function
+                                    }
+
+                                    if (!is.null(noise_calculator)) {
+                                      self$noise_calculator <- noise_calculator
+                                    }
+
+                                    self$rmsd_min_scans <- rmsd_min_scans
+                                    self$sample_id <- multi_sample_peak_list$get_sample_id()
+                                    if (!is.null(multi_sample_peak_list$get_zip_files)) {
+                                      self$zip_file <- multi_sample_peak_list$get_zip_files()
+                                    }
+
+                                    self$peak_correspondence(multi_sample_peak_list, peak_calc_type, sd_model = sd_model, multiplier = multiplier,
+                                                             mz_range = mz_range)
+                                    all_samples <- multi_sample_peak_list$get_scan_peak_lists()
+                                    sample_indices <- self$scan_peak
+                                    n_scan_per_sample <- lapply(seq(1, length(all_samples)), function(in_sample){
+                                      use_index <- sample_indices[, in_sample]
+                                      all_samples[[in_sample]]$peak_list[["n_scan"]][use_index]
+                                    })
+
+                                    self$n_scan <- do.call(cbind, n_scan_per_sample)
+                                    self$scans_in_sample <- vapply(all_samples, function(in_sample){
+                                      in_sample$n_scans
+                                    }, numeric(1))
+                                    invisible(self)
+                                  }
+                                )
+)
+
+
+#' FindCorrespondenceSamples
+#'
+#' @export
+#'
+FindCorrespondenceSamples <- R6::R6Class("FindCorrespondenceSamples",
+  inherit = FindCorrespondence,
+
+  public = list(
+    correspondence = MasterSampleList,
+    digital_resolution_multiplier = 3,
+    min_scan = 2,
+    remove_low_ic_scans = FALSE
+  )
+)
+
+
+#' compare objects to others 2
+#'
+#' Given one object and a list of others, determine if there is a match
+#' to any of the previous ones
+#'
+#' @param object_check the list of things
+#' @param object_list the one to check
+#' @param min_check what value is a minimum valid check
+#' @param exclude_check is there anything to exclude??
+#' @param check_function what function should be used to compare the objects?
+#'
+#' @details this function allows one to check that an object "matches" any of the
+#'   objects in a provided list. How an object "matches" is determined by the
+#'   \emph{check_function}, it should merely return TRUE or FALSE
+#'
+#' @importFrom purrr map2_df
+#'
+#' @export
+compare_object_to_list_diff <- function(object_check, object_list, min_check = 3, exclude_check = NULL, check_function){
+  has_result <- vapply(object_list, length, numeric(1)) > 0
+  object_list <- object_list[1:max(which(has_result))]
 
   if (is.null(exclude_check)) {
-    exclude_check <- length(mpl_list)
+    exclude_check <- length(object_list)
   }
 
-  mpl_compare <- lapply(mpl_list, compare_master_peak_lists, mpl_check)
-  mpl_compare <- as.data.frame(do.call(rbind, mpl_compare))
-  mpl_compare$index <- seq(1, nrow(mpl_compare))
-  mpl_compare <- dplyr::mutate(mpl_compare, all_true = master & scan & scan_height & scan_area & scan_mz)
-  mpl_compare <- mpl_compare[-exclude_check, ]
+  object_1 <- vector("list", 1)
+  object_1[[1]] <- object_check
+  object_compare <- purrr::map2_df(object_list, object_1, check_function)
+  #print(object_compare)
+  object_compare$index <- seq(1, nrow(object_compare))
+  object_compare <- object_compare[-exclude_check, ]
 
-  if (sum(mpl_compare$all_true) > 0) {
-    min_which_same <- min(which(mpl_compare$all_true[-exclude_check]))
+  if ((nrow(object_compare) >= 1) && (max(object_compare$index) >= min_check)) {
+    object_compare <- object_compare[object_compare$index >= min_check, ]
+    min_value <- min(object_compare$diff)
+  } else {
+    min_value <- NA
+  }
+}
+
+#' compare objects to others
+#'
+#' Given one object and a list of others, determine if there is a match
+#' to any of the previous ones
+#'
+#' @param object_check the list of things
+#' @param object_list the one to check
+#' @param min_check what value is a minimum valid check
+#' @param exclude_check is there anything to exclude??
+#' @param check_function what function should be used to compare the objects?
+#'
+#' @details this function allows one to check that an object "matches" any of the
+#'   objects in a provided list. How an object "matches" is determined by the
+#'   \emph{check_function}, it should merely return TRUE or FALSE
+#'
+#' @importFrom purrr map2_df
+#'
+#' @export
+compare_object_to_list <- function(object_check, object_list, min_check = 3, exclude_check = NULL, check_function){
+  has_result <- vapply(object_list, length, numeric(1)) > 0
+  object_list <- object_list[1:max(which(has_result))]
+
+  if (is.null(exclude_check)) {
+    exclude_check <- length(object_list)
+  }
+
+  object_1 <- vector("list", 1)
+  object_1[[1]] <- object_check
+  object_compare <- purrr::map2_df(object_list, object_1, check_function)
+  #print(object_compare)
+  object_compare$index <- seq(1, nrow(object_compare))
+  object_compare <- object_compare[-exclude_check, ]
+
+  if ((nrow(object_compare) > 1) && (sum(object_compare$compare) > 0)) {
+    min_which_same <- min(object_compare$index[object_compare$compare])
     if (min_which_same >= min_check) {
-      is_converged <- TRUE
+      is_same <- TRUE
     } else {
-      is_converged <- FALSE
+      is_same <- FALSE
     }
   } else {
-    is_converged <- FALSE
+    is_same <- FALSE
   }
-  is_converged
+  is_same
+}
+
+
+#' compare slopes
+#'
+#' check if subsequent differences show a minima with at least two increasing
+#' points after the minima
+#'
+#' @param values the values to work with
+#'
+#' @export
+#' @return logical
+compare_slopes <- function(values){
+  #values <- values[!is.na(values)]
+  if (sum(!is.na(values)) >= 3) {
+    min_loc <- which.min(values)
+
+    max_notna <- max(which(!is.na(values)))
+    if (max_notna > min_loc) {
+      n_greater <- sum(values[seq(min_loc + 1, max_notna)] > values[min_loc])
+    } else {
+      n_greater <- 0
+    }
+
+
+    if (n_greater >= 2) {
+      converged <- TRUE
+    } else {
+      converged <- FALSE
+    }
+  } else {
+    converged <- FALSE
+    min_loc <- 0
+  }
+
+  data.frame(converged = converged, min = min_loc)
 }
 
 #' compare two MasterPeakList objects
@@ -1285,15 +1560,56 @@ compare_mpl_to_list <- function(mpl_check, mpl_list, min_check = 3, exclude_chec
 #'
 #' @export
 #'
-compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("master", "scan",
-                                                                     "scan_height", "scan_area", "scan_mz")){
-  compare_results <- vapply(compare_list, function(in_obj){
+compare_master_peak_lists <- function(mpl_1, mpl_2, compare_list = c("scan",
+                                                                     "scan_height", "scan_area")){
+  compare_results <- purrr::map_lgl(compare_list, function(in_obj){
     isTRUE(all.equal(mpl_1[[in_obj]], mpl_2[[in_obj]]))
-  }, logical(1))
-  compare_results
+  })
+  #print(compare_results)
+  data.frame(compare = all(compare_results))
+}
+
+#' compare two sets of model predictions
+#'
+#' Given two different model prediction objects, use the L1 Norm (maximum absolute difference)
+#' to decide if they are the same or not.
+#'
+#' @param model_pred_1 the first one
+#' @param model_pred_2 the second
+#' @param pred_column which column in the data.frame to use for comparison
+#'
+#' @export
+#' @return data.frame
+compare_model_predictions <- function(model_pred_1, model_pred_2, pred_column = "y"){
+  pred_diffs <- sqrt(sum((model_pred_1[[pred_column]] - model_pred_2[[pred_column]])^2) / length(model_pred_1))
+
+  data.frame(diff = pred_diffs)
 }
 
 
+#' all model predictions
+#'
+#' When a bunch of offset models are generated, we want to go through and create
+#' a whole set of predictions. This enables creation of a whole lot of predictions.
+#'
+#' @param predict_function the function used to make the predictions
+#' @param x the thing to make predictions with
+#' @param list_of_models the set of models
+#'
+#' @importFrom purrr map2_df
+#'
+#' @export
+#'
+df_of_model_predictions <- function(predict_function, x, list_of_models){
+  in_x <- vector("list", 1)
+  in_x[[1]] <- x
+  generate_df <- function(model, x, predict_function){
+    data.frame(x = x, y = predict_function(model, x))
+  }
+  purrr::map2_df(list_of_models, in_x, generate_df, predict_function)
+}
+
+#'
 #' normalize scans
 #'
 #' Given a \code{MasterPeakList} object that has the peaks across scans corresponded,
@@ -1395,39 +1711,38 @@ normalize_mspl <- function(normalization_factors, mspl){
 #' PeakList objects for multiple samples
 #'
 #' @export
-
 MultiSamplePeakList <- R6::R6Class("MultiSamplePeakList",
                                  inherit = MultiScansPeakList,
   public = list(
     sample_id = NULL,
+    zip_file = NULL,
     min_scans = NULL,
     set_min_scans = function(){
-      sample_scans <- vapply(self$peak_list_by_scans, function(in_sample){
-        in_sample$n_scans
-      }, numeric(1))
-      self$min_scans <- floor(mean(sample_scans) * 0.1)
+      if (!is.null(self$min_scans)) {
+        self$peak_list_by_scans <- lapply(self$peak_list_by_scans, function(in_sample){
+          in_sample$min_scans <- self$min_scans
+          in_sample
+        })
+      }
+    },
+    filter_min_scans = function(){
       self$peak_list_by_scans <- lapply(self$peak_list_by_scans, function(in_sample){
-        in_sample$min_scans <- self$min_scans
+        in_sample$filter_min_scans()
         in_sample
       })
     },
-    filter_min_scans = function(){
-      if (!is.null(self$min_scans)) {
-        self$peak_list_by_scans <- lapply(self$peak_list_by_scans, function(in_sample){
-          in_sample$filter_min_scans()
-          in_sample
-        })
-      } else {
-        warning("Set min_scans first!")
-      }
-
-    },
     get_sample_id = function(){
-      vapply(self$peak_list_by_scans[self$scan_indices], function(in_sample){
-        in_sample$sample_id
-      }, character(1))
+      self$sample_id[self$scan_indices]
     },
-    initialize = function(sample_list = NULL){
+    set_zip_files = function(zip_files){
+      self$zip_file <- zip_files
+    },
+    get_zip_files = function(){
+      if (!is.null(self$zip_file)) {
+        self$zip_file[self$scan_indices]
+      }
+    },
+    initialize = function(sample_list = NULL, zip_files = NULL){
       n_scan <- length(sample_list)
 
       if (class(sample_list) == "character") {
@@ -1445,11 +1760,19 @@ MultiSamplePeakList <- R6::R6Class("MultiSamplePeakList",
           tmp_ids <- as.character(seq(1, n_scan))
         }
         self$peak_list_by_scans <- lapply(seq(1, n_scan), function(in_scan){
-          CorrespondentPeakList$new(sample_list[[in_scan]], scan = in_scan, sample_id = tmp_ids[in_scan])
+          if (!is.null(zip_files)) {
+            in_zip <- zip_files[in_scan]
+          } else {
+            in_zip <- NULL
+          }
+          CorrespondentPeakList$new(sample_list[[in_scan]], scan = in_scan, sample_id = tmp_ids[in_scan], zip_file = in_zip)
         })
         self$sample_id <- tmp_ids
       }
       self$scan_indices <- seq(1, length(self$peak_list_by_scans))
+      if (!is.null(zip_files)) {
+        self$zip_file <- zip_files
+      }
 
     }
   )
@@ -1466,12 +1789,19 @@ CorrespondentPeakList <- R6::R6Class("CorrespondentPeakList",
   public = list(
     sample_id = NULL,
     min_scans = NULL,
+    zip_file = NULL,
+
     filter_min_scans = function(){
-      self$peak_list <- dplyr::filter(self$peak_list, n_scan >= self$min_scans)
+      assertthat::assert_that(!is.null(self$min_scans))
+      min_scans <- correctly_round_numbers(self$n_scans, self$min_scans)
+
+      self$peak_list <- dplyr::filter(self$peak_list, n_scan >= min_scans)
+      self$peak_list$peak <- seq(1, nrow(self$peak_list))
     },
     n_scans = NULL,
-    initialize = function(master_peak_list, scan = NULL, sample_id = NULL){
+    initialize = function(master_peak_list, scan = NULL, sample_id = NULL, zip_file = NULL, min_scans = 0.1){
 
+      self$min_scans <- min_scans
       n_peak <- length(master_peak_list$master)
       self$peak_list <- data.frame(ObservedMZ = rowMeans(master_peak_list$scan_mz, na.rm = TRUE),
                                    Height = rowMeans(master_peak_list$scan_height, na.rm = TRUE),
@@ -1485,57 +1815,848 @@ CorrespondentPeakList <- R6::R6Class("CorrespondentPeakList",
 
       self$sample_id <- sample_id
       self$n_scans <- length(master_peak_list$scan)
+
+      self$zip_file <- zip_file
+
+      invisible(self)
     }
   ))
 
-
-#' MasterSampleList
+#' summarize_correspondencelist
 #'
-#' Holds the correspondence across samples
+#' creates a list of lists, where each list is named according to the json file
+#' it should generate. One list will be the processing information, and then
+#' their will either be a list for each scan (sample) or one list of the average
+#' values
+#'
+#' @param correspondencelist_object the correspondent peaks to summarize
+#' @param peakfinder_obj a PeakFinder that also needs to be summarized
+#' @param average_values should values be averaged
+#' @param individual_values should individual samples / scans be returned
+#' @param package_used which package was used to do summarize
 #'
 #' @export
+#' @return list
+summarize_correspondencelist <- function(correspondencelist_object, averaged_values = TRUE,
+                                       individual_values = FALSE){
 
-MasterSampleList <- R6::R6Class("MasterSampleList",
-  inherit = MasterPeakList,
+  if (is.null(correspondencelist_object$sd_model)) {
+    correspondencelist_object$calculate_sd_model()
+  }
+
+  sd_model <- correspondencelist_object$sd_model
+
+  n_peak <- length(correspondencelist_object$master)
+
+  average_height_area <- function(height_area){
+    height_area <- height_area[!is.na(height_area)]
+    mean_ha <- mean(height_area)
+    median_ha <- median(height_area)
+    sd_ha <- sd(height_area)
+    rsd_ha <- sd_ha / mean_ha
+    values <- height_area
+
+    list(Mean = mean_ha,
+         Median = median_ha,
+         SD = sd_ha,
+         RSD = rsd_ha,
+         Values = values)
+  }
+
+  average_mz <- function(mz, sd_model, sd_pred_function){
+    mz <- mz[!is.na(mz)]
+    mean_mz <- mean(mz)
+    median_mz <- median(mz)
+    sd_mz <- sd(mz)
+
+    model_sd <- sd_pred_function(sd_model, mean_mz)
+    values <- mz
+
+    list(Mean = mean_mz,
+         Median = median_mz,
+         SD = sd_mz,
+         ModelSD = model_sd,
+         Values = values)
+  }
+
+  if (averaged_values) {
+    if (!is.null(correspondencelist_object$total_intensity)) {
+      total_intensity <- correspondencelist_object$total_intensity
+    } else {
+      total_intensity <- NA
+    }
+    average_peaks <- list(peak_list.json = list(
+      TotalIntensity = total_intensity,
+      Peaks = purrr::map(seq(1, n_peak), function(in_peak){
+      tmp_index <- !is.na(correspondencelist_object$scan_mz[in_peak, ])
+
+      list(Sample = "Averaged",
+           # basically assume we only want average when there are scans, as an average
+           # makes no sense across samples, so NScan is used here and in single samples
+           # to be consistent to make it easier for reading data for doing assignment
+           NScan = (sum(tmp_index)),
+           Scans = correspondencelist_object$scan[tmp_index],
+           ObservedMZ = average_mz(correspondencelist_object$scan_mz[in_peak, ],
+                                   sd_model, correspondencelist_object$sd_predict_function),
+           Height = average_height_area(correspondencelist_object$scan_height[in_peak, ]),
+           Area = average_height_area(correspondencelist_object$scan_area[in_peak, ]),
+           NormalizedArea = average_height_area(correspondencelist_object$scan_normalizedarea[in_peak, ])
+           )
+    })))
+
+  } else {
+    average_peaks = list(peak_list.json = NULL)
+  }
+
+  if (individual_values) {
+    notna_indiv <- correspondencelist_object$count_notna()
+    individual_samples_scans <- purrr::map(seq(1, length(correspondencelist_object$scan)), function(in_scan){
+      sample_peaks <- !is.na(correspondencelist_object$scan_mz[, in_scan])
+
+      list(Peaks = purrr::map(which(sample_peaks), function(in_peak){
+          if (inherits(correspondencelist_object, "MasterSampleList")) {
+            sample <- correspondencelist_object$sample_id[in_scan]
+            n_scan <- correspondencelist_object$n_scan[in_peak, in_scan]
+            n_sample <- notna_indiv[in_peak]
+            scan <- NA
+          } else {
+            sample <- NA
+            scan <- correspondencelist_object$scan[in_scan]
+            n_scan <- notna_indiv[in_peak]
+            n_sample <- NA
+          }
+          peak <- in_peak
+
+          list(Sample = sample,
+               Peak = in_peak,
+               Scan = scan,
+               NScan = n_scan,
+               NSample = n_sample,
+               ObservedMZ = average_mz(correspondencelist_object$scan_mz[in_peak, in_scan],
+                                       sd_model, correspondencelist_object$sd_predict_function),
+               Height = average_height_area(correspondencelist_object$scan_height[in_peak, in_scan]),
+               Area = average_height_area(correspondencelist_object$scan_area[in_peak, in_scan]),
+               NormalizedArea = average_height_area(correspondencelist_object$scan_normalizedarea[in_peak, in_scan]))
+        })
+      )
+
+    })
+
+    if (inherits(correspondencelist_object, "MasterSampleList")) {
+      names(individual_samples_scans) <- paste0(correspondencelist_object$sample_id, ".json")
+    } else {
+      names(individual_samples_scans) <- paste0("scan_", correspondencelist_object$scan, ".json")
+    }
+  } else {
+    individual_samples_scans <- list(nothing = NULL)
+  }
+
+  if (inherits(correspondencelist_object, "MasterSampleList")) {
+    samples_zip <- purrr::map(correspondencelist_object$zip_file, function(x){x})
+    names(samples_zip) <- correspondencelist_object$sample_id
+    map_samples_zip <- list(samples_to_zip.json = list(Samples = samples_zip))
+  } else {
+    map_samples_zip <- list(samples_to_zip.json = NULL)
+  }
+
+  out_lists <- c(average_peaks, individual_samples_scans, map_samples_zip)
+
+  summarized_correspondence(out_lists)
+}
+
+summarized_correspondence <- function(x){
+  if (!is.list(x)) {
+    stop("X must be a list!")
+  } else {
+    structure(x, class = "summarized_correspondence")
+  }
+}
+
+as.data.frame.summarized_correspondence <- function(x, keep_peaks = NULL){
+  null_entries <- purrr::map_lgl(x, is.null)
+  x <- x[!null_entries]
+
+  has_peaks <- purrr::map_lgl(x, function(x){!is.null(x$Peaks)})
+  x <- x[has_peaks]
+
+  if (!is.null(keep_peaks)) {
+    x <- x[names(x) %in% keep_peaks]
+  }
+
+  peak_df <- purrr::map_df(x, function(in_peaks){
+    all_peaks <- in_peaks$Peaks
+    peak_index <- seq(1, length(all_peaks))
+    purrr::map_df(peak_index, function(ipeak){
+      #print(ipeak)
+      single_peak <- all_peaks[[ipeak]]
+
+      if (is.null(single_peak$Peak)) {
+        peak_id <- ipeak
+      } else {
+        peak_id <- single_peak$Peak
+      }
+      if (is.na(single_peak$Sample) & !is.null(single_peak$Scan)) {
+        scan <- as.character(single_peak$Scan)
+        nscan <- single_peak$nscan
+      } else {
+        scan <- single_peak$Sample
+        nscan <- single_peak$N
+      }
+
+      extract_values <- c("ObservedMZ", "Height", "Area", "NormalizedArea")
+
+      tmp_df <- purrr::map_df(extract_values, function(in_value){
+        extract_summary <- c("Mean", "Median", "SD", "RSD", "ModelSD")
+        use_summary <- intersect(names(single_peak[[in_value]]), extract_summary)
+        summary_df <- purrr::map_df(use_summary, function(in_summary){
+          data.frame(value = single_peak[[in_value]][[in_summary]],
+                     summary = in_summary, stringsAsFactors = FALSE)
+        })
+        summary_df$extracted <- in_value
+        summary_df
+      })
+      tmp_df$peak_id <- peak_id
+      tmp_df$scan <- scan
+      tmp_df$nscan <- nscan
+
+      tmp_df
+    })
+
+  })
+  peak_df
+}
+
+peak_list_2_df <- function(peak_list,
+                           summary_values = c("ObservedMZ", "Height", "Area", "NormalizedArea"),
+                           summary_types = c("Mean", "Median", "SD", "RSD", "ModelSD")) {
+  n_peaks <- length(peak_list)
+  peak_index <- seq(1, n_peaks)
+
+  purrr::map_df(peak_index, function(ipeak){
+    #print(ipeak)
+    single_peak <- peak_list[[ipeak]]
+
+    if (is.null(single_peak$Peak)) {
+      peak_id <- ipeak
+    } else {
+      peak_id <- single_peak$Peak
+    }
+    if (is.na(single_peak$Sample) & !is.null(single_peak$Scan)) {
+      scan <- as.character(single_peak$Scan)
+    } else {
+      scan <- single_peak$Sample
+    }
+    nscan <- single_peak$NScan
+
+    tmp_df <- purrr::map_df(summary_values, function(in_value){
+      use_summary <- intersect(names(single_peak[[in_value]]), summary_types)
+      summary_df <- purrr::map_df(use_summary, function(in_summary){
+        data.frame(value = single_peak[[in_value]][[in_summary]],
+                   summary = in_summary, stringsAsFactors = FALSE)
+      })
+      summary_df$extracted <- in_value
+      summary_df
+    })
+    tmp_df$peak_id <- peak_id
+    tmp_df$scan <- scan
+    tmp_df$nscan <- nscan
+
+    tmp_df
+  })
+}
+
+split_adduct <- function(emf, split_chr = "_"){
+  emf_split <- strsplit(emf, split = split_chr, fixed = TRUE)
+  purrr::map_df(emf_split, function(x){
+    data.frame(Adduct = x[1], EMF2 = x[2], stringsAsFactors = FALSE)
+  })
+}
+
+replace_null <- function(in_list, replace_value = NA) {
+  purrr::map(in_list, function(x){
+    if (is.null(x)) {
+      replace_value
+    } else {
+      x
+    }
+  })
+}
+
+assignment_list_2_df <- function(in_assignment, include_non_primary = TRUE){
+  assign_types <- purrr::map_chr(in_assignment, "Type")
+
+  if (!include_non_primary) {
+    in_assignment <- in_assignment[assign_types %in% "Primary"]
+  }
+
+  in_assignment <- purrr::map(in_assignment, replace_null)
+
+  assign_df <- purrr::map_df(in_assignment, as.data.frame, stringsAsFactors = FALSE)
+
+}
+
+peak_assignments_2_df <- function(peak_list, include_non_primary = TRUE) {
+  n_peaks <- length(peak_list)
+  peak_index <- seq(1, n_peaks)
+
+  assignments <- purrr::map(peak_index, function(ipeak){
+    #print(ipeak)
+    single_peak <- peak_list[[ipeak]]
+
+    if (is.null(single_peak$Peak)) {
+      peak_id <- ipeak
+    } else {
+      peak_id <- single_peak$Peak
+    }
+
+    if (length(single_peak$Assignments) != 0) {
+      assign_df <- assignment_list_2_df(single_peak$Assignments)
+      assign_df$peak_id <- peak_id
+    } else {
+      assign_df <- NULL
+    }
+    assign_df
+  })
+
+  null_assignments <- purrr::map_lgl(assignments, is.null)
+  assignments <- assignments[!null_assignments]
+  assignments <- purrr::map_df(assignments, function(x){x})
+  assignments <- cbind(assignments, split_adduct(assignments[["EMF"]]))
+  assignments
+}
+
+extract_peak_characteristics <- function(peak_df, extract_variables = c("ObservedMZ", "Height"), extract_summary = c("Mean")){
+  expanded_combinations <- expand.grid(extract_variables, extract_summary)
+  expected_variables <- paste0(expanded_combinations[,1], ".", expanded_combinations[,2])
+
+  peak_df <- peak_df[(peak_df$extracted %in% extract_variables) & (peak_df$summary %in% extract_summary), ]
+  peak_df$extract_variable <- paste0(peak_df$extracted, ".", peak_df$summary)
+
+  split_by_id <- split(peak_df, peak_df$peak_id)
+  purrr::map_df(split_by_id, function(x){
+    tmp_vector <- x$value
+    names(tmp_vector) <- x$extract_variable
+    out_vector <- tmp_vector[expected_variables]
+    names(out_vector) <- expected_variables
+    out_frame <- as.data.frame(as.list(out_vector), stringsAsFactors = FALSE)
+    out_frame$peak_id <- x$peak_id[1]
+    out_frame$nscan <- x$nscan[1]
+    out_frame$scan <- x$scan[1]
+    out_frame
+  })
+}
+
+merge_peak_characteristics_assignments <- function(extracted_characteristics, assignment_df, keep_only = "assignments"){
+  join_type <- switch(keep_only,
+                      assignments = dplyr::right_join,
+                      peaks = dplyr::left_join,
+                      both = dplyr::full_join)
+
+  out_df <- join_type(extracted_characteristics, assignment_df, by = c("peak_id"))
+
+  out_df
+}
+
+#' peak mz, height, assignments
+#'
+#' Extracts desired peak variables and assignment information from a peak list,
+#' the peak list is typically read in from a JSON output file of assignments
+#' generated by SMIRFE.
+#'
+#' @param peak_list the peak list from reading some JSON
+#' @param variables which variables to extract (default: ObservedMZ, Height)
+#' @param summaries which summary variables to extract (default: Mean)
+#' @param include_non_primary include non-primary assignments (default: TRUE)
+#' @param keep_peaks keep "both" original and assigned peaks, "assignments" only, or original "peaks"
+#'
+#' @export
+#' @return data.frame
+#'
+get_assigned_peak_info <- function(peak_list, variables = c("ObservedMZ", "Height"),
+                               summaries = "Mean", include_non_primary = TRUE,
+                               keep_peaks = "assignments"){
+
+  peak_df_1 <- peak_list_2_df(peak_list, summary_values = variables, summary_types = summaries)
+  peak_df_2 <- extract_peak_characteristics(peak_df_1, extract_variables = variables, extract_summary = summaries)
+
+  peak_assignments <- peak_assignments_2_df(peak_list, include_non_primary = include_non_primary)
+
+  merge_peak_characteristics_assignments(peak_df_2, peak_assignments, keep_only = keep_peaks)
+}
+
+#' get sample ti
+#'
+#' Calculate total intensity from a sample
+#'
+#' @param x the object
+#'
+#' @export
+sample_ti <- function(x) UseMethod("sample_ti")
+
+
+#' get sample ti
+#'
+#' Calculate the sample total intensities
+#'
+#' @param x the object
+#' @param min_scan how many scans should a peak be in to contribute?
+#'
+#' @export
+#'
+#' @importFrom dplyr filter select '%>%'
+#' @importFrom magrittr extract
+#'
+#' @return data.frame
+sample_ti.MasterPeakList <- function(x, min_scan = 2){
+  summarized_list <- summarize_correspondencelist(x, individual_values = FALSE)
+
+  summarized_df <- as.data.frame(summarized_list, keep_peaks = "peak_list.json")
+
+  sample_tic <- dplyr::filter(summarized_df, extracted %in% "Height", summary %in% "Mean") %>%
+    select(value) %>% extract("value") %>% sum()
+
+  sample_tic
+}
+
+#' lists_2_json
+#'
+#' @param lists_to_save the set of lists to create the json from
+#' @param zip_file should the JSON files be zipped into a zip file? Provide the zip file name
+#' @param digits how many digits to use for the JSON representation
+#' @param temp_dir temp directory to write the JSON files to
+#'
+#' @export
+#' @return character
+lists_2_json <- function(lists_to_save, zip_file = NULL, digits = 8, temp_dir = tempfile(pattern = "json")){
+  if (is.null(names(lists_to_save))) {
+    names(lists_to_save) <- paste0("S", seq(1, length(lists_to_save)), ".json")
+  }
+
+  if (!dir.exists(temp_dir)) {
+    dir.create(temp_dir)
+  }
+
+  not_null_files <- !purrr::map_lgl(lists_to_save, is.null)
+  lists_to_save <- lists_to_save[not_null_files]
+
+  temp_locs <- purrr::map_chr(names(lists_to_save), function(json_file){
+    json_data <- jsonlite::toJSON(lists_to_save[[json_file]], auto_unbox = TRUE, pretty = TRUE, digits = digits)
+    full_file <- file.path(temp_dir, json_file)
+    cat(json_data, sep = "\n", file = full_file)
+    full_file
+  })
+
+  if (!is.null(zip_file)) {
+    zip(zip_file, temp_locs, flags = "-jq")
+    return_value <- zip_file
+  } else {
+    return_value <- temp_locs
+  }
+  return_value
+}
+
+remove_loess_class <- function(sd_model){
+  if (inherits(sd_model, "loess")) {
+    attr(sd_model, "class") <- NULL
+    sd_model$call <- deparse(sd_model$call)
+    sd_model$terms <- NULL
+  }
+  sd_model
+}
+
+create_processing_info = function(package = "package:SIRM.FTMS.peakCharacterization",
+                                  peakfinder_obj = NULL, sd_model = NULL){
+  pkg_description <- utils::packageDescription(substring(package, 9))
+
+  if (!is.null(pkg_description$RemoteSha)) {
+    pkg_sha <- pkg_description$RemoteSha
+  } else {
+    pkg_sha <- NA
+  }
+
+  if (!is.null(peakfinder_obj)) {
+    if (inherits(peakfinder_obj, "PeakFinder")) {
+      document_peakfinder <- as.list(PeakFinder$new(peakfinder_obj$peak_method,
+                                     peakfinder_obj$noise_function, peakfinder_obj$raw_filter,
+                                     peakfinder_obj$create_report))
+      document_peakfinder[[".__enclos_env__"]] <- NULL
+      document_peakfinder$clone <- NULL
+      peak_method <- peakfinder_obj$peak_method
+      scan_range <- peakfinder_obj$raw_data$scan_range
+      run_time <- peakfinder_obj$run_time
+    }
+
+  } else {
+    document_peakfinder <- NA
+    peak_method <- NA
+    scan_range <- NA
+  }
+
+
+  if (!is.null(sd_model) && (inherits(sd_model, "loess"))) {
+    sd_model <- remove_loess_class(sd_model)
+  } else {
+    sd_model <- NA
+  }
+
+  processing_info <- list(Package = package,
+                          Version = pkg_description$Version,
+                          Sha = pkg_sha,
+                          RunTime = run_time,
+                          FunctionCalled = document_peakfinder,
+                               Parameters = list(Method = peak_method,
+                                                 Scans = scan_range),
+                               Models = list(SDModel = sd_model)
+  )
+  processing_info
+}
+
+#' calculate M/Z offsets
+#'
+#' It is useful to be able to compare the original M/Z values for a scan or sample,
+#' and the offset adjusted M/Z values after correspondence. This function facilitates
+#' that calculation.
+#'
+#' @param master_list A master sample or peak list object
+#' @param multi_peaklist A multi sample or multi scan peak list object
+#'
+#' @export
+#' @return data.frame
+#'
+calculate_mz_offsets <- function(master_list, multi_peaklist){
+  mpl_scans <- master_list$scan
+  mspl_scans <- multi_peaklist$scan_numbers()
+
+  use_scans <- intersect(mpl_scans, mspl_scans)
+
+  tmp_peak_lists <- multi_peaklist$get_scan_peak_lists()
+
+  diff_mz <- purrr::map_df(use_scans, function(in_scan){
+    #print(in_scan)
+    mpl_loc <- mpl_scans %in% in_scan
+    mpl_df <- data.frame(peak = master_list$scan_peak[, mpl_loc],
+                         ObservedMZ = master_list$scan_mz[, mpl_loc],
+                         scan = master_list$scan[mpl_loc],
+                         stringsAsFactors = FALSE)
+    if (!is.null(master_list$sample_id)) {
+      mpl_df$sample_id <- master_list$sample_id[mpl_loc]
+    }
+    mpl_df <- dplyr::filter(mpl_df, !is.na(peak))
+
+    mspl_loc <- mspl_scans %in% in_scan
+    mspl_df <- tmp_peak_lists[[which(mspl_loc)]]$peak_list
+    mspl_df$scan <- mspl_scans[mspl_loc]
+
+    mpl_df <- dplyr::left_join(mpl_df, mspl_df, by = "peak", suffix = c(".cor", ".org"))
+    mpl_df <- dplyr::mutate(mpl_df, diffMZ = ObservedMZ.cor - ObservedMZ.org)
+
+    if (!is.null(master_list$sample_id)) {
+      return(dplyr::select(mpl_df, peak, ObservedMZ.org, diffMZ, scan.cor, scan.org, sample_id))
+    } else {
+      return(dplyr::select(mpl_df, peak, ObservedMZ.org, diffMZ, scan.cor, scan.org))
+    }
+
+  })
+  diff_mz
+}
+
+
+MultiScansPeakList <- R6::R6Class("MultiScansPeakList",
   public = list(
-    sample_id = NULL,
+    peak_list_by_scans = NULL,
+    peak_type = "lm_weighted",
+    mz_range = c(-Inf, Inf),
+    min_points = 4,
+    max_peaks = Inf,
+    flat_cut = 0.98,
+    noise_function = NULL,
+    sd_fit_function = NULL,
+    sd_predict_function = NULL,
 
-    initialize = function(multi_sample_peak_list, peak_calc_type = "lm_weighted", sd_model = NULL, multiplier = 1,
-                          mz_range = c(-Inf, Inf), noise_calculator = NULL, sd_fit_function = NULL,
-                          sd_predict_function = NULL, rmsd_min_scans = 3){
-      assertthat::assert_that(any(class(multi_sample_peak_list) %in% "MultiSamplePeakList"))
-
-      if (is.null(sd_model)) {
-        sd_model = multi_sample_peak_list$mz_model
-      }
-
-      self$scan_indices <- multi_sample_peak_list$scan_indices
-
-      if (!is.null(sd_fit_function)) {
-        self$sd_fit_function <- sd_fit_function
-      } else if (!is.null(multi_sample_peak_list$sd_fit_function)) {
-        self$sd_fit_function <- multi_sample_peak_list$sd_fit_function
-      } else {
-        self$sd_fit_function <- default_sd_fit_function
-      }
-
-      if (!is.null(sd_predict_function)) {
-        self$sd_predict_function <- sd_predict_function
-      } else if (!is.null(multi_sample_peak_list$sd_predict_function)) {
-        self$sd_predict_function <- multi_sample_peak_list$sd_predict_function
-      } else {
-        self$sd_predict_function <- default_sd_predict_function
-      }
-
-      if (!is.null(noise_calculator)) {
-        self$noise_calculator <- noise_calculator
-      }
-
-      self$rmsd_min_scans <- rmsd_min_scans
-      self$sample_id <- multi_sample_peak_list$get_sample_id()
-      self$peak_correspondence(multi_sample_peak_list, peak_calc_type, sd_model = sd_model, multiplier = multiplier,
-                               mz_range = mz_range)
+    find_peaks = function(raw_data){
+      self$peak_list_by_scans <- find_peaks_across_scans(raw_data,
+                                                         mz_range = self$mz_range,
+                                                         peak_method = self$peak_type,
+                                                         min_points = self$min_points,
+                                                         n_peak = self$max_peaks, flat_cut = self$flat_cut,
+                                                         sd_fit_function = self$sd_fit_function,
+                                                         sd_predict_function = self$sd_predict_function,
+                                                         noise_function = self$noise_function)
       invisible(self)
+    },
+
+    scan_numbers = function(){
+      vapply(self$peak_list_by_scans[self$scan_indices], function(in_scan){
+        in_scan$scan
+      }, numeric(1))
+    },
+
+    scan_mz_models = function(){
+      all_models <- lapply(self$peak_list_by_scans[self$scan_indices], function(in_scan){
+        in_scan$mz_model
+      })
+
+    },
+    mz_model = NULL,
+
+    mz_model_diffs = NULL,
+
+    scan_indices = NULL,
+
+    get_scan_peak_lists = function(){
+      self$peak_list_by_scans[self$scan_indices]
+    },
+
+    get_noise_info = function(){
+      self$noise_info[self$scan_indices, ]
+    },
+
+    reset_scan_indices = function(){
+      self$scan_indices <- seq(1, length(self$peak_list_by_scans))
+    },
+
+    # calculates an average model and deviations from that model
+    # Assuming LOESS models, a generic set of m/z are created spaced by 0.5 mz,
+    # and then predictions of SD made based on m/z. The average model is created
+    # by averaging the SDs and fitting average SD ~ m/z.
+    #
+    # In the process, it also gets the sum of absolute residuals of each model
+    # to the average.
+    calculate_average_mz_model = function(){
+      list_of_models <- self$scan_mz_models()
+      mz_ranges <- lapply(list_of_models, function(x){range(round(x$x))})
+      mz_ranges <- range(do.call(rbind, mz_ranges))
+
+      mz_values <- seq(mz_ranges[1], mz_ranges[2], .5)
+
+      sd_preds <- lapply(list_of_models, function(in_model){
+        self$sd_predict_function(in_model, mz_values)
+      })
+
+      mean_sd_preds <- colMeans(do.call(rbind, sd_preds))
+
+      # generate and set the new model
+      mean_model <- self$sd_fit_function(mz_values, mean_sd_preds)
+      self$mz_model <- mean_model
+
+      # get the differences from the model so can look for potential outliers
+      scan_nums <- self$scan_numbers()
+
+      scan_mz_sd <- lapply(seq(1, length(sd_preds)), function(in_scan){
+        scan_sd <- sd_preds[[in_scan]]
+        data.frame(mz = mz_values,
+                   sd = scan_sd,
+                   diff = scan_sd - mean_sd_preds,
+                   scan = scan_nums[in_scan])
+      })
+      scan_mz_sd <- do.call(rbind, scan_mz_sd)
+
+      dplyr::group_by(scan_mz_sd, scan) %>%
+        dplyr::summarise(., sum_diff = sum(abs(diff)), median_diff = median(abs(diff))) %>%
+        dplyr::ungroup() -> scan_mz_summaries
+
+      self$mz_model_diffs <- scan_mz_summaries
+
+    },
+
+    remove_bad_resolution_scans = function(){
+      if (is.null(self$mz_model_diffs)) {
+        self$calculate_average_mz_model()
+      }
+      diff_model <- self$mz_model_diffs
+      max_out <- max(grDevices::boxplot.stats(diff_model$sum_diff)$stats)
+      keep_scans <- self$scan_numbers() %in% diff_model$scan[diff_model$sum_diff <= max_out]
+
+      #self$peak_list_by_scans <- self$peak_list_by_scans[keep_scans]
+      #self$noise_info <- self$noise_info[keep_scans, ]
+
+      self$scan_indices <- which(keep_scans)
+      self$calculate_average_mz_model()
+      invisible(self)
+    },
+
+    # it may happen that there are scans with no signal peaks, so we need a way
+    # to remove those
+    remove_no_signal_scans = function(){
+      if (!is.null(self$noise_function)) {
+        curr_noise <- self$get_noise_info()
+        has_signal <- which(curr_noise$n_signal != 0)
+        self$reorder(has_signal)
+      }
+    },
+
+    noise_info = NULL,
+
+    n_peaks = function(){
+      vapply(self$get_scan_peak_lists(), function(x){
+        if (!is.null(x$noise_function)) {
+          return(nrow(x$peak_list[x$peak_list$not_noise, ]))
+        } else {
+          return(nrow(x$peak_list))
+        }
+      }, numeric(1))
+    },
+
+    reorder = function(new_order){
+      self$scan_indices <- self$scan_indices[new_order]
+      invisible(self)
+    },
+
+    calculate_noise = function(...){
+      self$peak_list_by_scans <- lapply(self$peak_list_by_scans, function(in_scan){
+        #in_scan$noise_function <- self$noise_function
+        if (is.null(in_scan$noise_info)) {
+          in_scan$calculate_noise(...)
+        }
+        in_scan
+      })
+
+      noise_info <- lapply(self$get_scan_peak_lists(), function(in_scan){
+        in_scan$noise_info
+      })
+      noise_info <- do.call(rbind, noise_info)
+      noise_info$scan <- self$scan_numbers()
+      self$noise_info <- noise_info
+      invisible(self)
+
+    },
+
+    initialize = function(){
+
+      invisible(self)
+    }
+  ),
+  private = list(
+    deep_clone = function(name, value){
+      if (name == "peak_list_by_scans") {
+        value <- lapply(self$peak_list_by_scans, function(in_scan){
+          in_scan$clone()
+        })
+        value
+      } else {
+        value
+      }
     }
   )
 )
+
+find_peaks_across_scans <- function(raw_ms, mz_range = c(-Inf, Inf),
+                                    peak_method = "lm_weighted",
+                                    min_points = 4, n_peak = Inf, flat_cut = 0.98,
+                                    sd_fit_function = default_sd_fit_function,
+                                    sd_predict_function = default_sd_predict_function,
+                                    noise_function = noise_detector){
+  scan_range <- raw_ms$scan_range
+  peak_lists_by_scans <- purrr::map(scan_range, function(in_scan){
+    scan_data <- as.data.frame(xcms::getScan(raw_ms$raw_data, in_scan))
+
+    peak_list <- PeakList$new(in_scan)
+
+    if (!is.null(mz_range)) {
+      peak_list$mz_range <- mz_range
+    }
+
+    peak_list$peak_type <- peak_method
+    peak_list$min_points <- min_points
+    peak_list$max_peaks <- n_peak
+    peak_list$sd_fit_function <- sd_fit_function
+    peak_list$sd_predict_function <- sd_predict_function
+
+    peak_list$find_peaks(scan_data)
+    peak_list$noise_function <- noise_function
+
+    peak_list
+  })
+  peak_lists_by_scans
+}
+
+generate_peaks = function(scan_data, peak_method = "lm_weighted",
+                          min_points = 4, n_peak = 4, flat_cut = 0.98){
+  peak_locations <- pracma::findpeaks(scan_data$intensity, nups = floor(min_points/2),
+                                      ndowns = floor(min_points/2))
+  #peak_locations <- matrix(peak_locations, ncol = 4, byrow = FALSE)
+  scan_data$log_int <- metabolomicsUtilities::log_with_min(scan_data$intensity)
+
+  if (is.infinite(n_peak)) {
+    n_peak <- nrow(peak_locations)
+  } else {
+    n_peak <- min(c(nrow(peak_locations), n_peak))
+  }
+
+  peaks <- purrr::map_df(seq(1, n_peak), function(in_peak){
+    #print(in_peak)
+    "!DEBUG Peak `in_peak`"
+    peak_loc <- seq(peak_locations[in_peak, 3], peak_locations[in_peak, 4])
+    out_peak <- get_peak_info(scan_data[peak_loc, ], peak_method = peak_method, min_points = min_points)
+    out_peak$n_point <- length(peak_loc)
+    mz_width <- max(scan_data[peak_loc, "mz"]) - min(scan_data[peak_loc, "mz"])
+    out_peak$mz_width <- mz_width
+    out_peak$peak <- in_peak
+    out_peak$points <- I(list(scan_data[peak_loc, ]))
+    out_peak
+  })
+  peaks
+}
+
+create_mz_model = function(scan_data, sd_fit_function){
+  scan_data <- SIRM.FTMS.peakCharacterization:::get_scan_nozeros(scan_data)
+  mz_model <- sd_fit_function(scan_data$mz, scan_data$lag)
+  mz_model
+}
+
+
+PeakList <- R6::R6Class("PeakList",
+  public = list(
+   peak_list = NULL,
+   point_list = NULL,
+   scan = NULL,
+   mz_range = c(-Inf, Inf),
+   peak_type = NULL,
+   max_peaks = Inf,
+   min_points = 4,
+   flat_cut = 0.98,
+   noise = NULL,
+   noise_info = NULL,
+   mz_model = NULL,
+
+
+   noise_function = NULL,
+
+   calculate_noise = function(...){
+     tmp_noise <- self$noise_function(self$peak_list, ...)
+     self$noise_info <- tmp_noise$noise_info
+     self$noise <- tmp_noise$noise_info$threshold
+     self$peak_list <- tmp_noise$peak_list
+   },
+
+   sd_predict_function = NULL,
+   sd_fit_function = NULL,
+
+   find_peaks = function(scan_data){
+     self$mz_model <- create_mz_model(scan_data, self$sd_fit_function)
+     scan_data <- scan_data[((scan_data$mz >= self$mz_range[1]) &
+                               (scan_data$mz <= self$mz_range[2])), ]
+     out_peaks <- generate_peaks(scan_data, peak_method = self$peak_type,
+                                 min_points = self$min_points,
+                                 n_peak = self$max_peaks, flat_cut = self$flat_cut)
+
+     peak_cols <- names(out_peaks)
+     peak_cols <- peak_cols[!(peak_cols %in% "points")]
+     self$peak_list <- out_peaks[, peak_cols]
+     self$point_list <- out_peaks[, "points"]
+
+     if (!is.null(self$peak_list$Area)) {
+       model_values <- self$sd_predict_function(self$mz_model, self$peak_list$ObservedMZ)
+       self$peak_list$NormalizedArea <- self$peak_list$Area / model_values
+     }
+
+     invisible(self)
+   },
+
+   initialize = function(scan){
+     self$scan <- scan
+
+     invisible(self)
+   }
+
+))

@@ -13,19 +13,23 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
 
    find_peaks = function(...){
      if ("R6" %in% class(self$peak_finder)) {
-       self$peak_finder$raw_data <- self$zip_ms$raw_ms
-       self$peak_finder$out_file <- self$zip_ms$out_file
-       self$peak_finder$run_correspondence()
-       self$found_peaks <- self$peak_finder$export_data()
-       self$peak_finder$raw_data <- NULL
-       self$peak_finder$multi_scan <- NULL
-       peak_finder <- self$peak_finder
-       save(peak_finder, file = file.path(self$zip_ms$temp_directory, "peak_finder.rds"))
-       scans_to_json(peak_finder, file_output = self$zip_ms$temp_directory)
+       self$zip_ms$peak_finder <- self$peak_finder
+       self$zip_ms$peak_finder$raw_data <- self$zip_ms$raw_ms
+
+       self$zip_ms$peak_finder$run_correspondence()
+       self$zip_ms$peak_finder$raw_data <- NULL
      } else if ("function" %in% class(self$peak_finder)) {
        self$found_peaks <- self$peak_finder(self$zip_ms$raw_ms, ...)
      }
-     self$zip_ms$add_peak_list(self$found_peaks)
+   },
+
+   summarize = function(){
+     self$zip_ms$json_summary <- self$zip_ms$peak_finder$summarize()
+   },
+
+   save_peaks = function(){
+     self$zip_ms$save_peak_finder()
+     self$zip_ms$save_json()
    },
 
    write_zip = function(){
@@ -51,6 +55,8 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
    run_all = function(){
      self$load_file()
      self$find_peaks()
+     self$summarize()
+     self$save_peaks()
      self$write_zip()
      self$zip_ms$cleanup()
    },
@@ -89,11 +95,49 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
 PeakFinder <- R6::R6Class("PeakFinder",
   public = list(
     run_time = NULL,
+
+    summarize = function(package_used = "package:SIRM.FTMS.peakCharacterization"){
+      processing_info <- list(processing_metadata.json = create_processing_info(package = package_used,
+                                                                               peakfinder_obj = self,
+                                                                               sd_model = self$correspondent_peaks$master_peak_list$sd_model))
+
+      peak_lists <- self$correspondent_peaks$master_peak_list$summarize()
+
+      c(processing_info, peak_lists)
+    },
+
+    # Options for multi_scans ----
     raw_data = NULL,
     peak_method = NULL,
-    noise_function = NULL,
+    min_points = 4,
+    n_peak = Inf,
+    flat_cut = 0.98,
+
+
+    # Options for peak correspondence ----
+    mz_range = c(-Inf, Inf),
+    digital_resolution_multiplier = 1,
+    initial_rmsd_multiplier = 3,
+
+    # functions needed by others
     sd_fit_function = NULL,
     sd_predict_function = NULL,
+    offset_predict_function = NULL,
+    offset_fit_function = NULL,
+    offset_correction_function = NULL,
+    noise_function = NULL,
+
+    # control options
+    max_iteration = 30,
+    scan_fraction = 0.1,
+    collapse_peaks = FALSE,
+    remove_low_ic_scans = TRUE,
+    notify_progress = FALSE,
+    max_failures = 5,
+    keep_all_master_peak_lists = FALSE,
+    keep_intermediates = FALSE,
+
+    # Now the various bits and pieces ----
     raw_filter = NULL,
     apply_raw_filter = function(){
       if (!is.null(self$raw_filter)) {
@@ -116,7 +160,10 @@ PeakFinder <- R6::R6Class("PeakFinder",
       if (self$vocal) {
         message("Creating Multi-Scans ....")
       }
-      self$multi_scan <- SIRM.FTMS.peakCharacterization::MultiScans$new(self$raw_data, peak_method = self$peak_method, sd_fit_function = self$sd_fit_function,
+      self$multi_scan <- SIRM.FTMS.peakCharacterization::MultiScans$new(self$raw_data, peak_method = self$peak_method,
+                                                                        min_points = self$min_points,
+                                                                        n_peak = self$n_peak, flat_cut = self$flat_cut,
+                                                                        sd_fit_function = self$sd_fit_function,
                                                                         sd_predict_function = self$sd_predict_function)
       invisible(self)
     },
@@ -125,8 +172,19 @@ PeakFinder <- R6::R6Class("PeakFinder",
       if (self$vocal) {
         message("Creating Multi-Scan Peaklist ....")
       }
-      self$multi_scan_peaklist <- SIRM.FTMS.peakCharacterization::MultiScansPeakList$new(self$multi_scan, noise_function = self$noise_function,
-                                                                                         sd_predict_function = self$sd_predict_function)
+      self$multi_scan_peaklist <- SIRM.FTMS.peakCharacterization::MultiScansPeakList$new()
+      self$multi_scan_peaklist$noise_function <- self$noise_function
+      self$multi_scan_peaklist$sd_fit_function <- default_sd_fit_function
+      self$multi_scan_peaklist$sd_predict_function <- default_sd_predict_function
+
+      self$multi_scan_peaklist$find_peaks(self$raw_data)
+      self$multi_scan_peaklist$scan_indices <- seq(1, length(self$multi_scan_peaklist$peak_list_by_scans))
+      self$multi_scan_peaklist$calculate_noise()
+
+
+      self$multi_scan_peaklist$remove_no_signal_scans()
+      #
+      #       self$calculate_average_mz_model()
     },
 
     scan_start = NULL,
@@ -141,103 +199,42 @@ PeakFinder <- R6::R6Class("PeakFinder",
     },
 
     correspondent_peaks = NULL,
-    create_correspondent_peaks = function(median_corrected = FALSE, ...){
+    create_correspondent_peaks = function(...){
       if (self$vocal) {
         message("Peak Correspondence ....")
       }
 
-      if (median_corrected && !is.null(self$median_mz_offsets)) {
-        use_peaklist <- self$median_correct_multi_scan_peaklist()
-      } else {
-        use_peaklist <- self$multi_scan_peaklist$clone(deep = TRUE)
-      }
-
-      if (median_corrected && is.null(self$median_mz_offsets)) {
-        warning("Median corrected peak list requested, but not found, using uncorrected!")
-      }
+      use_peaklist <- self$multi_scan_peaklist$clone(deep = TRUE)
 
       self$correspondent_peaks <-
         SIRM.FTMS.peakCharacterization::FindCorrespondenceScans$new(use_peaklist,
-                                                                    digital_resolution_multiplier = 1,
-                                                                    rmsd_multiplier = 3,
+                                                                    peak_calc_type = self$peak_type,
+                                                                    max_iteration = self$max_iteration,
+                                                                    digital_resolution_multiplier = self$digital_resolution_multiplier,
+                                                                    rmsd_multiplier = self$initial_rmsd_multiplier,
+                                                                    max_failures = self$max_failures,
+                                                                    mz_range = self$mz_range,
+                                                                    notify_progress = self$vocal,
+                                                                    noise_function = self$noise_function,
                                                                     sd_fit_function = self$sd_fit_function,
                                                                     sd_predict_function = self$sd_predict_function,
-                                                                    ...)
+                                                                    offset_fit_function = self$offset_fit_function,
+                                                                    offset_predict_function = self$offset_predict_function,
+                                                                    offset_correction_function = self$offset_correction_function,
+                                                                    collapse_peaks = self$collapse_peaks,
+                                                                    keep_all_master_peak_lists = self$keep_all_master_peak_lists,
+                                                                    keep_intermediates = self$keep_intermediates
+                                                                    )
+      self$correspondent_peaks$iterative_correspondence()
     },
 
     scan_information_content = NULL,
-    filter_information_content = function(){
-      if (self$vocal) {
-        message("Filtering based on information content ....")
-      }
-      # this function removes scans by outlier information content values, and
-      # then subsequently re-orders the remaining scans by information content values
-      self$correspondent_peaks$master_peak_list$calculate_scan_information_content()
-      tmp_information <- self$correspondent_peaks$master_peak_list$scan_information_content
-
-      tmp_information$scan_order <- seq(1, nrow(tmp_information))
-
-      # find outliers
-      outlier_values <- grDevices::boxplot.stats(tmp_information$information_content)$out
-      # remove them
-      tmp_information <- tmp_information[!(tmp_information$information_content %in% outlier_values), ]
-
-      # order by information content so we can reorder everything else
-      tmp_information <- tmp_information[order(tmp_information$information_content, decreasing = TRUE), ]
-
-      self$multi_scan_peaklist <- self$multi_scan_peaklist$reorder(tmp_information$scan_order)
-      self$scan_information_content <- self$multi_scan_peaklist$scan_indices
-
-      self$correspondent_peaks$master_peak_list$reorder(tmp_information$scan_order)
-    },
 
     collapse_correspondent_peaks = function(){
       if (self$vocal) {
         message("Collapsing correspondent peaks ....")
       }
       self$correspondent_peaks$master_peak_list <- collapse_correspondent_peaks(self$correspondent_peaks$master_peak_list)
-    },
-
-    median_mz_offsets = NULL,
-
-    calculate_median_mz_offset = function(min_scan_perc = 0.05){
-      mpl <- self$correspondent_peaks$master_peak_list
-
-      n_col <- ncol(mpl$scan_mz)
-
-      n_min_scan <- round(min_scan_perc * n_col)
-
-      correspond_peaks <- mpl$count_notna() >= n_min_scan
-
-      scan_indices <- mpl$scan_indices
-
-      scan_diff <- lapply(seq(1, n_col), function(in_scan){
-        mz_diffs <- mpl$scan_mz[correspond_peaks, in_scan] -
-          mpl$master[correspond_peaks]
-        mz_diffs <- mz_diffs[!is.na(mz_diffs)]
-
-        data.frame(median = median(mz_diffs),
-                   scan_index = scan_indices[in_scan])
-      })
-      self$median_mz_offsets <- do.call(rbind, scan_diff)
-    },
-
-    # make sure to actually copy multi_scan_peaklist first and **then** modify it
-    median_correct_multi_scan_peaklist = function(){
-      if (self$vocal) {
-        message("Median correcting peaks ....")
-      }
-
-      #self$calculate_median_mz_offset()
-
-      msp <- self$multi_scan_peaklist$clone(deep = TRUE)
-      if (!is.null(self$median_mz_offsets)) {
-        for (irow in seq(1, nrow(self$median_mz_offsets))) {
-          msp$peak_list_by_scans[[self$median_mz_offsets[irow, "scan_index"]]]$peak_list$ObservedMZ <-
-            msp$peak_list_by_scans[[self$median_mz_offsets[irow, "scan_index"]]]$peak_list$ObservedMZ - self$median_mz_offsets[irow, "median"]
-        }
-      }
-      msp
     },
 
     scan_normalized = NULL,
@@ -312,6 +309,7 @@ PeakFinder <- R6::R6Class("PeakFinder",
       mpl$normalization_factors <- normalization_factors
       mpl$normalized_by <- intensity_measure
       self$correspondent_peaks$master_peak_list <- mpl
+      self$correspondent_peaks$master_peak_list$calculate_total_intensity()
       invisible(self)
     },
 
@@ -360,8 +358,12 @@ PeakFinder <- R6::R6Class("PeakFinder",
       if (self$vocal) {
         message("Generating the final peak data ....")
       }
-      sd_model <- self$correspondent_peaks$sd_models[[length(self$correspondent_peaks$sd_models)]] # grab the last model generated from peak correspondence
+
       master_peaks <- self$correspondent_peaks$master_peak_list
+      if (is.null(master_peaks$sd_model)) {
+        master_peaks$calculate_sd_model()
+      }
+      sd_model <- master_peaks$sd_model
       n_peak <- length(master_peaks$master)
 
       peak_data <- lapply(seq(1, n_peak), function(in_peak){
@@ -433,17 +435,13 @@ PeakFinder <- R6::R6Class("PeakFinder",
       tictoc::tic()
       if (is.null(self$multi_scan) & (!is.null(self$raw_data))) {
         self$apply_raw_filter()
-        self$create_multi_scan()
+        #self$create_multi_scan()
         self$create_multi_scan_peaklist()
       } else if (is.null(self$multi_scan_peaklist)) {
         stop("Need a MultiScanPeakList to work with!", call. = TRUE)
       }
       self$filter_dr_models()
       self$create_correspondent_peaks(median_corrected = FALSE)
-      self$collapse_correspondent_peaks()
-      self$filter_information_content()
-      self$calculate_median_mz_offset()
-      self$create_correspondent_peaks(median_corrected = TRUE)
       self$collapse_correspondent_peaks()
       self$normalize_scans_by_correspondent_peaks()
       self$save_intermediates()
@@ -459,9 +457,10 @@ PeakFinder <- R6::R6Class("PeakFinder",
       SIRM.FTMS.peakCharacterization::PeakPickingAnalysis$new(self$peak_data, self$processing_info)
     },
 
-    initialize = function(peak_method = "lm_weighted", noise_function = noise_sorted_peaklist, raw_filter = NULL,
+    initialize = function(peak_method = "lm_weighted", noise_function = noise_detector, raw_filter = NULL,
                           report_function = NULL, intermediates = FALSE, sd_fit_function = NULL,
-                          sd_predict_function = NULL){
+                          sd_predict_function = NULL, offset_fit_function = NULL, offset_predict_function = NULL,
+                          offset_correction_function = NULL){
       if (!is.null(peak_method)) {
         self$peak_method <- peak_method
       }
@@ -490,6 +489,24 @@ PeakFinder <- R6::R6Class("PeakFinder",
         self$sd_predict_function <- default_sd_predict_function
       }
 
+      if (!is.null(offset_fit_function)) {
+        self$offset_fit_function <- offset_fit_function
+      } else {
+        self$offset_fit_function <- default_offset_fit_function
+      }
+
+      if (!is.null(offset_predict_function)) {
+        self$offset_predict_function <- offset_predict_function
+      } else {
+        self$offset_predict_function <- default_offset_predict_function
+      }
+
+      if (!is.null(offset_correction_function)) {
+        self$offset_correction_function <- offset_correction_function
+      } else {
+        self$offset_correction_function <- default_correct_offset_function
+      }
+
       self$intermediates <- intermediates
 
       invisible(self)
@@ -497,15 +514,38 @@ PeakFinder <- R6::R6Class("PeakFinder",
   )
 )
 
+
+#' default sd fit
+#'
+#' The default fit function for differences and RMSD
+#'
+#' @param x the x values, often M/Z
+#' @param y the y values, normally differences or RMSD
+#'
+#' @export
+#'
+#' @return list
 default_sd_fit_function <- function(x, y){
   loess_frame <- data.frame(x = x, y = y)
   loess_fit <- stats::loess(y ~ x, data = loess_frame, control = stats::loess.control(surface = "direct"))
   loess_fit
 }
 
+
+#' default sd predict
+#'
+#' The default predict function for difference and RMSD
+#'
+#' @param model the previously generated model
+#' @param x the new data
+#'
+#' @export
+#'
+#' @return numeric
 default_sd_predict_function <- function(model, x){
   stats:::predict.loess(model, newdata = x)
 }
+
 
 #' peak finding and reporting
 #'

@@ -37,19 +37,24 @@ plot_tic <- function(xcms_raw, color_ms = TRUE, log_transform = TRUE){
                          index = xcms_raw@scanindex,
                          type = "normal",
                          stringsAsFactors = FALSE)
-  msn_data <- data.frame(ms_level = paste0("ms", xcms_raw@msnLevel),
-                         tic = xcms_raw@msnPrecursorIntensity,
-                         scantime = xcms_raw@msnRt,
-                         index = xcms_raw@msnScanindex,
-                         type = "normal",
-                         stringsAsFactors = FALSE)
+  if (length(xcms_raw@msnLevel) != 0) {
+    msn_data <- data.frame(ms_level = paste0("ms", xcms_raw@msnLevel),
+                           tic = xcms_raw@msnPrecursorIntensity,
+                           scantime = xcms_raw@msnRt,
+                           index = xcms_raw@msnScanindex,
+                           type = "normal",
+                           stringsAsFactors = FALSE)
+    msn_precursors <- unique(xcms_raw@msnPrecursorScan)
+    ms1_data$type[msn_precursors] <- "precursor"
+    all_data <- rbind(ms1_data, msn_data)
+  } else {
+    all_data <- ms1_data
+  }
 
-  msn_precursors <- unique(xcms_raw@msnPrecursorScan)
-  ms1_data$type[msn_precursors] <- "precursor"
 
-  all_data <- rbind(ms1_data, msn_data)
-
-  all_data$ms_type <- paste0(all_data$type, ".", all_data$ms_level)
+  if ((length(unique(all_data$ms_level)) > 1) || (length(unique(all_data$type)) > 1)) {
+    all_data$ms_type <- paste0(all_data$type, ".", all_data$ms_level)
+  }
 
   if (log_transform) {
     all_data$tic <- log10(all_data$tic + 1)
@@ -58,12 +63,15 @@ plot_tic <- function(xcms_raw, color_ms = TRUE, log_transform = TRUE){
     y_lab <- "TIC"
   }
 
-  all_data$ms_type <- forcats::fct_relevel(all_data$ms_type, "normal.ms1", "precursor.ms1", "normal.ms2")
-
-
-
-  ggplot(all_data, aes(x = scantime, xend = scantime, y = 0, yend = tic, color = ms_type)) + geom_segment() +
-    labs(y = y_lab)
+  if (!is.null(all_data$ms_type)) {
+    all_data$ms_type <- forcats::fct_relevel(all_data$ms_type, "normal.ms1", "precursor.ms1", "normal.ms2")
+    tic_plot <- ggplot(all_data, aes(x = scantime, xend = scantime, y = 0, yend = tic, color = ms_type)) + geom_segment() +
+      labs(y = y_lab)
+  } else {
+    tic_plot <- ggplot(all_data, aes(x = scantime, xend = scantime, y = 0, yend = tic)) + geom_segment() +
+      labs(y = y_lab)
+  }
+  tic_plot
 }
 
 #' import Xcalibur data
