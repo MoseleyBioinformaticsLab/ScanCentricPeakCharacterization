@@ -1,0 +1,87 @@
+## Purpose
+
+See if we can detect noise peaks vs **true** peaks using only the number of
+non-zero peaks in a tiled or sliding window across M/Z after smushing all
+of the raw scan peaks together.
+
+Based on [this](https://gitlab.cesb.uky.edu/rmflight/SIRM.FTMS.peakCharacterization/issues/29)
+issue.
+
+```{r libraries}
+library(SIRM.FTMS.peakCharacterization)
+library(dplyr)
+library(ggplot2)
+library(knitrProgressBar)
+```
+
+## Data
+
+Raw data from 100Cpos, mainly because we have it.
+
+```{r load_data}
+zip_data <- zip_ms("~/data/cesb_data/zip_files/lung_matched_tissue-X2017.11.17.14.47.45/100Cpos.zip")
+zip_data$load_raw()
+zip_data$load_peak_finder()
+zip_data$cleanup()
+```
+
+## Sliding Window
+
+```{r smush_scan_data}
+scan_range <- zip_data$raw_ms$scan_range
+smushed_scan_data <- purrr::map_df(scan_range, function(in_scan){
+    scan_data <- as.data.frame(xcms::getScan(zip_data$raw_ms$raw_data, in_scan))
+})
+```
+
+Lets use the M/Z model to get some idea of how big a peak should be.
+
+```{r peak_width}
+mz_model <- loess_to_df(zip_data$peak_finder$multi_scan_peaklist$mz_model)
+mz_800 <- filter(mz_model, (x == 800), which %in% "fitted")
+
+peak_width <- mz_800$y * 8
+```
+
+```{r sliding_window}
+library(IRanges)
+sliding_window_iranges <- function(mz_intensity_df, use_range = NULL, window = 10, delta = window / 10){
+  if (is.null(use_range)) {
+    range_start = floor(min(mz_intensity_df$mz))
+    range_end = ceiling(max(mz_intensity_df$mz))
+  } else {
+    range_start = floor(min(use_range))
+    range_end <- ceiling(max(use_range))
+  }
+
+
+  if (delta < 1) {
+    mult_factor <- 1 / delta
+    delta2 <- 1
+  } else {
+    mult_factor <- 1
+    delta2 <- delta
+  }
+
+  mz_intensity_df$mz2 <- round(mz_intensity_df$mz * mult_factor)
+  mz_intensity_df <- mz_intensity_df[mz_intensity_df$intensity > 0, ]
+  range_start <- range_start * mult_factor
+  range_end <- range_end * mult_factor
+
+  range_obj <- IRanges(start = range_start, end = range_end)
+  windows <- slidingWindows(range_obj, width = round(window * mult_factor), step = delta2)[[1]]
+
+  mz_ranges <- IRanges(start = mz_intensity_df$mz2, width = 1)
+  overlap_data <- countOverlaps(windows, mz_ranges, type = "any")
+  overlap_data
+}
+
+non_zero_counts <- data.frame(count = sliding_window_iranges(smushed_scan_data, window = peak_width, delta = peak_width / 10))
+```
+
+```{r plot_it}
+ggplot(filter(non_zero_counts, count > 5), aes(x = count)) + geom_histogram(bins = 100) #+ coord_cartesian(ylim = c(0, 10000))
+```
+
+So, Hunter is right. Looks like we can use this to detect how many *non-zero points*
+a *real* peak should have.
