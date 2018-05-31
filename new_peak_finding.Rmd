@@ -1,0 +1,241 @@
+## New Correspondent Peak Finding Method
+
+This is to work out how to generate the final correspondent peaks based on 
+smashing all the scan data together.
+
+## Data
+
+```{r packages}
+library(SIRM.FTMS.peakCharacterization)
+library(dplyr)
+library(ggplot2)
+```
+
+We will use a dataset where only peak correspondence has been done.
+
+```{r load_data}
+zip_data <- readRDS("~/Documents/manuscripts/peakCharacterization/data_analysis/data_output/100Cpos.rds")
+```
+
+## Noise Detection
+
+```{r smush_scans}
+smush_scan_data <- function(raw_ms) {
+  scan_range <- raw_ms$scan_range
+  smushed_scan_data <- purrr::map_df(scan_range, function(in_scan){
+    scan_data <- as.data.frame(xcms::getScan(raw_ms$raw_data, in_scan))
+    scan_data$scan <- in_scan
+    scan_data
+  })
+  smushed_scan_data
+}
+
+raw_scan_data <- smush_scan_data(zip_data$raw_ms)
+```
+
+## Normalizing Raw Scan Data
+
+```{r normalize_by_mz}
+mz_aware_scan_normalization_models = function(pf_data, intensity_measure = "Height", summary_function = mean){
+
+  mpl <- pf_data$correspondent_peaks$master_peak_list
+  intensity_options <- c(Height = "scan_height", Area = "scan_area", NormalizedArea = "scan_normalizedarea")
+  intensity_internal <- intensity_options[intensity_measure]
+  n_corresponding <- mpl$count_notna()
+
+  normalizing_peaks <- n_corresponding >= quantile(n_corresponding, 0.95)
+
+  n_scan <- ncol(mpl$scan_mz)
+
+  peak_intensities <- log(mpl[[intensity_internal]][normalizing_peaks, ])
+
+  # need to check that there are at least 25 correspondent peaks in each of
+  # the scans, if not we will drop the scan and not bother to normalize it
+  n_peak_scan <- vapply(seq(1, ncol(peak_intensities)), function(in_scan){
+    sum(!is.na(peak_intensities[, in_scan]))
+  }, numeric(1))
+
+  keep_scans <- n_peak_scan >= 25
+
+  if (sum(keep_scans) != n_scan){
+    pf_data$multi_scan_peaklist <- pf_data$multi_scan_peaklist$reorder(keep_scans)
+    mpl <- mpl$reorder(keep_scans)
+    peak_intensities <- peak_intensities[, keep_scans]
+    n_scan <- sum(keep_scans)
+  }
+
+  pf_data$scan_normalized <- pf_data$multi_scan_peaklist$scan_indices
+  
+  peak_mz <- mpl$master[normalizing_peaks]
+
+  # this is getting the difference of a scan to all the other scans.
+  # It uses the fact that the peaks are the rows, and the scans are the columns.
+  # Take out the scan you want, make it a matrix that will be same size as the other.
+  # Remove that scan from the full matrix.
+  # Take their differences, this is the difference of that scan to all other scans
+  # for all of the peaks.
+  # Average the difference in each scan across the peaks
+  # Sum them after to find the total difference
+  scan_diffs <- vapply(seq(1, n_scan), function(in_scan){
+    scan_peaks <- peak_intensities[, in_scan, drop = FALSE]
+    scan_peaks_matrix <- matrix(scan_peaks, nrow = nrow(scan_peaks), ncol = n_scan - 1)
+
+    other_matrix <- peak_intensities[, -in_scan, drop = FALSE]
+    scan_other_diff <- scan_peaks_matrix - other_matrix
+    peak_means <- colMeans(scan_other_diff, na.rm = TRUE)
+    sum(peak_means)
+  }, numeric(1))
+
+  normalize_scan <- which.min(abs(scan_diffs))
+
+  scan_norm_matrix <- matrix(peak_intensities[, normalize_scan, drop = FALSE],
+                             nrow = nrow(peak_intensities), ncol = n_scan)
+
+  diff_matrix <- peak_intensities - scan_norm_matrix
+  
+  # for each scan, fit a loess model based on m/z, and then apply the correction
+  # to the scan
+  normalization_models <- vector("list", ncol(diff_matrix))
+  for (iscan in seq_len(ncol(diff_matrix))) {
+    #if (iscan != normalize_scan) {
+      diff_mz <- data.frame(x = peak_mz, y = diff_matrix[, iscan])
+      loess_fit <- stats::loess(y ~ x, data = diff_mz, control = stats::loess.control(surface = "direct"), span = 1.5)
+      normalization_models[[iscan]] <- loess_fit
+    # 
+    #   loess_predict <- predict(loess_fit, newdata = mpl$scan_mz[, iscan])
+    #   mpl$scan_height[, iscan] <- exp(log(mpl$scan_height[, iscan]) - loess_predict)
+    #   mpl$scan_area[, iscan] <- exp(log(mpl$scan_area[, iscan]) - loess_predict)
+    #   mpl$scan_normalizedarea[, iscan] <- exp(log(mpl$scan_normalizedarea[, iscan]) - loess_predict)
+    # #}
+    
+  }
+  names(normalization_models) <- mpl$scan
+  # mpl$is_normalized <- TRUE
+  # mpl$normalized_by <- intensity_measure
+  # pf_data$correspondent_peaks$master_peak_list <- mpl
+  # pf_data$correspondent_peaks$master_peak_list$calculate_total_intensity()
+  # pf_data
+  normalization_models
+}
+
+normalization_models <- mz_aware_scan_normalization_models(zip_data$peak_finder)
+
+
+apply_mz_scan_normalization <- function(raw_scan_data, normalization_models){
+  raw_scan_list <- split(raw_scan_data, raw_scan_data$scan)
+  
+  do_normalization <- function(scan_points, norm_model){
+    model_predict <- predict(norm_model, newdata = scan_points$mz)
+    
+    corrected_intensity <- exp(log(scan_points$intensity) - model_predict)
+    scan_points$intensity <- corrected_intensity
+    scan_points
+  }
+  
+  normalized_intensities <- purrr::map_df(names(normalization_models), function(x){
+    do_normalization(raw_scan_list[[x]], normalization_models[[x]])
+  })
+  
+  normalized_intensities
+  
+}
+
+raw_scans_normalized <- apply_mz_scan_normalization(raw_scan_data, normalization_models)
+```
+
+## Determine Noise
+
+We use a density of points within a small sliding window to remove things that
+should be noise. This is combined with counts of the noise peaks from every
+scan.
+
+```{r noise_removal}
+library(IRanges)
+sliding_window_iranges <- function(mz_intensity_df, use_range = NULL, mz_model = NULL, window = 10, delta = window / 10){
+  
+  #mz_intensity_df <- mz_intensity_df[mz_intensity_df$intensity > 0, ]
+  
+  if (is.null(use_range)) {
+    range_start = floor(min(mz_intensity_df$mz))
+    range_end = ceiling(max(mz_intensity_df$mz))
+  } else {
+    range_start = floor(min(use_range))
+    range_end <- ceiling(max(use_range))
+  }
+
+  min_spacing <- min(mz_model$y) * delta
+  mz_start <- vector(mode = "numeric", length = (range_end - range_start) / min_spacing)
+  mz_end <- mz_start
+
+  start_window <- range_start
+  iteration <- 1
+  
+  while (start_window < range_end) {
+    mz_start[iteration] <- start_window
+    curr_spacing <- mz_model[which.min(abs(mz_model$x - start_window)), "y"]
+    mz_end[iteration] <- start_window + (window * curr_spacing)
+    start_window <- start_window + (curr_spacing / delta)
+    iteration <- iteration + 1
+  }
+  
+  keep_locs <- mz_start != 0
+  mz_start <- mz_start[keep_locs]
+  mz_end <- mz_end[keep_locs]
+  
+  mult_factor <- 1 / min_spacing
+
+  window_start <- round(mz_start * mult_factor)
+  window_end <- round(mz_end * mult_factor)
+  
+  windows <- IRanges(start = window_start, end = window_end)
+
+  mz_ranges_zero <- IRanges(start = round(mz_intensity_df[mz_intensity_df$intensity == 0, "mz"] * mult_factor), width = 1)
+  mz_ranges_nonzero <- IRanges(start = round(mz_intensity_df[mz_intensity_df$intensity > 0, "mz"] * mult_factor), width = 1)
+  
+  zero_overlaps <- countOverlaps(windows, mz_ranges_zero, type = "any")
+  nonzero_overlaps <- countOverlaps(windows, mz_ranges_nonzero, type = "any")
+  
+  mcols(windows) <- list(mz_start = mz_start, mz_end = mz_end, zero_counts = zero_overlaps, nonzero_counts = nonzero_overlaps)
+  
+  windows
+}
+
+mz_model <- filter(loess_to_df(zip_data$peak_finder$multi_scan_peaklist$mz_model), which %in% "fitted")
+
+window_counts <- sliding_window_iranges(raw_scans_normalized, mz_model = mz_model, window = 10)
+
+calculate_noise_cutoff <- function(mspl, n_windows, window_size = 10){
+  noise_peaks <- purrr::map_df(mspl$get_scan_peak_lists(), function(x){
+    x$peak_list[!x$peak_list$not_noise, c("peak", "not_noise", "n_point")]
+  })
+  all_noise <- nrow(noise_peaks)
+  
+  non_overlapping_windows <- length(window_counts) / (window_size + 2)
+  
+  noise_window_ratio <- all_noise / non_overlapping_windows
+  
+  average_noise_points <- mean(noise_peaks$n_point)
+  
+  find_multiplier <- function(ratio_value, min_perc = 0.9999, use_range = c(1, 10)){
+    test_values <- seq(use_range[1], use_range[2], by = 0.01)
+    out_value <- 1 - (ratio_value ^ test_values)
+    multiplier <- test_values[min(which(out_value >= min_perc))]
+  }
+  use_multiplier <- find_multiplier(noise_window_ratio, min_perc = 0.99985)
+  
+  noise_cutoff <- floor(average_noise_points * use_multiplier)
+}
+
+noise_cutoff <- calculate_noise_cutoff(zip_data$peak_finder$multi_scan_peaklist, length(window_counts))
+```
+
+## Peak Pick and Characterize
+
+Now we can run peak-picking and characterization.
+
+```{r do_peakpicking}
+raw_scans_normalized <- raw_scans_normalized[order(raw_scans_normalized$mz, decreasing = FALSE), ]
+raw_scans_normalized <- raw_scans_normalized[raw_scans_normalized$intensity > 0, ]
+
+normalized_peaks <- SIRM.FTMS.peakCharacterization:::generate_peaks(raw_scans_normalized, min_points = 10, n_peak = Inf)
+```
