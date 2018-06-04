@@ -190,14 +190,16 @@ sliding_window_iranges <- function(mz_intensity_df, use_range = NULL, mz_model =
   windows <- IRanges(start = window_start, end = window_end)
 
   mz_ranges_zero <- IRanges(start = round(mz_intensity_df[mz_intensity_df$intensity == 0, "mz"] * mult_factor), width = 1)
+  mcols(mz_ranges_zero) <- mz_intensity_df[mz_intensity_df$intensity == 0, ]
   mz_ranges_nonzero <- IRanges(start = round(mz_intensity_df[mz_intensity_df$intensity > 0, "mz"] * mult_factor), width = 1)
+  mcols(mz_ranges_nonzero) <- mz_intensity_df[mz_intensity_df$intensity > 0, ]
   
   zero_overlaps <- countOverlaps(windows, mz_ranges_zero, type = "any")
   nonzero_overlaps <- countOverlaps(windows, mz_ranges_nonzero, type = "any")
   
   mcols(windows) <- list(mz_start = mz_start, mz_end = mz_end, zero_counts = zero_overlaps, nonzero_counts = nonzero_overlaps)
   
-  windows
+  list(window_counts = windows, zero_points = mz_ranges_zero, nonzero_points = mz_ranges_nonzero)
 }
 
 mz_model <- filter(loess_to_df(zip_data$peak_finder$multi_scan_peaklist$mz_model), which %in% "fitted")
@@ -210,7 +212,7 @@ calculate_noise_cutoff <- function(mspl, n_windows, window_size = 10){
   })
   all_noise <- nrow(noise_peaks)
   
-  non_overlapping_windows <- length(window_counts) / (window_size + 2)
+  non_overlapping_windows <- n_windows / (window_size + 2)
   
   noise_window_ratio <- all_noise / non_overlapping_windows
   
@@ -226,16 +228,294 @@ calculate_noise_cutoff <- function(mspl, n_windows, window_size = 10){
   noise_cutoff <- floor(average_noise_points * use_multiplier)
 }
 
-noise_cutoff <- calculate_noise_cutoff(zip_data$peak_finder$multi_scan_peaklist, length(window_counts))
+noise_cutoff <- calculate_noise_cutoff(zip_data$peak_finder$multi_scan_peaklist, n_windows = length(window_counts$window_counts))
 ```
 
 ## Peak Pick and Characterize
 
 Now we can run peak-picking and characterization.
 
-```{r do_peakpicking}
-raw_scans_normalized <- raw_scans_normalized[order(raw_scans_normalized$mz, decreasing = FALSE), ]
-raw_scans_normalized <- raw_scans_normalized[raw_scans_normalized$intensity > 0, ]
+So, a first attempt at using `pracma::findpeaks` on the normalized data after removing zeros just
+plain out and failed, which isn't really that surprising, given that the zeros
+were a nice way to tell us where a peak started and ended in a given scan. Some other options to
+consider:
 
-normalized_peaks <- SIRM.FTMS.peakCharacterization:::generate_peaks(raw_scans_normalized, min_points = 10, n_peak = Inf)
+* The sliding window really can find the peaks, and merging them together (via `reduce`)
+will give us the peak boundaries. This should be valid given that we have spaced the delta
+by at least the spacing between points. We could use a 2 point spacing to be more sure
+that things really do belong together ...
+
+* A ratio of non-zero to zero points in the sliding windows might tell us where peak
+boundaries are, but there may be some issue where there are only peaks in a few scans.
+
+* Removing any points in those intervals defined by the noise cutoff first, do
+peak picking in each scan, define where the peaks are, and then merge regions
+that overlap by a certain amount
+
+### Sliding Window Reduction
+
+```{r sliding_window_reduction}
+reduce_sliding_window <- function(window_counts, noise_cutoff = 1, min_gapwidth = 1L){
+  has_data_window <- window_counts[mcols(window_counts)$nonzero_counts > noise_cutoff]
+  reduced_data_window <- reduce(has_data_window, min.gapwidth = 2L, with.revmap = TRUE)
+  
+  original_metadata <- mcols(has_data_window)
+  revmap <- mcols(reduced_data_window)$revmap
+  
+  new_metadata <- purrr::map_df(seq(1, length(revmap)), function(x){
+    mapped_indices <- revmap[[x]]
+    data.frame(mz_start = min(original_metadata$mz_start[mapped_indices]),
+               mz_end = max(original_metadata$mz_end[mapped_indices]),
+               peak = x)
+  })
+  
+  mcols(reduced_data_window) <- new_metadata
+  reduced_data_window
+}
+
+reduced_windows <- reduce_sliding_window(window_counts$window_counts, noise_cutoff = noise_cutoff)
+
+reduced_windows_points <- mergeByOverlaps(reduced_windows, window_counts$nonzero_points)
+
+split_points <- split(reduced_windows_points, reduced_windows_points$peak)
+
+use_peaks <- c(1, 9, 1000, 1300, 1500)
+
+for (ipeak in use_peaks) {
+  p <- ggplot(as.data.frame(split_points[[ipeak]]), aes(x = mz, y = log10(intensity), color = as.factor(scan))) + geom_point() + geom_line() + theme(legend.position = "none")
+  print(p)
+}
 ```
+
+This looks extremely promising. I think we will need to do peak picking on every scan within every region to get the "true"
+peak region, but I think we can do that rather quickly and easily. 
+
+```{r peak_pick_regions}
+peak_pick_scan_region <- function(df_of_scan, min_points = 4){
+  nups <- floor(min_points / 2)
+  peak_scan <- pracma::findpeaks(df_of_scan$intensity, nups = nups)
+  df_of_scan$log_int <- log(df_of_scan$intensity)
+  
+  if (!is.null(peak_scan)) {
+    out_peaks <- purrr::map_df(seq_len(nrow(peak_scan)), function(x){
+      peak_points <- seq(peak_scan[x, 3], peak_scan[x, 4])
+      peak_info <- get_peak_info(df_of_scan[peak_points, ])
+      peak_info$range <- list(c(min(df_of_scan[peak_points, "mz"]), max(df_of_scan[peak_points, "mz"])))
+      peak_info
+    })
+  } else {
+    out_peaks <- data.frame(ObservedMZ = NA,
+                            Height = NA,
+                            Area = NA,
+                            SSR = NA,
+                            type = "NA")
+    out_peaks$range <- list(c(NA, NA))
+  }
+  out_peaks
+}
+
+peak_pick_regions_by_scans <- function(df_of_region, min_points = 4){
+  df_of_region <- as.data.frame(df_of_region)
+  split_by_scan <- split(df_of_region, df_of_region$scan)
+  
+  # necessary for now, should be able to use smaller peaks later
+  n_point <- purrr::map_int(split_by_scan, nrow)
+  keep_scans <- n_point >= min_points
+  split_by_scan <- split_by_scan[keep_scans]
+  
+  scan_peaks <- purrr::map_df(split_by_scan, function(in_scan){
+    #print(in_scan$scan[1])
+    peak_info <- peak_pick_scan_region(in_scan, min_points = min_points)
+    peak_info$scan <- in_scan$scan[1]
+    peak_info
+  })
+  na_peaks <- is.na(scan_peaks$ObservedMZ)
+  scan_peaks[!na_peaks, ]
+}
+
+all_peaks <- purrr::map(seq_len(length(split_points)), function(in_split){
+  print(in_split)
+  peak_pick_regions_by_scans(split_points[[in_split]])
+})
+
+n_scans <- purrr::map_int(all_peaks, function(x){length(unique(x$scan))})
+
+has_dup <- which(purrr::map_lgl(all_peaks, function(in_peak){
+  sum(duplicated(in_peak$scan)) > 0
+}))
+
+# now, can we find the outliers in every case using a distance to the median??
+
+remove_outliers <- purrr::map(all_peaks, function(in_peaks){
+  median_mz <- median(in_peaks$ObservedMZ)
+  median_dist <- abs(in_peaks$ObservedMZ - median_mz)
+  dist_stats <- boxplot.stats(median_dist)
+  
+  far_points <- dist_stats$out[dist_stats$out > 0]
+  
+  if (length(far_points) > 0) {
+    in_peaks <- in_peaks[!(median_dist %in% far_points), ]
+    median_mz <- median(in_peaks$ObservedMZ)
+  }
+  
+  dup_scans <- in_peaks$scan[duplicated(in_peaks$scan)]
+  
+  if (length(dup_scans) > 0) {
+    dup_peaks <- in_peaks[in_peaks$scan %in% dup_scans, ]
+    split_dups <- split(dup_peaks, dup_peaks$scan)
+    
+    keep_dups <- purrr::map_df(split_dups, function(x){
+      x[which.min(abs(x$ObservedMZ - median_mz)), ]
+    })
+    
+    in_peaks <- rbind(in_peaks[!(in_peaks$scan %in% dup_scans), ],
+                      keep_dups)
+  }
+  in_peaks
+})
+
+has_dups2 <- purrr::map_lgl(remove_outliers, function(x){
+  sum(duplicated(x$scan)) > 0
+})
+
+n_scan <- purrr::map_int(remove_outliers, function(x){
+  length(unique(x$scan))
+})
+```
+
+## Check Intensities For Each Scan
+
+If we've done things right thus far, we shouldn't have noise in each scan.
+
+```{r check_scan_intensities}
+split_scan <- purrr::map(remove_outliers, function(x){
+  split(x, x$scan)
+})
+
+peaks_by_scan <- purrr::map(as.character(seq(1, 40)), function(in_scan){
+  purrr::map_df(split_scan, in_scan)
+})
+
+scans_to_plot <- sample(40, 5)
+
+for (iscan in scans_to_plot) {
+  p <- ggplot(peaks_by_scan[[iscan]], aes(x = log10(Height))) + geom_histogram(bins = 100)
+  print(p)
+}
+```
+
+Hmmm, this wasn't what I expected to see. We still have a bimodal distribution
+in each of the scans. Lets leave it for now though.
+
+## Check About Splitting Regions
+
+We also need to know if we will need code to split regions up into multiple
+peaks.
+
+### Size of Regions in Delta Units
+
+```{r split_regions}
+region_sizes <- purrr::map_df(seq(1, length(split_points)), function(index){
+  in_points <- split_points[[index]]
+  mz_range <- c(min(in_points$mz_start), max(in_points$mz_end))
+  
+  mz_center <- mean(mz_range)
+  delta_value <- mz_model$y[which.min(abs(mz_center - mz_model$x))]
+  
+  out_data <- data.frame(mz = mz_center, width = (mz_range[2] - mz_range[1]) / delta_value)
+  out_data$peak <- index
+  out_data
+  
+})
+
+ggplot(region_sizes, aes(x = width)) + geom_histogram(bins = 100) + labs(x = "deltas")
+
+ggplot(region_sizes, aes(x = mz, y = width)) + geom_point()
+```
+
+OK, so some of these look like they are much bigger than others, we should definitely take a look.
+
+```{r large_regions}
+large_regions <- filter(region_sizes, width > 60)$peak
+
+ggplot(as.data.frame(split_points[[571]]), aes(x = mz, y = log10(intensity), color = as.factor(scan))) + geom_point() + geom_line()
+
+ggplot(as.data.frame(split_points[[1476]]), aes(x = mz, y = log10(intensity), color = as.factor(scan))) + geom_point() + geom_line()
+
+ggplot(as.data.frame(split_points[[864]]), aes(x = mz, y = log10(intensity), color = as.factor(scan))) + geom_point() + theme(legend.position = "none")
+ggplot(data.frame(mz = all_peaks[[864]]$ObservedMZ), aes(x = mz)) + geom_histogram(bins = 40)
+```
+
+Definitely have some regions with more than a single peak. So now to figure out
+how to find them.
+
+```{r find_multiple_peaks}
+test_region <- split_points[[864]]
+
+test_window <- reduced_windows[864]
+
+test_counts <- subsetByOverlaps(window_counts$window_counts, test_window)
+
+test_mcols <- as.data.frame(mcols(test_counts))
+ggplot(test_mcols, aes(x = mz_start, y = nonzero_counts)) + geom_point()
+
+count_points <- tidyr::gather(test_mcols, key = count_type, value = counts, zero_counts, nonzero_counts)
+
+ggplot(count_points, aes(x = mz_start, y = counts, color = count_type)) + geom_point()
+
+test_mcols$count_ratio <- log10(test_mcols$nonzero_counts + 1) - log10(test_mcols$zero_counts + 1)
+
+ggplot(test_mcols, aes(x = mz_start, y = count_ratio)) + geom_point()
+```
+
+OK, so we can detect these multiple peaks using the ratio of the zero counts
+and the non-zero counts in the tiles. Lets actually do this across everything and count them up.
+
+```{r check_multiple_peaks}
+n_peaks_window <- purrr::map_int(seq(1, length(reduced_windows)), function(window_index){
+  tmp_counts <- subsetByOverlaps(window_counts$window_counts, reduced_windows[window_index])
+  
+  count_ratio <- log10(mcols(tmp_counts)$nonzero_counts + 1) - log10(mcols(tmp_counts)$zero_counts + 1)
+  
+  peaks <- pracma::findpeaks(count_ratio, nups = 2)
+  
+  if (!is.null(peaks)) {
+    n_peaks <- sum(peaks[, 1] > -0.5)
+  } else {
+    n_peaks <- 1L
+  }
+  
+  n_peaks
+})
+
+sum(n_peaks_window)
+```
+
+
+So current plan:
+
+* create m/z models for each scan using non-zero points
+* calculate number of non-zero points across sliding windows
+* actually use the 99% criterion to remove windows that are likely noise
+  * this would avoid doing peak picking and characterization across every single
+  scan as a first step.
+* merge the windows that are above this cutoff
+* for each of the merged windows, find the overlapping non-zero data points
+* then for each m/z window:
+  * for each scan, try and find and characterize peaks within
+  * remove peaks that are far from the median m/z in a peak region, and choose a single peak for each scan
+  * choose peak regions that contain lots of scans for normalization
+  * create a normalization model between scans using these characterized peaks
+  * normalize raw data in each region
+  * choose the points in each scan that are within the kept peaks from each scan
+  * for each region, now get full peak information using all the raw points
+  * choose subsets of scans, and their points, and get new peak information for each subset.
+
+
+Some notes on this plan:
+
+* Can check how well the noise reduction went by taking the characterized peak intensities from each scan and plotting them, should have a largely unimodal distribution now
+* Can check if we need to write code for splitting regions with multiple peaks by checking:
+  * the sizes of regions in delta units (dependent or independently of M/Z)
+  * The distributions of ObservedMZ within each region. Have seen outliers (this was part of yesterdays work was to remove outliers), but true multi-modality would imply multiple peaks.
+
