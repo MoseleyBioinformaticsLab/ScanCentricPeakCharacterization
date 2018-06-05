@@ -197,7 +197,7 @@ sliding_window_iranges <- function(mz_intensity_df, use_range = NULL, mz_model =
   zero_overlaps <- countOverlaps(windows, mz_ranges_zero, type = "any")
   nonzero_overlaps <- countOverlaps(windows, mz_ranges_nonzero, type = "any")
   
-  mcols(windows) <- list(mz_start = mz_start, mz_end = mz_end, zero_counts = zero_overlaps, nonzero_counts = nonzero_overlaps)
+  mcols(windows) <- list(mz_start = mz_start, mz_end = mz_end, zero_counts = zero_overlaps, nonzero_counts = nonzero_overlaps, overlap_ratio = log10(nonzero_overlaps + 1) - log10(zero_overlaps + 1))
   
   list(window_counts = windows, zero_points = mz_ranges_zero, nonzero_points = mz_ranges_nonzero)
 }
@@ -274,18 +274,61 @@ reduce_sliding_window <- function(window_counts, noise_cutoff = 1, min_gapwidth 
 }
 
 reduced_windows <- reduce_sliding_window(window_counts$window_counts, noise_cutoff = noise_cutoff)
+```
 
-reduced_windows_points <- mergeByOverlaps(reduced_windows, window_counts$nonzero_points)
+Now we check each region, and do peak-picking on the log10 ratio of the
+non-zero to zero points to find sub-regions if necessary.
+
+```{r sub_windows}
+split_sub_windows <- function(overlap_counts, nups = 2){
+  sub_peaks <- pracma::findpeaks(mcols(overlap_counts)$overlap_ratio, nups = nups)
+  if (!is.null(sub_peaks)) {
+    peak_list <- IRanges(start = start(overlap_counts)[sub_peaks[, 3]],
+                         end = start(overlap_counts)[sub_peaks[, 4]])
+    mcols(peak_list) <- data.frame(overlap_ratio = sub_peaks[, 1])
+    
+    n_peaks <- length(peak_list)
+    end(peak_list)[n_peaks] <- end(overlap_counts)[sub_peaks[n_peaks, 4]]
+  } else {
+    peak_list <- IRanges(start = min(start(overlap_counts)),
+                         end = max(end(overlap_counts)))
+    mcols(peak_list) <- data.frame(overlap_ratio = max(mcols(overlap_counts)$overlap_ratio))
+  }
+  peak_list
+}
+
+find_sub_windows <- function(windows, original_counts, nups = 2){
+  mcols(windows) <- data.frame(overlap_ratio = 0)
+  split_windows <- split(windows, seq(1, length(windows)))
+  
+  for (iwindow in seq_len(length(split_windows))) {
+    print(iwindow)
+    split_windows[[iwindow]] <- split_sub_windows(
+      subsetByOverlaps(original_counts, split_windows[[iwindow]]), nups = nups
+    )
+  }
+  
+  unlist(split_windows)
+}
+
+sub_windows <- find_sub_windows(reduced_windows, window_counts$window_counts)
+mcols(sub_windows) <- list(mcols(sub_windows), peak = seq(1, length(sub_windows)))
+```
+
+```{r extract_points}
+reduced_windows_points <- mergeByOverlaps(window_counts$nonzero_points, sub_windows)
 
 split_points <- split(reduced_windows_points, reduced_windows_points$peak)
 
-use_peaks <- c(1, 9, 1000, 1300, 1500)
+use_peaks <- c(1, 2, 9, 1000, 1300, 1500)
 
 for (ipeak in use_peaks) {
   p <- ggplot(as.data.frame(split_points[[ipeak]]), aes(x = mz, y = log10(intensity), color = as.factor(scan))) + geom_point() + geom_line() + theme(legend.position = "none")
   print(p)
 }
 ```
+
+
 
 This looks extremely promising. I think we will need to do peak picking on every scan within every region to get the "true"
 peak region, but I think we can do that rather quickly and easily. 
