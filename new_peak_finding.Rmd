@@ -9,6 +9,8 @@ smashing all the scan data together.
 library(SIRM.FTMS.peakCharacterization)
 library(dplyr)
 library(ggplot2)
+library(IRanges)
+library(R6)
 ```
 
 We will use a dataset where only peak correspondence has been done.
@@ -150,19 +152,16 @@ should be noise. This is combined with counts of the noise peaks from every
 scan.
 
 ```{r noise_removal}
-library(IRanges)
-sliding_window_iranges <- function(mz_intensity_df, use_range = NULL, mz_model = NULL, window = 10, delta = window / 10){
-  
-  #mz_intensity_df <- mz_intensity_df[mz_intensity_df$intensity > 0, ]
-  
+create_mz_windows <- function(mz_model, use_range = NULL, 
+                              window_size = 10, delta = window_size / 10){
   if (is.null(use_range)) {
-    range_start = floor(min(mz_intensity_df$mz))
-    range_end = ceiling(max(mz_intensity_df$mz))
+    range_start = floor(min(mz_model$x))
+    range_end = ceiling(max(mz_model$x))
   } else {
     range_start = floor(min(use_range))
     range_end <- ceiling(max(use_range))
   }
-
+  
   min_spacing <- min(mz_model$y) * delta
   mz_start <- vector(mode = "numeric", length = (range_end - range_start) / min_spacing)
   mz_end <- mz_start
@@ -172,8 +171,8 @@ sliding_window_iranges <- function(mz_intensity_df, use_range = NULL, mz_model =
   
   while (start_window < range_end) {
     mz_start[iteration] <- start_window
-    curr_spacing <- mz_model[which.min(abs(mz_model$x - start_window)), "y"]
-    mz_end[iteration] <- start_window + (window * curr_spacing)
+    curr_spacing <- mz_model[which.min(abs(mz_model$x - start_window)), "y"] * delta
+    mz_end[iteration] <- start_window + (window_size * curr_spacing)
     start_window <- start_window + (curr_spacing / delta)
     iteration <- iteration + 1
   }
@@ -182,29 +181,51 @@ sliding_window_iranges <- function(mz_intensity_df, use_range = NULL, mz_model =
   mz_start <- mz_start[keep_locs]
   mz_end <- mz_end[keep_locs]
   
-  mult_factor <- 1 / min_spacing
+  point_multiplier <- 1 / min(mz_model$y)
 
-  window_start <- round(mz_start * mult_factor)
-  window_end <- round(mz_end * mult_factor)
+  window_start <- round(mz_start * point_multiplier)
+  window_end <- round(mz_end * point_multiplier)
   
   windows <- IRanges(start = window_start, end = window_end)
+  
+  mcols(windows) <- list(mz_start = mz_start, mz_end = mz_end)
+  windows@metadata <- list(point_multiplier = point_multiplier,
+                           delta = delta,
+                           window_size = window_size)
+  windows
+  
+}
 
-  mz_ranges_zero <- IRanges(start = round(mz_intensity_df[mz_intensity_df$intensity == 0, "mz"] * mult_factor), width = 1)
-  mcols(mz_ranges_zero) <- mz_intensity_df[mz_intensity_df$intensity == 0, ]
-  mz_ranges_nonzero <- IRanges(start = round(mz_intensity_df[mz_intensity_df$intensity > 0, "mz"] * mult_factor), width = 1)
-  mcols(mz_ranges_nonzero) <- mz_intensity_df[mz_intensity_df$intensity > 0, ]
-  
-  zero_overlaps <- countOverlaps(windows, mz_ranges_zero, type = "any")
-  nonzero_overlaps <- countOverlaps(windows, mz_ranges_nonzero, type = "any")
-  
-  mcols(windows) <- list(mz_start = mz_start, mz_end = mz_end, zero_counts = zero_overlaps, nonzero_counts = nonzero_overlaps, overlap_ratio = log10(nonzero_overlaps + 1) - log10(zero_overlaps + 1))
-  
-  list(window_counts = windows, zero_points = mz_ranges_zero, nonzero_points = mz_ranges_nonzero)
+mz_points_to_windows <- function(mz_data, point_multiplier){
+  mz_windows <- IRanges(start = round(mz_data[, "mz"] * point_multiplier), width = 1)
+  mcols(mz_windows) <- mz_data
+  mz_windows@metadata <- list(point_multiplier = point_multiplier)
+  mz_windows
 }
 
 mz_model <- filter(loess_to_df(zip_data$peak_finder$multi_scan_peaklist$mz_model), which %in% "fitted")
 
-window_counts <- sliding_window_iranges(raw_scans_normalized, mz_model = mz_model, window = 10)
+sliding_windows <- create_mz_windows(mz_model, use_range = c(148, 1600), window_size = 10, delta = 1)
+
+tiled_windows <- create_mz_windows(mz_model, use_range = c(148, 1600), window_size = 1, delta = 1)
+
+mz_windows <- mz_points_to_windows(raw_scans_normalized, sliding_windows@metadata$point_multiplier)
+
+count_overlaps <- function(windows, mz_windows){
+  zero_intensities <- mz_windows@elementMetadata$intensity == 0
+  
+  nonzero_counts <- countOverlaps(windows, mz_windows[!zero_intensities])
+  zero_counts <- countOverlaps(windows, mz_windows[zero_intensities])
+  count_ratio <- log10(nonzero_counts + 1) - log10(zero_counts + 1)
+  
+  windows@elementMetadata$nonzero_counts <- nonzero_counts
+  windows@elementMetadata$zero_counts <- zero_counts
+  windows@elementMetadata$count_ratio <- count_ratio
+  windows
+}
+
+sliding_windows <- count_overlaps(sliding_windows, mz_windows)
+tiled_windows <- count_overlaps(tiled_windows, mz_windows)
 
 calculate_noise_cutoff <- function(mspl, n_windows, window_size = 10){
   noise_peaks <- purrr::map_df(mspl$get_scan_peak_lists(), function(x){
@@ -228,7 +249,7 @@ calculate_noise_cutoff <- function(mspl, n_windows, window_size = 10){
   noise_cutoff <- floor(average_noise_points * use_multiplier)
 }
 
-noise_cutoff <- calculate_noise_cutoff(zip_data$peak_finder$multi_scan_peaklist, n_windows = length(window_counts$window_counts))
+noise_cutoff <- calculate_noise_cutoff(zip_data$peak_finder$multi_scan_peaklist, n_windows = length(sliding_windows))
 ```
 
 ## Peak Pick and Characterize
@@ -257,7 +278,7 @@ that overlap by a certain amount
 ```{r sliding_window_reduction}
 reduce_sliding_window <- function(window_counts, noise_cutoff = 1, min_gapwidth = 1L){
   has_data_window <- window_counts[mcols(window_counts)$nonzero_counts > noise_cutoff]
-  reduced_data_window <- reduce(has_data_window, min.gapwidth = 2L, with.revmap = TRUE)
+  reduced_data_window <- reduce(has_data_window, min.gapwidth = min_gapwidth, with.revmap = TRUE)
   
   original_metadata <- mcols(has_data_window)
   revmap <- mcols(reduced_data_window)$revmap
@@ -270,28 +291,274 @@ reduce_sliding_window <- function(window_counts, noise_cutoff = 1, min_gapwidth 
   })
   
   mcols(reduced_data_window) <- new_metadata
+  reduced_data_window@metadata <- window_counts@metadata
   reduced_data_window
 }
 
-reduced_windows <- reduce_sliding_window(window_counts$window_counts, noise_cutoff = noise_cutoff)
+reduced_windows <- reduce_sliding_window(sliding_windows, noise_cutoff = noise_cutoff)
 ```
 
 Now we check each region, and do peak-picking on the log10 ratio of the
 non-zero to zero points to find sub-regions if necessary.
 
+```{r test_regions}
+subset_window_by_mz <- function(windows, mz_range, point_multiplier = NULL){
+  if (is.null(point_multiplier)) {
+    point_multiplier <- windows@metadata$point_multiplier
+  }
+  
+  if (is.null(point_multiplier)) {
+    stop("Please provide the point_multiplier value to convert M/Z to points")
+  }
+  
+  point_range <- round(mz_range * point_multiplier)
+  sub_window <- IRanges(start = min(point_range), end = max(point_range))
+  subsetByOverlaps(windows, sub_window)
+}
+
+generate_plottable_data <- function(query_window, mz_points, sliding_points, tiled_points){
+  mz_data <- subsetByOverlaps(mz_points, query_window)
+  plot_data <- as.data.frame(mcols(mz_data)[, c("mz", "intensity")])
+  plot_data$type <- "original"
+  plot_data$intensity <- log10(plot_data$intensity + 1)
+  
+  tiled_data <- subsetByOverlaps(tiled_points, query_window)
+  tiled_frame <- transmute(as.data.frame(mcols(tiled_data)[, c("mz_start", "nonzero_counts")]), mz = mz_start, intensity = log10(nonzero_counts + 1), type = "tiled")
+  
+  sliding_data <- subsetByOverlaps(sliding_points, query_window)
+  sliding_frame <- transmute(as.data.frame(mcols(sliding_data)[, c("mz_start", "nonzero_counts")]), mz = mz_start, intensity = log10(nonzero_counts + 2), type = "sliding")
+  
+  plot_data <- rbind(plot_data, tiled_frame, sliding_frame)
+  plot_data
+
+}
+
+window_1_plot <- generate_plottable_data(reduced_windows[1], mz_windows, sliding_windows, tiled_windows)
+
+reduced2 <- subset_window_by_mz(reduced_windows, mz_range = c(1317.202, 1317.226))
+window_2_plot <- generate_plottable_data(reduced2, mz_windows, sliding_windows, tiled_windows)
+```
+
+Based on these plots, we might be able to use peak-picking, counting peaks
+in the tiled windows, and then peak-picking those to define where the "true" peaks
+lie. Let's give it a shot.
+
+```{r}
+create_na_peak <- function(peak_method = "lm_weighted"){
+  data.frame(ObservedMZ = as.numeric(NA),
+             Height = as.numeric(NA),
+             Area = as.numeric(NA),
+             SSR = as.numeric(NA),
+             type = peak_method,
+             stringsAsFactors = FALSE)
+}
+
+get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points = min_points){
+  range_data <- in_range@elementMetadata
+  
+  possible_peaks <- pracma::findpeaks(range_data$intensity, nups = 2)
+
+  if (!is.null(possible_peaks)) {
+    n_peak <- nrow(possible_peaks)
+    peaks <- purrr::map_df(seq(1, n_peak), function(in_peak){
+    #print(in_peak)
+      "!DEBUG Peak `in_peak`"
+      peak_loc <- seq(possible_peaks[in_peak, 3], possible_peaks[in_peak, 4])
+      out_peak <- get_peak_info(range_data[peak_loc, ], peak_method = peak_method, min_points = min_points)
+      out_peak$n_point <- length(peak_loc)
+      out_peak$mz_width <- max(range_data[peak_loc, "mz"]) - min(range_data[peak_loc, "mz"])
+      out_peak$points <- I(list(start(in_range)[peak_loc]))
+      out_peak$scan <- range_data$scan[1]
+      out_peak
+    })
+  } else {
+    peaks <- create_na_peak()
+    peaks$points <- NA
+    peaks$scan <- range_data$scan[1]
+  }
+  peaks
+}
+
+run_peak_picking_in_reduced <- function(query_window, mz_windows, tiled_windows, peak_method = "lm_weighted", min_points = 4,
+                                        plot_data = FALSE){
+  mz_points <- subsetByOverlaps(mz_windows, query_window)
+  mz_points@elementMetadata$log_int <- log(mz_points@elementMetadata$intensity + 1e-8)
+  mz_points <- split(mz_points, mz_points@elementMetadata$scan)
+  
+  reduced_peaks <- purrr::map_df(names(mz_points), function(in_scan){
+    get_reduced_peaks(mz_points[[in_scan]], peak_method = peak_method, min_points = min_points)
+    
+  })
+  
+  reduced_peaks <- reduced_peaks[!is.na(reduced_peaks$ObservedMZ), ]
+  
+  if (nrow(reduced_peaks) > 0){
+    reduced_peaks$mz <- reduced_peaks$ObservedMZ
+    reduced_mz_points <- mz_points_to_windows(reduced_peaks, mz_windows@metadata$point_multiplier)
+    
+    tiled_points <- subsetByOverlaps(tiled_windows, query_window)
+    #tiled_points@elementMetadata <- NULL
+    tiled_points@elementMetadata$peak_count <- countOverlaps(tiled_points, reduced_mz_points)
+    
+    
+    
+    sub_tiles <- reduce(tiled_points[mcols(tiled_points)$peak_count > 0])
+    mcols(sub_tiles) <- list(region = seq(1, length(sub_tiles)))
+    
+    reduced_mz_points <- mergeByOverlaps(reduced_mz_points, sub_tiles)
+    
+    sub_mz_point <- split(reduced_mz_points, reduced_mz_points$region)
+    
+    sub_mz_region <- IRangesList()
+    
+    for (iregion in seq_len(length(sub_mz_point))) {
+      all_points <- unlist(sub_mz_point[[iregion]]$points)
+      tmp_range <- IRanges(start = min(all_points), end = max(all_points))
+      mcols(tmp_range) <- I(list(as.numeric(sub_mz_point[[iregion]]$scan)))
+      sub_mz_region[[iregion]] <- tmp_range
+    }
+  } else {
+    sub_mz_region <- IRangesList()
+  }
+
+  if (plot_data) {
+    plot_data <- as.data.frame(mcols(unlist(mz_points))[, c("mz", "intensity", "scan")]) %>% mutate(intensity = log10(intensity + 1e-8), type = "original")
+
+    peak_data <- transmute(reduced_peaks, mz = ObservedMZ, intensity = log10(Height), scan = 0, type = "peakpicked")
+
+    tiled_data <- transmute(as.data.frame(mcols(tiled_points)), mz = mz_start, intensity = log10(peak_count + 1e-8), scan = 0, type = "tiled")
+
+    plot_data <- rbind(plot_data, peak_data, tiled_data)
+    return(plot_data)
+  } else {
+    return(unlist(sub_mz_region))
+  }
+
+}
+
+mcols(reduced_windows) <- NULL
+all_regions <- split(reduced_windows, seq(1, length(reduced_windows)))
+all_regions2 <- all_regions
+library(knitrProgressBar)
+prog_obj <- knitrProgressBar::progress_estimated(length(all_regions))
+for (iregion in seq_len(length(all_regions))) {
+  all_regions2[[iregion]] <- run_peak_picking_in_reduced(all_regions[[iregion]], mz_windows, tiled_windows)
+  update_progress(prog_obj)
+}
+
+all_regions2 <- unlist(all_regions2)
+```
+
+```{r check_lengths_duplicates}
+all_scans <- mcols(all_regions2)$X
+
+n_scan <- purrr::map_int(all_scans, length)
+
+sum(n_scan >= 6)
+
+has_dup <- purrr::map_lgl(all_scans, function(x){sum(duplicated(x)) > 0})
+
+tmp_data <- run_peak_picking_in_reduced(subsetByOverlaps(reduced_windows, all_regions2[1095]), mz_windows, tiled_windows, plot_data = TRUE)
+
+use_regions <- seq(1095, 1099)
+for (iregion in use_regions) {
+  region_data <- run_peak_picking_in_reduced(all_regions2[iregion], mz_windows, tiled_windows, plot_data = TRUE)
+  p <- ggplot(filter(region_data, type %in% "original"), aes(x = mz, y = intensity, color = as.factor(scan))) + geom_point() + geom_line()
+  q <- p + geom_point(data = filter(region_data, !(type %in% "original")), color = "black")
+  print(q)
+}
+```
+
+```{r check_width_distribution}
+region_widths <- countOverlaps(all_regions2, tiled_windows)
+
+reduced_widths <- countOverlaps(reduced_windows, tiled_windows)
+```
+
+```{r}
+window_1_tiled <- run_peak_picking_in_reduced(reduced_windows[1], mz_windows, tiled_windows)
+window_1_tmp <- window_1_tiled$tiled
+reduce(window_1_tmp[mcols(window_1_tmp)$peak_count > 0])
+
+
+ggplot(window_1_tiled$plot, aes(x = mz, y = intensity, color = type)) + geom_point()
+
+window_2_tiled <- run_peak_picking_in_reduced(reduced2, mz_windows, tiled_windows)
+window_2_tmp <- window_2_tiled$tiled
+reduce(window_2_tmp[mcols(window_2_tmp)$peak_count > 0])
+
+ggplot(window_2_tiled$plot, aes(x = mz, y = intensity, color = type)) + geom_point()
+
+sub_peaks <- purrr::map_df(unique(sub_data@elementMetadata$scan), function(in_scan){
+  print(in_scan)
+  tmp_range <- sub_data[sub_data@elementMetadata$scan %in% in_scan, ]
+  mz_data <- tmp_range@elementMetadata
+  mz_data$log_int <- log(mz_data$intensity + 1e-8)
+  possible_peaks <- pracma::findpeaks(mz_data$intensity, nups = 2)
+  
+  n_peak <- nrow(possible_peaks)
+  peaks <- purrr::map_df(seq(1, n_peak), function(in_peak){
+    #print(in_peak)
+    "!DEBUG Peak `in_peak`"
+    peak_loc <- seq(possible_peaks[in_peak, 3], possible_peaks[in_peak, 4])
+    out_peak <- get_peak_info(mz_data[peak_loc, ], peak_method = peak_method, min_points = min_points)
+    out_peak$n_point <- length(peak_loc)
+    out_peak$mz_width <- max(mz_data[peak_loc, "mz"]) - min(mz_data[peak_loc, "mz"])
+    out_peak$points <- I(list(peak_loc))
+    out_peak$scan <- in_scan
+    out_peak
+  })
+  peaks
+})
+
+sub_peaks$mz <- sub_peaks$ObservedMZ
+sub_peak_windows <- mz_points_to_windows(sub_peaks, tiled_windows@metadata$point_multiplier)
+
+peaks_in_tiles <- countOverlaps(sub_tiles, sub_peak_windows)
+
+tiled_windows2 <- create_mz_windows(mz_model, use_range = c(148, 1600), window_size = 2, delta = 1)
+tiled_windows2 <- count_overlaps(tiled_windows2, mz_windows)
+test1 <- subsetByOverlaps(tiled_windows2, reduced_windows[1])
+test1_data <- as.data.frame(mcols(test1))
+
+test1_points <- subsetByOverlaps(mz_windows, reduced_windows[1])
+
+pracma::findpeaks(test1_data$count_ratio, nups = 2)
+tmp_data <- as.data.frame(mcols(tiled_counts$window_counts))
+use_tiles <- (tmp_data$mz_start > 1317.199) & (tmp_data$mz_end < 1317.23)
+sub_region <- tiled_counts$window_counts[use_tiles]
+
+tmp_data_region <- tmp_data[use_tiles, ]
+pracma::findpeaks(tmp_data_region$overlap_ratio)
+
+tmp_data_sliding <- as.data.frame(mcols(window_counts$window_counts))
+use_sliding <- (tmp_data_sliding$mz_start > 1317.199) & (tmp_data_sliding$mz_start < 1317.23)
+
+tmp_data_sliding_region <- tmp_data_sliding[use_sliding, ]
+
+```
+
 ```{r sub_windows}
 split_sub_windows <- function(overlap_counts, nups = 2){
-  sub_peaks <- pracma::findpeaks(mcols(overlap_counts)$overlap_ratio, nups = nups)
+  window_data <- mcols(overlap_counts)
+  #has_nonzero <- window_data$nonzero_counts > 0
+  #window_data <- window_data[has_nonzero, ]
+  #overlap_counts <- overlap_counts[has_nonzero]
+  sub_peaks <- pracma::findpeaks(window_data$overlap_ratio, nups = nups)
   if (!is.null(sub_peaks)) {
     peak_list <- IRanges(start = start(overlap_counts)[sub_peaks[, 3]],
                          end = start(overlap_counts)[sub_peaks[, 4]])
-    mcols(peak_list) <- data.frame(overlap_ratio = sub_peaks[, 1])
+    mcols(peak_list) <- data.frame(overlap_ratio = window_data$overlap_ratio[sub_peaks[, 2]])
     
     n_peaks <- length(peak_list)
-    end(peak_list)[n_peaks] <- end(overlap_counts)[sub_peaks[n_peaks, 4]]
+    
+    if (n_peaks > 1) {
+      end(peak_list)[n_peaks] <- end(overlap_counts)[sub_peaks[n_peaks, 4]]
+    }
+    
   } else {
     peak_list <- IRanges(start = min(start(overlap_counts)),
-                         end = max(end(overlap_counts)))
+                         end = max(start(overlap_counts)))
     mcols(peak_list) <- data.frame(overlap_ratio = max(mcols(overlap_counts)$overlap_ratio))
   }
   peak_list
@@ -380,12 +647,43 @@ all_peaks <- purrr::map(seq_len(length(split_points)), function(in_split){
   print(in_split)
   peak_pick_regions_by_scans(split_points[[in_split]])
 })
+```
 
-n_scans <- purrr::map_int(all_peaks, function(x){length(unique(x$scan))})
+```{r check_n_scans, fig.keep = "all"}
+n_scans <- purrr::map_int(all_peaks, function(x){
+  length(unique(x$scan))
+})
 
+ggplot(data.frame(n_scans = n_scans), aes(x = n_scans)) + geom_histogram(bins = 30)
+
+plot_0 <- c(18, sample(which(n_scans == 0), 4))
+
+for (ipeak in plot_0) {
+  p <- ggplot(as.data.frame(split_points[[ipeak]]), aes(x = mz, y = log10(intensity), color = as.factor(scan))) + geom_point() + geom_line() + theme(legend.position = "none")
+  print(p)
+}
+```
+
+OK, have some cases with just single points in them.
+
+```{r check_duplicate_scans}
 has_dup <- which(purrr::map_lgl(all_peaks, function(in_peak){
   sum(duplicated(in_peak$scan)) > 0
 }))
+
+plot_dup <- unique(c(7, sample(has_dup, 4)))
+
+for (ipeak in plot_dup) {
+  p <- ggplot(as.data.frame(split_points[[ipeak]]), aes(x = mz, y = log10(intensity), color = as.factor(scan))) + geom_point() + geom_line() + theme(legend.position = "none")
+  print(p)
+}
+```
+
+So, there are probably two types of things. 
+
+**Peak 7**, where there is nothing really, and should just sort of be dropped. And then side things, like **Peak 967**.
+
+```{r}
 
 # now, can we find the outliers in every case using a distance to the median??
 
@@ -425,6 +723,8 @@ n_scan <- purrr::map_int(remove_outliers, function(x){
   length(unique(x$scan))
 })
 ```
+
+
 
 ## Check Intensities For Each Scan
 
