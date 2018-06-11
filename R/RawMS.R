@@ -69,6 +69,11 @@ RawMS <- R6::R6Class("RawMS",
      scan_range = NULL,
      rt_range = NULL,
      mz_range = NULL,
+     sd_fit_function = NULL,
+     sd_predict_function = NULL,
+     mz_model_list = NULL,
+     mz_model_differences = NULL,
+     mz_model = NULL,
      plot_tic = function(color_ms = TRUE, log_transform = TRUE){
        plot_tic(self$raw_data, color_ms = color_ms, log_transform = log_transform)
      },
@@ -102,15 +107,88 @@ RawMS <- R6::R6Class("RawMS",
      count_raw_peaks = function(){
        count_raw_peaks(self$raw_data, self$scan_range)
      },
+     extract_raw_data = function(){
+       scan_range <- self$scan_range
+       raw_scan_data <- purrr::map_df(scan_range, function(in_scan){
+         scan_data <- as.data.frame(xcms::getScan(self$raw_data, in_scan))
+         scan_data$scan <- in_scan
+         scan_data
+       })
+       raw_scan_data
+     },
+
+     get_mz_models = function(){
+       self$mz_model_list <- furrr::future_map(self$scan_range, function(in_scan){
+         create_mz_model(as.data.frame(xcms::getScan(self$raw_data, in_scan)), self$sd_fit_function)
+       })
+     },
+
+     average_mz_models = function(){
+       if (is.null(self$mz_model_list)) {
+         self$get_mz_models()
+       }
+
+       if (length(self$mz_model_list) != length(self$scan_range)) {
+         self$get_mz_models()
+       }
+
+       model_list <- self$mz_model_list
+       mz_ranges <- round(range(unlist(purrr::map(model_list, function(x){range(x$x)}))))
+
+       mz_values <- seq(mz_ranges[1], mz_ranges[2], 0.5)
+       sd_predictions <- furrr::future_map(model_list, self$sd_predict_function, mz_values)
+       mean_sd_preds <- colMeans(do.call(rbind, sd_predictions))
+
+       self$mz_model <- self$sd_fit_function(mz_values, mean_sd_preds)
+
+       use_scans <- self$scan_range
+       scan_mz_sd <- purrr::map_df(seq_len(length(use_scans)), function(scan_index){
+         scan_prediction <- sd_predictions[[scan_index]]
+         diff_prediction_mean <- abs(scan_prediction - mean_sd_preds)
+         data.frame(scan = use_scans[scan_index],
+                    sum_diff = sum(diff_prediction_mean),
+                    median_diff = median(diff_prediction_mean))
+       })
+       self$mz_model_differences <- scan_mz_sd
+     },
+
+     remove_bad_resolution_scans = function(){
+       if (is.null(self$mz_model_diffs)) {
+         self$average_mz_models()
+       }
+       diff_model <- self$mz_model_differences
+       max_out <- max(grDevices::boxplot.stats(diff_model$sum_diff)$stats)
+       keep_scans <- self$scan_range[self$scan_range %in% diff_model$scan[diff_model$sum_diff <= max_out]]
+
+       #self$peak_list_by_scans <- self$peak_list_by_scans[keep_scans]
+       #self$noise_info <- self$noise_info[keep_scans, ]
+
+       self$scan_range <- keep_scans
+       self$mz_model_list <- NULL
+       self$average_mz_models()
+       invisible(self)
+     },
 
 
-   initialize = function(raw_file, metadata_file = NULL, scan_range = NULL, rt_range = NULL){
+
+   initialize = function(raw_file, metadata_file = NULL, scan_range = NULL, rt_range = NULL, sd_fit_function = NULL,
+                         sd_predict_function = NULL){
      self$raw_data <- import_raw_ms(raw_file)
      if (!is.null(metadata_file)) {
        self$raw_metadata <- fromJSON(metadata_file)
      }
 
 
+     if (is.null(sd_fit_function)) {
+       self$sd_fit_function <- default_sd_fit_function
+     } else {
+       self$sd_fit_function <- sd_fit_function
+     }
+     if (is.null(sd_predict_function)) {
+       self$sd_predict_function <- default_sd_predict_function
+     } else {
+       self$sd_predict_function <- sd_predict_function
+     }
      # default is to use the MS1 non-precursor scans
      if (is.null(scan_range) && is.null(rt_range)) {
        # message("Using MS1 non-precursor scans!")
