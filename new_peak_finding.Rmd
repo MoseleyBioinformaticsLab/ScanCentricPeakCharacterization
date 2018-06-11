@@ -10,7 +10,7 @@ library(SIRM.FTMS.peakCharacterization)
 library(dplyr)
 library(ggplot2)
 library(IRanges)
-library(R6)
+library(compiler)
 ```
 
 We will use a dataset where only peak correspondence has been done.
@@ -196,12 +196,16 @@ create_mz_windows <- function(mz_model, use_range = NULL,
   
 }
 
+create_mz_windows <- compiler::cmpfun(create_mz_windows)
+
 mz_points_to_windows <- function(mz_data, point_multiplier){
   mz_windows <- IRanges(start = round(mz_data[, "mz"] * point_multiplier), width = 1)
   mcols(mz_windows) <- mz_data
   mz_windows@metadata <- list(point_multiplier = point_multiplier)
   mz_windows
 }
+
+mz_points_to_windows <- compiler::cmpfun(mz_points_to_windows)
 
 mz_model <- filter(loess_to_df(zip_data$peak_finder$multi_scan_peaklist$mz_model), which %in% "fitted")
 
@@ -223,7 +227,7 @@ count_overlaps <- function(windows, mz_windows){
   windows@elementMetadata$count_ratio <- count_ratio
   windows
 }
-
+count_overlaps <- compiler::cmpfun(count_overlaps)
 sliding_windows <- count_overlaps(sliding_windows, mz_windows)
 tiled_windows <- count_overlaps(tiled_windows, mz_windows)
 
@@ -294,6 +298,7 @@ reduce_sliding_window <- function(window_counts, noise_cutoff = 1, min_gapwidth 
   reduced_data_window@metadata <- window_counts@metadata
   reduced_data_window
 }
+reduce_sliding_window <- compiler::cmpfun(reduce_sliding_window)
 
 reduced_windows <- reduce_sliding_window(sliding_windows, noise_cutoff = noise_cutoff)
 ```
@@ -352,6 +357,7 @@ create_na_peak <- function(peak_method = "lm_weighted"){
              type = peak_method,
              stringsAsFactors = FALSE)
 }
+create_na_peak <- compiler::cmpfun(create_na_peak)
 
 get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points = min_points){
   range_data <- in_range@elementMetadata
@@ -378,6 +384,7 @@ get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points 
   }
   peaks
 }
+get_reduced_peaks <- compiler::cmpfile(get_reduced_peaks)
 
 run_peak_picking_in_reduced <- function(query_window, mz_windows, tiled_windows, peak_method = "lm_weighted", min_points = 4,
                                         plot_data = FALSE){
@@ -436,6 +443,8 @@ run_peak_picking_in_reduced <- function(query_window, mz_windows, tiled_windows,
 
 }
 
+run_peak_picking_in_reduced <- compiler::cmpfun(run_peak_picking_in_reduced)
+
 mcols(reduced_windows) <- NULL
 all_regions <- split(reduced_windows, seq(1, length(reduced_windows)))
 all_regions2 <- all_regions
@@ -447,6 +456,8 @@ for (iregion in seq_len(length(all_regions))) {
 }
 
 all_regions2 <- unlist(all_regions2)
+
+#save(sliding_windows, reduced_windows, all_regions2, tiled_windows, mz_windows, file = "peak_picking_reduced.RData")
 ```
 
 ```{r check_lengths_duplicates}
@@ -475,7 +486,80 @@ region_widths <- countOverlaps(all_regions2, tiled_windows)
 reduced_widths <- countOverlaps(reduced_windows, tiled_windows)
 ```
 
+## Actually Do Some Peak Characterization
 
+```{r peak_characterization}
+get_merged_peak_info <- function(in_points, peak_method = "lm_weighted", min_points = 4){
+  use_points <- unlist(IRangesList(in_points))
+  
+  use_data <- mcols(use_points)
+  use_data <- use_data[use_data$intensity > 0, ]
+  get_peak_info(use_data, peak_method = peak_method, min_points = min_points)
+}
+
+get_merged_peak_info <- compiler::cmpfun(get_merged_peak_info)
+
+regional_peak_characterization <- function(mz_points, min_peaks = 4, max_selection = 100, peak_method = "lm_weighted", min_points = 4){
+  
+  mz_points@elementMetadata$log_int <- log(mz_points@elementMetadata$intensity + 1e-8)
+  mz_data <- mcols(mz_points)
+  reduced_peaks <- purrr::map_df(unique(mz_data$scan), function(in_scan){
+    get_reduced_peaks(mz_points[mz_data$scan %in% in_scan], peak_method = peak_method, min_points = min_points)
+  })
+  reduced_peaks <- reduced_peaks[!is.na(reduced_peaks$ObservedMZ), ]
+  n_peaks <- nrow(reduced_peaks)
+  if (n_peaks >= min_peaks) {
+    reduced_peaks$peak <- seq(1, nrow(reduced_peaks))
+  
+    peak_points <- purrr::map(seq(1, nrow(reduced_peaks)), function(in_peak){
+      use_points <- IRanges(start = reduced_peaks[in_peak, "points"][[1]], width = 1)
+      use_scan <- reduced_peaks[in_peak, "scan"]
+      subsetByOverlaps(mz_points[mz_data$scan %in% use_scan], use_points)
+    })
+    
+    peak_info <- get_merged_peak_info(peak_points)
+    peak_samples <- utils::combn(n_peaks, 3)
+  
+    if (ncol(peak_samples) > max_selection) {
+      peak_samples <- peak_samples[, sample(ncol(peak_samples), max_selection)]
+    }
+    
+    sampled_peaks <- purrr::map_df(seq_len(ncol(peak_samples)), function(in_sample){
+      get_merged_peak_info(peak_points[peak_samples[, in_sample]])
+    })
+    
+    peak_info$ObservedMZSD <- sd(sampled_peaks$ObservedMZ)
+    peak_info$HeightSD <- sd(sampled_peaks$Height)
+    peak_info$Log10HeightSD <- sd(log10(sampled_peaks$Height))
+    peak_info$ObservedMZSD2 <- sd(reduced_peaks$ObservedMZ)
+    peak_info$Height2 <- mean(reduced_peaks$Height)
+    peak_info$HeightSD2 <- sd(reduced_peaks$Height)
+  } else {
+    peak_info <- create_na_peak()
+    peak_info$ObservedMZSD <- NA
+    peak_info$HeightSD <- NA
+    peak_info$Log10HeightSD <- NA
+    peak_info$ObservedMZSD2 <- NA
+    peak_info$Height2 <- NA
+    peak_info$HeightSD2 <- NA
+  }
+  
+ peak_info
+}
+regional_peak_characterization <- compiler::cmpfun(regional_peak_characterization)
+```
+
+```{r run_subsamples}
+n_regions <- length(all_regions2)
+subsample_progress <- knitrProgressBar::progress_estimated(n_regions)
+peak_subsamples <- purrr::map_df(seq_len(n_regions), function(in_region){
+  #print(in_region)
+  update_progress(subsample_progress)
+  regional_peak_characterization(subsetByOverlaps(mz_windows, all_regions2[in_region]))
+})
+
+save(peak_subsamples2, sliding_windows, reduced_windows, all_regions2, tiled_windows, mz_windows, file = "peak_picking_reduced2.RData")
+```
 
 So current plan:
 
