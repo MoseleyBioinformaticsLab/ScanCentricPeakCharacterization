@@ -7,17 +7,122 @@ smashing all the scan data together.
 
 ```{r packages}
 library(SIRM.FTMS.peakCharacterization)
-library(dplyr)
-library(ggplot2)
-library(IRanges)
-library(compiler)
 ```
 
 We will use a dataset where only peak correspondence has been done.
 
 ```{r load_data}
-zip_data <- readRDS("~/Documents/manuscripts/peakCharacterization/data_analysis/data_output/100Cpos.rds")
+raw_data <- RawMS$new("100Cpos.mzML")
+raw_data$remove_bad_resolution_scans()
 ```
+
+```{r create_region_finder}
+pr_finder <- PeakRegionFinder$new(raw_data)
+```
+
+```{r do_stuff}
+self <- pr_finder
+
+self$add_sliding_regions()
+self$add_tiled_regions()
+
+self$reduce_signal_regions()
+```
+
+## Working with splitting sub-regions
+
+```{r split_sub_regions}
+library(furrr)
+plan(multiprocess)
+signal_regions <- self$peak_regions$peak_regions
+mz_point_regions <- self$peak_regions$mz_point_regions
+tiled_regions <- IRanges::subsetByOverlaps(self$peak_regions$tiled_regions, signal_regions)
+
+split_regions <- function(signal_regions, mz_point_regions, tiled_regions, peak_method = "lm_weighted", min_points = 4) {
+  split_data <- furrr::future_map(seq(1, length(signal_regions)), function(in_region){
+    split_region_by_peaks(IRanges::subsetByOverlaps(mz_point_regions, signal_regions[in_region]), 
+                          IRanges::subsetByOverlaps(tiled_regions, signal_regions[in_region]),
+                          peak_method = peak_method, min_points = min_points)
+  })
+  peak_regions <- do.call(c, purrr::map(split_data, function(x){unlist(x$region)}))
+  peak_peaks <- do.call(c, purrr::map(split_data, "peaks"))
+  return(list(regions = peak_regions, peaks = peak_peaks))
+}
+
+split_peak_regions <- split_regions(signal_regions, mz_point_regions, tiled_regions)
+
+has_only_40 <- purrr::map_lgl(split_peak_regions$peaks, function(x){
+  length(x$scan) == 40
+})
+
+n_scan <- purrr::map_int(split_peak_regions$peaks, function(x){
+  length(unique(x$scan))
+})
+
+has_dup_scans <- purrr::map_lgl(split_peak_regions$peaks, function(x){
+  sum(duplicated(x$scan)) > 0
+})
+```
+
+
+```{r normalization_factors}
+normalize_peaks <- which(has_only_40)
+
+nscan <- 40
+
+peak_comparisons <- combn(nscan, 2)
+
+peak_mz <- purrr::map_dfc(split_peak_regions$peaks[normalize_peaks], function(x){
+  x$ObservedMZ[order(x$scan)]
+})
+peak_height <- purrr::map_dfc(split_peak_regions$peaks[normalize_peaks], function(x){
+  log(x$Height[order(x$scan)])
+})
+
+scan_distances <- purrr::map_dbl(seq(1, nrow(peak_height)), function(in_scan){
+  scan_peaks <- peak_height[in_scan, ,drop = FALSE]
+  scan_peaks_matrix <- matrix(unlist(scan_peaks), nrow = nscan - 1, ncol = ncol(scan_peaks), byrow = TRUE)
+
+  other_matrix <- as.matrix(peak_height[-in_scan, , drop = FALSE])
+  scan_other_diff <- scan_peaks_matrix - other_matrix
+  scan_distances <- purrr::map_dbl(seq(1, nrow(scan_other_diff)), function(x){
+    sqrt(sum(scan_other_diff[x, ]^2, na.rm = TRUE))
+  })
+  sum(scan_distances)
+})
+
+normalize_scan <- which.min(scan_distances)
+
+scan_norm_matrix <- matrix(unlist(peak_height[normalize_scan, , drop = FALSE]),
+                             nrow = nscan, ncol = ncol(peak_height), byrow = TRUE)
+
+diff_matrix <- as.matrix(peak_height) - scan_norm_matrix
+
+diff_df <- as.data.frame(diff_matrix)
+
+gather_diff <- tidyr::gather(diff_df, key = "peak", value = "diff") %>% dplyr::mutate(scan = rep(seq(1, 40), ncol(diff_df)),
+                           peak_id = paste0(peak, ".", scan))
+
+gather_mz <- tidyr::gather(peak_mz, key = "peak", value = "mz") %>% dplyr::mutate(scan = rep(seq(1, 40), ncol(diff_df)),
+                           peak_id = paste0(peak, ".", scan))
+
+gather_height <- tidyr::gather(peak_height, key = "peak", value = "height") %>% dplyr::mutate(scan = rep(seq(1, 40), ncol(diff_df)),
+                           peak_id = paste0(peak, ".", scan))
+
+height_ratio <- purrr::map_dfr(seq(1, nrow(peak_height)), function(in_row){
+  (peak_height[in_row, ]) / max((peak_height[in_row, ]), na.rm = TRUE)
+})
+gather_ratio <- tidyr::gather(height_ratio, key = "peak", value = "ratio") %>% dplyr::mutate(scan = rep(seq(1, 40), ncol(diff_df)),
+                           peak_id = paste0(peak, ".", scan))
+
+gather_df <- dplyr::left_join(gather_diff, gather_mz) %>% dplyr::left_join(., gather_mz) %>% dplyr::left_join(., gather_height) %>% dplyr::left_join(., gather_ratio)
+
+ggplot(dplyr::filter(gather_df), aes(x = mz, y = diff, color = as.factor(scan))) + geom_smooth(method = "loess", span = 1.5, se = FALSE) + theme(legend.position = "none")
+
+ggplot(dplyr::filter(gather_df, scan == 1), aes(x = mz, y = diff, color = height)) + geom_point()
+```
+
+Based on these results, we still need to do M/Z aware normalization.
 
 ## Noise Detection
 
