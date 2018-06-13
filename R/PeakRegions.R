@@ -9,6 +9,7 @@
 #'
 #' @importFrom IRanges IRanges
 #' @importFrom S4Vectors mcols
+#' @export
 mz_points_to_regions <- function(mz_data, point_multiplier = 20000){
   mz_regions <- IRanges(start = round(mz_data[, "mz"] * point_multiplier), width = 1)
   if (is.null(mz_data$point)) {
@@ -99,21 +100,37 @@ PeakRegions <- R6::R6Class("PeakRegions",
     mz_model = NULL,
 
     peak_regions = NULL,
+    sliding_regions = NULL,
     tiled_regions = NULL,
 
     point_multiplier = NULL,
+    scan_peaks = NULL,
     peak_data = NULL,
     is_normalized = FALSE,
+    normalization_factors = NULL,
+
+    n_scan = NULL,
+    scan_perc = NULL,
+    min_scan = NULL,
 
     mz_range = NULL,
 
-    initialize = function(mz_data, mz_model = NULL, point_multiplier = 20000){
+    set_min_scan = function(){
+      self$n_scan <- length(unique(self$mz_point_regions@elementMetadata$scan))
+      self$min_scan <- round(self$scan_perc * self$n_scan)
+      invisible(self)
+    },
+
+    initialize = function(mz_data, mz_model = NULL, point_multiplier = 20000, scan_perc = 0.1){
       self$point_multiplier <- point_multiplier
       self$mz_point_regions <- mz_points_to_regions(mz_data, self$point_multiplier)
       tmp_model <- loess_to_df(mz_model)
       self$mz_model <- tmp_model[tmp_model$which %in% "fitted", ]
 
       self$mz_range <- range(mz_data$mz)
+      self$scan_perc <- scan_perc
+      self$set_min_scan()
+
       invisible(self)
     }
   )
@@ -133,30 +150,61 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
     region_percentage = NULL,
 
+    peak_method = NULL,
+    min_points = NULL,
+
     add_sliding_regions = function(){
-      self$peak_regions$peak_regions <- create_mz_regions(self$peak_regions$mz_model, use_range = self$peak_regions$mz_range, region_size = self$sliding_region_size,
+      self$peak_regions$sliding_regions <- create_mz_regions(self$peak_regions$mz_model, use_range = self$peak_regions$mz_range, region_size = self$sliding_region_size,
                                                              delta = self$sliding_region_delta,
-                                                             point_multiplier = peak_regions$point_multiplier)
+                                                             point_multiplier = self$peak_regions$point_multiplier)
     },
 
     add_tiled_regions = function(){
-      tmp_tiles <- create_mz_regions(self$peak_regions$mz_model, use_range = self$peak_regions$mz_range, region_size = self$tiled_region_size,
+      self$peak_regions$tiled_regions <- create_mz_regions(self$peak_regions$mz_model, use_range = self$peak_regions$mz_range, region_size = self$tiled_region_size,
                                      delta = self$tiled_region_delta,
                                      point_multiplier = self$peak_regions$point_multiplier)
-      self$peak_regions$tiled_regions <- IRanges::subsetByOverlaps(tmp_tiles, self$peak_regions$peak_regions)
     },
 
-    reduce_signal_regions = function(){
-      self$peak_regions$peak_regions <- find_signal_regions(self$peak_regions$peak_regions, self$peak_regions$mz_point_regions, self$region_percentage)
+    reduce_sliding_regions = function(){
+      self$peak_regions$peak_regions <- find_signal_regions(self$peak_regions$sliding_regions, self$peak_regions$mz_point_regions, self$region_percentage)
     },
 
-    subset_signal_regions = function(){
-      signal_data <- subset_signal_regions(self$peak_regions$peak_regions, self$peak_regions$mz_point_regions)
+    split_peak_regions = function(use_regions = NULL){
+      if (is.null(use_regions)) {
+        use_regions <- seq_len(length(self$peak_regions$peak_regions))
+      }
+      peak_data <- split_regions(self$peak_regions$peak_regions[use_regions], self$peak_regions$mz_point_regions, self$peak_regions$tiled_regions, peak_method = self$peak_method, min_points = self$min_points)
+      self$peak_regions$peak_regions <- peak_data$regions
+      self$peak_regions$scan_peaks <- peak_data$peaks
       #self$peak_regions$peak_regions <- subset_signal_regions(self$)
     },
 
+    normalize_data = function(which_data = "raw"){
+      normalization_factors <- calculate_scan_normalization(self$peak_regions$scan_peaks, intensity_measure = "Height", summary_function = median)
+      self$peak_regions <- apply_normalization_peak_regions(self$peak_regions, normalization_factors, which_data = which_data)
+    },
+
+    find_peaks_in_regions = function(which_data = "raw"){
+      if (which_data == "raw") {
+        self$peak_regions$peak_data <- characterize_peaks_in_regions(self$peak_regions$mz_point_regions, self$peak_regions$peak_regions,
+                                                                     self$peak_regions$normalization_factors$scan, min_scan = 4, max_subset = 100)
+      } else {
+        self$peak_regions$peak_data <- characterize_picked_peaks(self$peak_regions$scan_peaks, self$peak_regions$normalization_factors$scan, min_scan = 4)
+      }
+
+    },
+
+    characterize_peaks = function(){
+      self$add_sliding_regions()
+      self$add_tiled_regions()
+      self$reduce_sliding_regions()
+      self$split_peak_regions()
+      self$normalize_data()
+      self$find_peaks_in_regions()
+    },
+
     initialize = function(raw_ms, sliding_region_size = 10, sliding_region_delta = 1, tiled_region_size = 1, tiled_region_delta = 1,
-                          region_percentage = 0.99, point_multiplier = 20000){
+                          region_percentage = 0.99, point_multiplier = 20000, peak_method = "lm_weighted", min_points = 4){
       if (inherits(raw_ms, "RawMS")) {
         self$peak_regions <- PeakRegions$new(raw_ms$extract_raw_data(), raw_ms$mz_model, point_multiplier)
       }
@@ -170,6 +218,9 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       self$tiled_region_size <- tiled_region_size
       self$tiled_region_delta <- tiled_region_delta
       self$region_percentage <- region_percentage
+
+      self$peak_method = peak_method
+      self$min_points = min_points
 
       invisible(self)
     }
@@ -227,7 +278,7 @@ create_na_peak <- function(peak_method = "lm_weighted"){
 get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points = min_points){
   range_data <- in_range@elementMetadata
 
-  possible_peaks <- pracma::findpeaks(range_data$intensity, nups = 2)
+  possible_peaks <- pracma::findpeaks(range_data$log_int, nups = round(min_points / 2))
 
   if (!is.null(possible_peaks)) {
     n_peak <- nrow(possible_peaks)
@@ -256,27 +307,27 @@ get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points 
 #' find the peaks, and return the region, and the set of points that make
 #' up each point from each scan.
 #'
-#' @param mz_region_points the mz point regions to use
-#' @param tiled_region the tiled regions
+#' @param mz_point_regions the mz point regions to use
+#' @param tiled_regions the tiled regions
 #' @param peak_method the method for getting the peaks
 #' @param min_points how many points are needed for a peak
 #'
 #' @export
 #' @return list
-split_signal_region <- function(mz_region_points, tiled_regions, peak_method = "lm_weighted", min_points = 4){
-  mz_region_points@elementMetadata$log_int <- log(mz_region_points@elementMetadata$intensity + 1e-8)
-  mz_region_points <- split(mz_region_points, mz_region_points@elementMetadata$scan)
+split_region_by_peaks <- function(mz_point_regions, tiled_regions, peak_method = "lm_weighted", min_points = 4){
+  mz_point_regions@elementMetadata$log_int <- log(mz_point_regions@elementMetadata$intensity + 1e-8)
+  mz_point_regions <- split(mz_point_regions, mz_point_regions@elementMetadata$scan)
 
-  reduced_peaks <- purrr::map_df(names(mz_region_points), function(in_scan){
-    get_reduced_peaks(mz_region_points[[in_scan]], peak_method = peak_method, min_points = min_points)
+  reduced_peaks <- purrr::map_df(names(mz_point_regions), function(in_scan){
+    get_reduced_peaks(mz_point_regions[[in_scan]], peak_method = peak_method, min_points = min_points)
 
   })
 
   reduced_peaks <- reduced_peaks[!is.na(reduced_peaks$ObservedMZ), ]
 
-  if (nrow(reduced_peaks) > 0){
+  if (nrow(reduced_peaks) > 0) {
     reduced_peaks$mz <- reduced_peaks$ObservedMZ
-    reduced_mz_points <- mz_points_to_regions(reduced_peaks, mz_region_points[[1]]@metadata$point_multiplier)
+    reduced_mz_points <- mz_points_to_regions(reduced_peaks, mz_point_regions[[1]]@metadata$point_multiplier)
 
     #tiled_points@elementMetadata <- NULL
     tiled_regions@elementMetadata$peak_count <- IRanges::countOverlaps(tiled_regions, reduced_mz_points)
@@ -288,17 +339,225 @@ split_signal_region <- function(mz_region_points, tiled_regions, peak_method = "
 
     reduced_mz_points <- IRanges::mergeByOverlaps(reduced_mz_points, sub_tiles)
 
-    sub_mz_point <- split(reduced_mz_points, reduced_mz_points$region)
-
-    sub_mz_region <- IRangesList()
+    sub_mz_point <- as.list(S4Vectors::split(reduced_mz_points, reduced_mz_points$region))
+    names(sub_mz_point) <- NULL
+    sub_mz_region <- IRanges::IRangesList()
 
     for (iregion in seq_len(length(sub_mz_point))) {
-      all_points <- unlist(sub_mz_point[[iregion]]$points)
-      tmp_range <- IRanges(start = min(all_points), end = max(all_points))
-      mcols(tmp_range) <- I(list(as.numeric(sub_mz_point[[iregion]]$scan)))
+      all_points <- unique(unlist(sub_mz_point[[iregion]]$points))
+      tmp_range <- IRanges::IRanges(start = min(all_points), end = max(all_points))
+      S4Vectors::mcols(tmp_range) <- I(list(as.numeric(sub_mz_point[[iregion]]$scan)))
       sub_mz_region[[iregion]] <- tmp_range
     }
   } else {
-    sub_mz_region <- IRangesList()
+    sub_mz_region <- IRanges::IRangesList()
+    sub_mz_point <- NULL
   }
+  return(list(region = sub_mz_region, peaks = sub_mz_point))
+}
+
+
+split_regions <- function(signal_regions, mz_point_regions, tiled_regions, peak_method = "lm_weighted", min_points = 4) {
+  split_data <- furrr::future_map(seq(1, length(signal_regions)), function(in_region){
+    split_region_by_peaks(IRanges::subsetByOverlaps(mz_point_regions, signal_regions[in_region]),
+                          IRanges::subsetByOverlaps(tiled_regions, signal_regions[in_region]),
+                          peak_method = peak_method, min_points = min_points)
+  })
+  peak_regions <- do.call(c, purrr::map(split_data, function(x){unlist(x$region)}))
+  peak_peaks <- do.call(c, purrr::map(split_data, "peaks"))
+  return(list(regions = peak_regions, peaks = peak_peaks))
+}
+
+calculate_scan_normalization <- function(scan_peaks, intensity_measure = "Height", summary_function = median){
+  n_scan_per_peak <- purrr::map_int(scan_peaks, function(x){
+    if (sum(duplicated(x$scan)) == 0) {
+      return(length(x$scan))
+    } else {
+      return(0L)
+    }
+  })
+
+  scan_cutoff <- quantile(n_scan_per_peak, 0.95)
+  normalize_peaks <- which(n_scan_per_peak >= scan_cutoff)
+
+  all_scans <- data.frame(scan = unique(unlist(purrr::map(scan_peaks, function(x){unique(x$scan)}))))
+
+  peak_intensity <- purrr::map_dfc(scan_peaks[normalize_peaks], function(x){
+    tmp_data <- dplyr::left_join(all_scans, as.data.frame(x[, c("scan", intensity_measure)]), by = "scan")
+    log(tmp_data[, intensity_measure])
+  })
+
+  intensity_ratio <- purrr::map_dfr(seq_len(nrow(peak_intensity)), function(x){
+    peak_intensity[x, ] / max(peak_intensity[x, ])
+  })
+  peak_intensity[intensity_ratio < 0.7] <- NA
+
+  intensity_scans <- purrr::map_int(seq_len(ncol(peak_intensity)), function(x){
+    sum(!is.na(peak_intensity[, x]))
+  })
+
+  peak_intensity <- peak_intensity[, intensity_scans >= scan_cutoff]
+
+  notna_scans <- rowSums(!is.na(as.matrix(peak_intensity)))
+  keep_scans <- notna_scans >= 25
+  all_scans <- all_scans[keep_scans, , drop = FALSE]
+  peak_intensity <- peak_intensity[keep_scans, ]
+
+  scan_distances <- purrr::map_dbl(seq(1, nrow(peak_intensity)), function(in_scan){
+    scan_peaks <- peak_intensity[in_scan, ,drop = FALSE]
+    scan_peaks_matrix <- matrix(unlist(scan_peaks), nrow = nrow(peak_intensity) - 1, ncol = ncol(scan_peaks), byrow = TRUE)
+
+    other_matrix <- as.matrix(peak_intensity[-in_scan, , drop = FALSE])
+    scan_other_diff <- scan_peaks_matrix - other_matrix
+    scan_distances <- purrr::map_dbl(seq(1, nrow(scan_other_diff)), function(x){
+      sqrt(sum(scan_other_diff[x, ]^2, na.rm = TRUE))
+    })
+    sum(scan_distances)
+  })
+
+  normalize_scan <- which.min(scan_distances)
+
+  scan_norm_matrix <- matrix(unlist(peak_intensity[normalize_scan, , drop = FALSE]),
+                             nrow = nrow(peak_intensity), ncol = ncol(peak_intensity), byrow = TRUE)
+
+  diff_matrix <- as.matrix(peak_intensity) - scan_norm_matrix
+
+  normalization_factors <- purrr::map_dbl(seq_len(nrow(diff_matrix)), function(in_row){
+    summary_function(diff_matrix[in_row, ], na.rm = TRUE)
+  })
+  data.frame(scan = all_scans$scan, normalization = normalization_factors)
+}
+
+apply_normalization_peak_regions <- function(peak_regions, normalization_factors, which_data = "both") {
+  to_normalize <- switch(which_data,
+                            both = c("mz_point_regions", "scan_peaks"),
+                            raw = "mz_point_regions",
+                            scan_peaks = "scan_peaks")
+
+  split_normalization <- split(normalization_factors$normalization, normalization_factors$scan)
+
+  if ("mz_point_regions" %in% to_normalize) {
+    split_points <- as.list(split(peak_regions$mz_point_regions, peak_regions$mz_point_regions@elementMetadata$scan))
+    split_points <- split_points[names(split_points) %in% names(split_normalization)]
+
+    normed_points <- purrr::map2(split_points, split_normalization, function(in_points, in_norm){
+      in_points@elementMetadata$intensity <- exp(log(in_points@elementMetadata$intensity) - in_norm)
+      in_points
+    })
+
+    peak_regions$mz_point_regions <- unlist(IRanges::IRangesList(normed_points))
+  }
+
+  if ("scan_peaks" %in% to_normalize) {
+    scan_peaks <- peak_regions$scan_peaks
+
+    normed_peaks <- furrr::future_map(scan_peaks, function(in_peak){
+      peak_index <- seq_len(nrow(in_peak))
+      split_peak_by_scan <- split(peak_index, in_peak$scan)
+
+      keep_scans <- names(split_peak_by_scan)[names(split_peak_by_scan) %in% names(split_normalization)]
+      in_peak <- in_peak[in_peak$scan %in% as.numeric(keep_scans), ]
+
+      for (iscan in keep_scans) {
+        in_peak[in_peak$scan %in% as.numeric(iscan), "Height"] <- exp(log(in_peak[in_peak$scan %in% as.numeric(iscan), "Height"]) - split_normalization[[iscan]])
+      }
+      in_peak
+    })
+    peak_regions$scan_peaks <- normed_peaks
+  }
+  peak_regions$is_normalized <- to_normalize
+  peak_regions$normalization_factors <- normalization_factors
+
+  return(peak_regions)
+}
+
+get_merged_peak_info <- function(in_points, peak_method = "lm_weighted", min_points = 4){
+  use_points <- unlist(IRanges::IRangesList(in_points))
+
+  use_data <- mcols(use_points)
+  use_data <- use_data[use_data$intensity > 0, ]
+  use_data$log_int <- log(use_data$intensity + 1e-8)
+  get_peak_info(use_data, peak_method = peak_method, min_points = min_points)
+
+}
+
+
+characterize_mz_points <- function(in_points, use_scans = NULL, max_subset = 100){
+  if (is.null(use_scans)) {
+    use_scans <- unique(in_points@elementMetadata$scan)
+  }
+
+  in_points <- in_points[in_points@elementMetadata$scan %in% use_scans]
+
+  split_points <- as.list(split(in_points, in_points@elementMetadata$scan))
+  n_split <- length(split_points)
+
+  peak_info <- get_merged_peak_info(split_points)
+  peak_samples <- utils::combn(n_split, 3)
+
+  if (ncol(peak_samples) > max_subset) {
+    peak_samples <- peak_samples[, sample(ncol(peak_samples), max_subset)]
+  }
+
+  sampled_peaks <- purrr::map_df(seq_len(ncol(peak_samples)), function(in_sample){
+    get_merged_peak_info(split_points[peak_samples[, in_sample]])
+  })
+
+  peak_info$ObservedMZSD <- sd(sampled_peaks$ObservedMZ)
+  peak_info$HeightSD <- sd(sampled_peaks$Height)
+  peak_info$Log10HeightSD <- sd(log10(sampled_peaks$Height))
+
+  point_data <- S4Vectors::mcols(in_points)
+  peak_start <- min(point_data[point_data$intensity > 0, "mz"])
+  peak_stop <- max(point_data[point_data$intensity > 0, "mz"])
+
+  peak_info$Start <- peak_start
+  peak_info$Stop <- peak_stop
+  peak_info$NSubset <- ncol(peak_samples)
+  peak_info
+}
+
+
+characterize_peaks_in_regions <- function(mz_point_regions, peak_regions, use_scans, min_scan = 4, max_subset = 100){
+  peak_region_scans <- peak_regions@elementMetadata$X
+  peak_region_scans <- purrr::map(peak_region_scans, function(in_region){
+    in_region[in_region %in% use_scans]
+  })
+  n_scans <- purrr::map_int(peak_region_scans, function(x){length(unique(x))})
+
+  keep_regions <- which(n_scans >= min_scan)
+  peak_region_scans <- peak_region_scans[keep_regions]
+  peak_regions <- peak_regions[keep_regions]
+  n_scans <- n_scans[keep_regions]
+
+  peak_data <- furrr::future_map_dfr(seq_len(length(peak_regions)), function(in_region){
+    characterize_mz_points(IRanges::subsetByOverlaps(mz_point_regions, peak_regions[in_region]), peak_region_scans[[in_region]], max_subset = max_subset)
+  })
+  peak_data$NScan <- n_scans
+  peak_data$PeakID <- seq_len(nrow(peak_data))
+  peak_data
+}
+
+characterize_picked_peaks <- function(scan_peaks, use_scans, min_scan = 4){
+  n_scans <- purrr::map_int(scan_peaks, function(in_peak){
+    all_scans <- unique(in_peak$scan)
+    length(all_scans[all_scans %in% use_scans])
+  })
+  keep_peaks <- n_scans >= min_scan
+  scan_peaks <- scan_peaks[keep_peaks]
+
+  peak_data <- purrr::map_df(scan_peaks, function(in_peak){
+    data.frame(ObservedMZ = mean(in_peak$ObservedMZ),
+               Height = mean(in_peak$Height),
+               Area = mean(in_peak$Area),
+               ObservedMZSD = sd(in_peak$ObservedMZ),
+               HeightSD = sd(in_peak$Height),
+               Log10HeightSD = sd(log10(in_peak$Height)),
+               Start = min(in_peak$ObservedMZ),
+               Stop = max(in_peak$ObservedMZ))
+  })
+  peak_data$NSubset <- n_scans[keep_peaks]
+  peak_data$NScan <- n_scans[keep_peaks]
+  peak_data$PeakID <- seq_len(nrow(peak_data))
+  peak_data
 }
