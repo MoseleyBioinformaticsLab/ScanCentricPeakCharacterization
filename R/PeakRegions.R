@@ -112,6 +112,7 @@ PeakRegions <- R6::R6Class("PeakRegions",
     n_scan = NULL,
     scan_perc = NULL,
     min_scan = NULL,
+    max_subsets = NULL,
 
     mz_range = NULL,
 
@@ -121,7 +122,7 @@ PeakRegions <- R6::R6Class("PeakRegions",
       invisible(self)
     },
 
-    initialize = function(mz_data, mz_model = NULL, point_multiplier = 20000, scan_perc = 0.1){
+    initialize = function(mz_data, mz_model = NULL, point_multiplier = 20000, scan_perc = 0.1, max_subsets = 100){
       self$point_multiplier <- point_multiplier
       self$mz_point_regions <- mz_points_to_regions(mz_data, self$point_multiplier)
       tmp_model <- loess_to_df(mz_model)
@@ -130,6 +131,8 @@ PeakRegions <- R6::R6Class("PeakRegions",
       self$mz_range <- range(mz_data$mz)
       self$scan_perc <- scan_perc
       self$set_min_scan()
+
+      self$max_subsets <- max_subsets
 
       invisible(self)
     }
@@ -186,10 +189,17 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
     find_peaks_in_regions = function(which_data = "raw"){
       if (which_data == "raw") {
-        self$peak_regions$peak_data <- characterize_peaks_in_regions(self$peak_regions$mz_point_regions, self$peak_regions$peak_regions,
-                                                                     self$peak_regions$normalization_factors$scan, min_scan = 4, max_subset = 100)
+        self$peak_regions$peak_data <- characterize_peaks_in_regions(
+          self$peak_regions$mz_point_regions,
+          self$peak_regions$peak_regions,
+          self$peak_regions$normalization_factors$scan,
+          min_scan = self$peak_regions$min_scan,
+          max_subsets = self$peak_regions$max_subsets)
       } else {
-        self$peak_regions$peak_data <- characterize_picked_peaks(self$peak_regions$scan_peaks, self$peak_regions$normalization_factors$scan, min_scan = 4)
+        self$peak_regions$peak_data <- characterize_picked_peaks(
+          self$peak_regions$scan_peaks,
+          self$peak_regions$normalization_factors$scan,
+          min_scan = self$peak_regions$min_scan)
       }
 
     },
@@ -482,7 +492,7 @@ get_merged_peak_info <- function(in_points, peak_method = "lm_weighted", min_poi
 }
 
 
-characterize_mz_points <- function(in_points, use_scans = NULL, max_subset = 100){
+characterize_mz_points <- function(in_points, use_scans = NULL, max_subsets = 100){
   if (is.null(use_scans)) {
     use_scans <- unique(in_points@elementMetadata$scan)
   }
@@ -495,8 +505,8 @@ characterize_mz_points <- function(in_points, use_scans = NULL, max_subset = 100
   peak_info <- get_merged_peak_info(split_points)
   peak_samples <- utils::combn(n_split, 3)
 
-  if (ncol(peak_samples) > max_subset) {
-    peak_samples <- peak_samples[, sample(ncol(peak_samples), max_subset)]
+  if (ncol(peak_samples) > max_subsets) {
+    peak_samples <- peak_samples[, sample(ncol(peak_samples), max_subsets)]
   }
 
   sampled_peaks <- purrr::map_df(seq_len(ncol(peak_samples)), function(in_sample){
@@ -518,7 +528,7 @@ characterize_mz_points <- function(in_points, use_scans = NULL, max_subset = 100
 }
 
 
-characterize_peaks_in_regions <- function(mz_point_regions, peak_regions, use_scans, min_scan = 4, max_subset = 100){
+characterize_peaks_in_regions <- function(mz_point_regions, peak_regions, use_scans, min_scan = 4, max_subsets = 100){
   peak_region_scans <- peak_regions@elementMetadata$X
   peak_region_scans <- purrr::map(peak_region_scans, function(in_region){
     in_region[in_region %in% use_scans]
@@ -531,7 +541,7 @@ characterize_peaks_in_regions <- function(mz_point_regions, peak_regions, use_sc
   n_scans <- n_scans[keep_regions]
 
   peak_data <- furrr::future_map_dfr(seq_len(length(peak_regions)), function(in_region){
-    characterize_mz_points(IRanges::subsetByOverlaps(mz_point_regions, peak_regions[in_region]), peak_region_scans[[in_region]], max_subset = max_subset)
+    characterize_mz_points(IRanges::subsetByOverlaps(mz_point_regions, peak_regions[in_region]), peak_region_scans[[in_region]], max_subsets = max_subsets)
   })
   peak_data$NScan <- n_scans
   peak_data$PeakID <- seq_len(nrow(peak_data))
