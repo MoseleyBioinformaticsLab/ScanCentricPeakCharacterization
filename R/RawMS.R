@@ -109,8 +109,13 @@ RawMS <- R6::R6Class("RawMS",
      },
      extract_raw_data = function(){
        scan_range <- self$scan_range
+       if (is.null(self$mz_range)) {
+         mz_range <- numeric()
+       } else {
+         mz_range <- self$mz_range
+       }
        raw_scan_data <- purrr::map_df(scan_range, function(in_scan){
-         scan_data <- as.data.frame(xcms::getScan(self$raw_data, in_scan))
+         scan_data <- as.data.frame(xcms::getScan(self$raw_data, in_scan, mzrange = mz_range))
          scan_data$scan <- in_scan
          scan_data
        })
