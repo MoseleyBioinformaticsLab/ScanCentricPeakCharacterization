@@ -204,6 +204,24 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
     },
 
+    add_offsets = function(){
+      self$peak_regions$peak_data <- add_offset(self$peak_regions$peak_data, self$peak_regions$mz_model)
+      invisible(self)
+    },
+
+    model_mzsd = function(){
+      self$peak_regions$peak_data$ObservedMZSDModel <- model_sds(self$peak_regions$peak_data$ObservedMZ,
+                            self$peak_regions$peak_data$ObservedMZSD, loess_span = 1)
+      invisible(self)
+    },
+
+    model_heightsd = function(){
+      self$peak_regions$peak_data$Log10HeightSDModel <-
+        model_sds(log10(self$peak_regions$peak_data$Height),
+                  self$peak_regions$peak_data$Log10HeightSD, loess_span = 0.5)
+      invisible(self)
+    },
+
     characterize_peaks = function(){
       self$add_sliding_regions()
       self$add_tiled_regions()
@@ -211,6 +229,9 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       self$split_peak_regions()
       self$normalize_data()
       self$find_peaks_in_regions()
+      self$add_offsets()
+      self$model_mzsd()
+      self$model_heightsd()
     },
 
     initialize = function(raw_ms, sliding_region_size = 10, sliding_region_delta = 1, tiled_region_size = 1, tiled_region_delta = 1,
@@ -296,9 +317,10 @@ get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points 
       #print(in_peak)
       "!DEBUG Peak `in_peak`"
       peak_loc <- seq(possible_peaks[in_peak, 3], possible_peaks[in_peak, 4])
-      out_peak <- get_peak_info(range_data[peak_loc, ], peak_method = peak_method, min_points = min_points)
-      out_peak$n_point <- length(peak_loc)
-      out_peak$mz_width <- max(range_data[peak_loc, "mz"]) - min(range_data[peak_loc, "mz"])
+      peak_data <- range_data[peak_loc, ]
+      weights <- peak_data$intensity / max(peak_data$intensity)
+      out_peak <- get_fitted_peak_info(peak_data, w = weights)
+      #out_peak <- get_peak_info(range_data[peak_loc, ], peak_method = peak_method, min_points = min_points)
       out_peak$points <- I(list(IRanges::start(in_range)[peak_loc]))
       out_peak$scan <- range_data$scan[1]
       out_peak
@@ -368,7 +390,7 @@ split_region_by_peaks <- function(mz_point_regions, tiled_regions, peak_method =
 
 
 split_regions <- function(signal_regions, mz_point_regions, tiled_regions, peak_method = "lm_weighted", min_points = 4) {
-  split_data <- furrr::future_map(seq(1, length(signal_regions)), function(in_region){
+  split_data <- purrr::map(seq(1, length(signal_regions)), function(in_region){
     split_region_by_peaks(IRanges::subsetByOverlaps(mz_point_regions, signal_regions[in_region]),
                           IRanges::subsetByOverlaps(tiled_regions, signal_regions[in_region]),
                           peak_method = peak_method, min_points = min_points)
@@ -570,4 +592,19 @@ characterize_picked_peaks <- function(scan_peaks, use_scans, min_scan = 4){
   peak_data$NScan <- n_scans[keep_peaks]
   peak_data$PeakID <- seq_len(nrow(peak_data))
   peak_data
+}
+
+add_offset <- function(peak_data, mz_model){
+  offsets <- purrr::map_df(peak_data$PeakID, function(in_id){
+    peak_mz <- peak_data$ObservedMZ[peak_data$PeakID %in% in_id]
+    offset_value <- mz_model$y[which.min(abs(peak_mz - mz_model$x))]
+    data.frame(PeakID = in_id, Offset = offset_value)
+  })
+  dplyr::left_join(peak_data, offsets, by = "PeakID")
+}
+
+model_sds <- function(values, sds, loess_span = 0.75){
+  sd_frame <- data.frame(x = values, y = sds)
+  loess_fit <- stats::loess(y ~ x, data = sd_frame, span = loess_span)
+  loess_fit$fitted
 }
