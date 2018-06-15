@@ -122,17 +122,28 @@ PeakRegions <- R6::R6Class("PeakRegions",
       invisible(self)
     },
 
-    initialize = function(mz_data, mz_model = NULL, point_multiplier = 20000, scan_perc = 0.1, max_subsets = 100){
-      self$point_multiplier <- point_multiplier
+    add_data = function(mz_data, mz_model = NULL){
       self$mz_point_regions <- mz_points_to_regions(mz_data, self$point_multiplier)
       tmp_model <- loess_to_df(mz_model)
-      self$mz_model <- tmp_model[tmp_model$which %in% "fitted", ]
+
+      if (!is.null(mz_model)) {
+        self$mz_model <- tmp_model[tmp_model$which %in% "fitted", ]
+      }
 
       self$mz_range <- range(mz_data$mz)
-      self$scan_perc <- scan_perc
-      self$set_min_scan()
 
+      self$set_min_scan()
+      invisible(self)
+    },
+
+    initialize = function(mz_data = NULL, mz_model = NULL, point_multiplier = 20000, scan_perc = 0.1, max_subsets = 100){
+      self$point_multiplier <- point_multiplier
+      self$scan_perc <- scan_perc
       self$max_subsets <- max_subsets
+
+      if (!is.null(mz_data)) {
+        self$add_data(mz_data, mz_model)
+      }
 
       invisible(self)
     }
@@ -143,6 +154,9 @@ PeakRegions <- R6::R6Class("PeakRegions",
 #' @export
 PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
   public = list(
+    run_time = NULL,
+    start_time = NULL,
+    stop_time = NULL,
     peak_regions = NULL,
 
     sliding_region_size = NULL,
@@ -155,24 +169,39 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
     peak_method = NULL,
     min_points = NULL,
+    sample_id = NULL,
+
+    progress = NULL,
 
     add_sliding_regions = function(){
+      if (self$progress) {
+        message("Adding sliding regions ...")
+      }
       self$peak_regions$sliding_regions <- create_mz_regions(self$peak_regions$mz_model, use_range = self$peak_regions$mz_range, region_size = self$sliding_region_size,
                                                              delta = self$sliding_region_delta,
                                                              point_multiplier = self$peak_regions$point_multiplier)
     },
 
     add_tiled_regions = function(){
+      if (self$progress) {
+        message("Adding tiled regions ...")
+      }
       self$peak_regions$tiled_regions <- create_mz_regions(self$peak_regions$mz_model, use_range = self$peak_regions$mz_range, region_size = self$tiled_region_size,
                                      delta = self$tiled_region_delta,
                                      point_multiplier = self$peak_regions$point_multiplier)
     },
 
     reduce_sliding_regions = function(){
+      if (self$progress) {
+        message("Finding initial signal regions ...")
+      }
       self$peak_regions$peak_regions <- find_signal_regions(self$peak_regions$sliding_regions, self$peak_regions$mz_point_regions, self$region_percentage)
     },
 
     split_peak_regions = function(use_regions = NULL){
+      if (self$progress) {
+        message("Splitting signal regions by peaks ...")
+      }
       if (is.null(use_regions)) {
         use_regions <- seq_len(length(self$peak_regions$peak_regions))
       }
@@ -183,11 +212,17 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     },
 
     normalize_data = function(which_data = "raw"){
+      if (self$progress) {
+        message("Normalizing scans ...")
+      }
       normalization_factors <- calculate_scan_normalization(self$peak_regions$scan_peaks, intensity_measure = "Height", summary_function = median)
       self$peak_regions <- apply_normalization_peak_regions(self$peak_regions, normalization_factors, which_data = which_data)
     },
 
     find_peaks_in_regions = function(which_data = "raw"){
+      if (self$progress) {
+        message("Finding peaks in regions ...")
+      }
       if (which_data == "raw") {
         self$peak_regions$peak_data <- characterize_peaks_in_regions(
           self$peak_regions$mz_point_regions,
@@ -222,6 +257,19 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       invisible(self)
     },
 
+    add_data = function(raw_ms) {
+      if (inherits(raw_ms, "RawMS")) {
+        self$peak_regions$add_data(raw_ms$extract_raw_data(), raw_ms$mz_model)
+      }
+      invisible(self)
+    },
+
+    summarize_peaks = function(){
+      list(TIC = sum(self$peak_regions$peak_data$Height),
+           Sample = self$sample_id,
+           Peaks = self$peak_regions$peak_data)
+    },
+
     characterize_peaks = function(){
       self$add_sliding_regions()
       self$add_tiled_regions()
@@ -234,14 +282,54 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       self$model_heightsd()
     },
 
-    initialize = function(raw_ms, sliding_region_size = 10, sliding_region_delta = 1, tiled_region_size = 1, tiled_region_delta = 1,
-                          region_percentage = 0.99, point_multiplier = 20000, peak_method = "lm_weighted", min_points = 4){
-      if (inherits(raw_ms, "RawMS")) {
-        self$peak_regions <- PeakRegions$new(raw_ms$extract_raw_data(), raw_ms$mz_model, point_multiplier)
+    summarize = function(package_used = "package:SIRM.FTMS.peakCharacterization"){
+      # generate information about our objects
+      pkg_description <- utils::packageDescription(substring(package_used, 9))
+
+      if (!is.null(pkg_description$RemoteSha)) {
+        pkg_sha <- pkg_description$RemoteSha
+      } else {
+        pkg_sha <- NA
       }
 
-      if (inherits(raw_ms, "PeakRegions")) {
+      p_finder <- as.list(self)
+      p_finder[[".__enclos_env__"]] <- NULL
+      p_finder$clone <- NULL
+
+      p_regions <- as.list(self$peak_regions)
+      p_finder$peak_regions <- NULL
+
+      p_regions[[".__enclos_env__"]] <- NULL
+      p_regions$clone <- NULL
+      p_regions$mz_point_regions <- NULL
+      p_regions$mz_model <- NULL
+      p_regions$sliding_regions <- NULL
+      p_regions$tiled_regions <- NULL
+      p_regions$scan_peaks <- NULL
+      p_regions$peak_data <- NULL
+      p_regions$peak_regions <- NULL
+
+      processing_info <- list(Package = package_used,
+                              Version = pkg_description$Version,
+                              Sha = pkg_sha,
+                              RunTime = self$run_time,
+                              PeakFinder = p_finder,
+                              PeakRegions = p_regions
+      )
+      # and then about the peaks we had
+      list(processing_metadata.json = processing_info,
+           peak_list.json = self$summarize_peaks())
+
+    },
+
+    initialize = function(raw_ms = NULL, sliding_region_size = 10, sliding_region_delta = 1, tiled_region_size = 1, tiled_region_delta = 1,
+                          region_percentage = 0.99, point_multiplier = 20000, peak_method = "lm_weighted", min_points = 4, progress = FALSE){
+      if (inherits(raw_ms, "RawMS")) {
+        self$peak_regions <- PeakRegions$new(raw_ms$extract_raw_data(), raw_ms$mz_model, point_multiplier)
+      } else if (inherits(raw_ms, "PeakRegions")) {
         self$peak_regions <- raw_ms
+      } else {
+        self$peak_regions <- PeakRegions$new(mz_data = NULL, mz_model = NULL, point_multiplier = point_multiplier)
       }
 
       self$sliding_region_size <- sliding_region_size
@@ -252,6 +340,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
       self$peak_method = peak_method
       self$min_points = min_points
+      self$progress = progress
 
       invisible(self)
     }
@@ -390,7 +479,7 @@ split_region_by_peaks <- function(mz_point_regions, tiled_regions, peak_method =
 
 
 split_regions <- function(signal_regions, mz_point_regions, tiled_regions, peak_method = "lm_weighted", min_points = 4) {
-  split_data <- purrr::map(seq(1, length(signal_regions)), function(in_region){
+  split_data <- furrr::future_map(seq(1, length(signal_regions)), function(in_region){
     split_region_by_peaks(IRanges::subsetByOverlaps(mz_point_regions, signal_regions[in_region]),
                           IRanges::subsetByOverlaps(tiled_regions, signal_regions[in_region]),
                           peak_method = peak_method, min_points = min_points)

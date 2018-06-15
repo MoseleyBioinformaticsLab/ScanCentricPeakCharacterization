@@ -12,11 +12,11 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
    found_peaks = NULL,
 
    find_peaks = function(...){
-     if ("R6" %in% class(self$peak_finder)) {
+     if (inherits(self$peak_finder, "R6")) {
        self$zip_ms$peak_finder <- self$peak_finder
-       self$zip_ms$peak_finder$raw_data <- self$zip_ms$raw_ms
+       self$zip_ms$peak_finder$add_data(self$zip_ms$raw_ms)
 
-       self$zip_ms$peak_finder$run_correspondence()
+       self$zip_ms$peak_finder$characterize_peaks()
        self$zip_ms$peak_finder$raw_data <- NULL
      } else if ("function" %in% class(self$peak_finder)) {
        self$found_peaks <- self$peak_finder(self$zip_ms$raw_ms, ...)
@@ -40,8 +40,16 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
      }
    },
 
+   peak_finder_class = NULL,
    set_peak_finder = function(in_function){
      self$peak_finder <- in_function
+   },
+
+   filter_raw_scans = function(){
+     if (!is.null(self$raw_scan_filter)) {
+       self$zip_ms$raw_ms <- self$raw_scan_filter(raw_ms)
+     }
+     self$zip_ms$raw_ms$remove_bad_resolution_scans()
    },
 
    peak_finder = NULL,
@@ -54,6 +62,7 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
 
    run_all = function(){
      self$load_file()
+     self$filter_raw_scans()
      self$find_peaks()
      self$summarize()
      self$save_peaks()
@@ -61,7 +70,7 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
      self$zip_ms$cleanup()
    },
 
-   initialize = function(in_file, metadata_file = NULL, out_file = NULL, peak_finder = NULL, temp_loc = NULL){
+   initialize = function(in_file, metadata_file = NULL, out_file = NULL, peak_finder_class = NULL, temp_loc = NULL, raw_scan_filter = NULL){
      self$in_file <- in_file
 
      if (!is.null(metadata_file)) {
@@ -72,9 +81,12 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
        self$out_file <- out_file
      }
 
+     if (!is.null(raw_scan_filter)) {
+       self$raw_scan_filter <- raw_scan_filter
+     }
 
      if (!is.null(peak_finder)) {
-       self$peak_finder <- peak_finder
+       self$peak_finder_class <- peak_finder_class
      }
 
      if (!is.null(temp_loc)) {
