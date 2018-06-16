@@ -15,7 +15,11 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
      if (inherits(self$peak_finder, "R6")) {
        self$zip_ms$peak_finder <- self$peak_finder
        self$zip_ms$peak_finder$add_data(self$zip_ms$raw_ms)
-
+       if (!is.null(self$zip_ms$id)) {
+         self$zip_ms$peak_finder$sample_id <- self$zip_ms$id
+       } else {
+         self$zip_ms$peak_finder$sample_id <- basename_no_file_ext(self$in_file)
+       }
        self$zip_ms$peak_finder$characterize_peaks()
        self$zip_ms$peak_finder$raw_data <- NULL
      } else if ("function" %in% class(self$peak_finder)) {
@@ -62,6 +66,7 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
 
    run_all = function(){
      self$load_file()
+     self$peak_finder$start_time <- Sys.time()
      self$filter_raw_scans()
      self$find_peaks()
      self$summarize()
@@ -70,7 +75,7 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
      self$zip_ms$cleanup()
    },
 
-   initialize = function(in_file, metadata_file = NULL, out_file = NULL, peak_finder_class = NULL, temp_loc = NULL, raw_scan_filter = NULL){
+   initialize = function(in_file, metadata_file = NULL, out_file = NULL, peak_finder = NULL, temp_loc = NULL, raw_scan_filter = NULL){
      self$in_file <- in_file
 
      if (!is.null(metadata_file)) {
@@ -86,7 +91,7 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
      }
 
      if (!is.null(peak_finder)) {
-       self$peak_finder_class <- peak_finder_class
+       self$peak_finder <- peak_finder
      }
 
      if (!is.null(temp_loc)) {

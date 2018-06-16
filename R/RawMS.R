@@ -74,6 +74,7 @@ RawMS <- R6::R6Class("RawMS",
      mz_model_list = NULL,
      mz_model_differences = NULL,
      mz_model = NULL,
+
      plot_tic = function(color_ms = TRUE, log_transform = TRUE){
        plot_tic(self$raw_data, color_ms = color_ms, log_transform = log_transform)
      },
