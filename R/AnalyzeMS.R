@@ -10,6 +10,7 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
      self$zip_ms <- ZipMS$new(self$in_file, self$metadata_file, self$out_file, temp_loc = self$temp_loc)
    },
    found_peaks = NULL,
+   raw_scan_filter = NULL,
 
    find_peaks = function(...){
      if (inherits(self$peak_finder, "R6")) {
