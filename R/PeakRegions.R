@@ -277,6 +277,9 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       self$split_peak_regions()
       self$normalize_data()
       self$find_peaks_in_regions()
+      if (nrow(self$peak_regions$peak_data) == 0) {
+        stop("No peaks meeting criteria!")
+      }
       self$add_offsets()
       self$model_mzsd()
       self$model_heightsd()
@@ -511,7 +514,7 @@ calculate_scan_normalization <- function(scan_peaks, intensity_measure = "Height
   })
 
   intensity_ratio <- purrr::map_dfr(seq_len(nrow(peak_intensity)), function(x){
-    peak_intensity[x, ] / max(peak_intensity[x, ])
+    peak_intensity[x, ] / max(peak_intensity[x, ], na.rm = TRUE)
   })
   peak_intensity[intensity_ratio < 0.7] <- NA
 
@@ -523,6 +526,11 @@ calculate_scan_normalization <- function(scan_peaks, intensity_measure = "Height
 
   notna_scans <- rowSums(!is.na(as.matrix(peak_intensity)))
   keep_scans <- notna_scans >= 25
+
+  if (sum(keep_scans) == 0) {
+    stop("No scans left to use in normalization!")
+  }
+
   all_scans <- all_scans[keep_scans, , drop = FALSE]
   peak_intensity <- peak_intensity[keep_scans, ]
 
@@ -696,6 +704,7 @@ add_offset <- function(peak_data, mz_model){
 
 model_sds <- function(values, sds, loess_span = 0.75){
   sd_frame <- data.frame(x = values, y = sds)
-  loess_fit <- stats::loess(y ~ x, data = sd_frame, span = loess_span)
-  loess_fit$fitted
+  loess_fit <- stats::loess(y ~ x, data = sd_frame, span = loess_span, control = loess.control(surface = "direct"))
+  loess_pred <- predict(loess_fit, values)
+  loess_pred
 }
