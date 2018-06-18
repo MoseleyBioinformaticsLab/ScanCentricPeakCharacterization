@@ -52,7 +52,7 @@ AnalyzeMS <- R6::R6Class("AnalyzeMS",
 
    filter_raw_scans = function(){
      if (!is.null(self$raw_scan_filter)) {
-       self$zip_ms$raw_ms <- self$raw_scan_filter(raw_ms)
+       self$zip_ms$raw_ms <- self$raw_scan_filter(self$zip_ms$raw_ms)
      }
      self$zip_ms$raw_ms$remove_bad_resolution_scans()
    },
