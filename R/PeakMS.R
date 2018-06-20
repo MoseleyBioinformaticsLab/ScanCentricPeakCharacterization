@@ -2264,7 +2264,7 @@ remove_loess_class <- function(sd_model){
   sd_model
 }
 
-create_processing_info = function(package = "package:SIRM.FTMS.peakCharacterization",
+create_processing_info = function(package = "package:FTMS.peakCharacterization",
                                   peakfinder_obj = NULL, sd_model = NULL){
   pkg_description <- utils::packageDescription(substring(package, 9))
 
@@ -2599,7 +2599,7 @@ generate_peaks = function(scan_data, peak_method = "lm_weighted",
 }
 
 create_mz_model = function(scan_data, sd_fit_function){
-  scan_data <- SIRM.FTMS.peakCharacterization:::get_scan_nozeros(scan_data)
+  scan_data <- FTMS.peakCharacterization:::get_scan_nozeros(scan_data)
   mz_model <- sd_fit_function(scan_data$mz, scan_data$lag)
   mz_model
 }

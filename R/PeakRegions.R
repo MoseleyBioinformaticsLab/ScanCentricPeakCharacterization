@@ -285,7 +285,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       self$model_heightsd()
     },
 
-    summarize = function(package_used = "package:SIRM.FTMS.peakCharacterization"){
+    summarize = function(package_used = "package:FTMS.peakCharacterization"){
       self$stop_time <- Sys.time()
       self$run_time <- as.numeric(difftime(self$stop_time, self$start_time, units = "s"))
       # generate information about our objects

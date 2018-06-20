@@ -194,11 +194,11 @@ peak_finder <- function(raw_data, method = "lm_weighted", noise_function = noise
   # example data:
   # load("zip_ms_example.RData")
   # raw_data <- zip_ms$raw_ms
-  multi_scan <- SIRM.FTMS.peakCharacterization::MultiScans$new(raw_data, peak_method = method)
-  multi_scan_peak_list <- SIRM.FTMS.peakCharacterization::MultiScansPeakList$new(multi_scan, noise_function = noise_function)
+  multi_scan <- FTMS.peakCharacterization::MultiScans$new(raw_data, peak_method = method)
+  multi_scan_peak_list <- FTMS.peakCharacterization::MultiScansPeakList$new(multi_scan, noise_function = noise_function)
 
-  correspondent_peaks <- SIRM.FTMS.peakCharacterization::FindCorrespondenceScans$new(multi_scan_peak_list, multiplier = 3)
-  correspondent_peaks$master_peak_list <- SIRM.FTMS.peakCharacterization::normalize_scans(correspondent_peaks$master_peak_list)
+  correspondent_peaks <- FTMS.peakCharacterization::FindCorrespondenceScans$new(multi_scan_peak_list, multiplier = 3)
+  correspondent_peaks$master_peak_list <- FTMS.peakCharacterization::normalize_scans(correspondent_peaks$master_peak_list)
 
   get_mz <- function(scan_mz, sd_model){
     mean_mz <- mean(scan_mz)
