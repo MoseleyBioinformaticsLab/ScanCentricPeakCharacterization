@@ -7,689 +7,180 @@ smashing all the scan data together.
 
 ```{r packages}
 library(SIRM.FTMS.peakCharacterization)
+library(furrr)
+plan(multiprocess)
 ```
 
 We will use a dataset where only peak correspondence has been done.
 
-```{r load_data}
-raw_data <- RawMS$new("100Cpos.mzML")
-raw_data$remove_bad_resolution_scans()
-```
-
-```{r create_region_finder}
-pr_finder <- PeakRegionFinder$new(raw_data)
-```
-
-```{r do_stuff}
-self <- pr_finder
-
-self$add_sliding_regions()
-self$add_tiled_regions()
-
-self$reduce_signal_regions()
-```
-
-## Working with splitting sub-regions
-
-```{r split_sub_regions}
+```{r load_data_setup, eval = FALSE}
+library(SIRM.FTMS.peakCharacterization)
 library(furrr)
 plan(multiprocess)
-signal_regions <- self$peak_regions$peak_regions
-mz_point_regions <- self$peak_regions$mz_point_regions
-tiled_regions <- IRanges::subsetByOverlaps(self$peak_regions$tiled_regions, signal_regions)
+raw_data <- RawMS$new("100Cpos.mzML")
+tictoc::tic()
+start_time <- Sys.time()
 
-split_regions <- function(signal_regions, mz_point_regions, tiled_regions, peak_method = "lm_weighted", min_points = 4) {
-  split_data <- furrr::future_map(seq(1, length(signal_regions)), function(in_region){
-    split_region_by_peaks(IRanges::subsetByOverlaps(mz_point_regions, signal_regions[in_region]), 
-                          IRanges::subsetByOverlaps(tiled_regions, signal_regions[in_region]),
-                          peak_method = peak_method, min_points = min_points)
-  })
-  peak_regions <- do.call(c, purrr::map(split_data, function(x){unlist(x$region)}))
-  peak_peaks <- do.call(c, purrr::map(split_data, "peaks"))
-  return(list(regions = peak_regions, peaks = peak_peaks))
-}
+raw_data$remove_bad_resolution_scans()
 
-split_peak_regions <- split_regions(signal_regions, mz_point_regions, tiled_regions)
+raw_time <- difftime(Sys.time(), start_time)
 
-has_only_40 <- purrr::map_lgl(split_peak_regions$peaks, function(x){
-  length(x$scan) == 40
+pr_finder <- PeakRegionFinder$new(raw_data)
+
+pr_finder$add_sliding_regions()
+pr_finder$add_tiled_regions()
+
+add_window_time <- difftime(Sys.time(), start_time)
+
+pr_finder$reduce_sliding_regions()
+
+reduce_window_time <- difftime(Sys.time(), start_time)
+
+pr_finder$split_peak_regions()
+
+initial_split_time <- difftime(Sys.time(), start_time)
+
+pr_finder$normalize_data()
+
+pr_finder$find_peaks_in_regions()
+
+finding_peak_time <- difftime(Sys.time(), start_time)
+
+tictoc::toc()
+```
+
+This took about 30 minutes, with 20 of that being the peak characterization within the determined regions.
+
+## Load Data
+
+```{r setup_modeling}
+library(SIRM.FTMS.peakCharacterization)
+library(ggplot2)
+
+```
+
+```{r load_data}
+pr_1 <- readRDS("100Cpos_regional.rds")
+multi_scan_peaks <- pr_1$peak_regions$peak_data
+pr_2 <- readRDS("100Cpos_regional_2.rds")
+indiv_scan_peaks <- pr_2$peak_regions$peak_data
+
+rm(pr_1)
+rm(pr_2)
+```
+
+## Do We Need Models
+
+### Model MZ SD
+
+```{r mzsd, fig.keep="all"}
+p_mzsd <- ggplot(multi_scan_peaks, aes(x = ObservedMZ, y = ObservedMZSD)) + geom_point() + geom_smooth()
+p_mzsd
+
+p_mzsd + ylim(c(0, 0.01))
+
+p_mzsd + geom_point(aes(color = NScan)) + ylim(c(0, 0.01))
+```
+
+```{r mzsd_factor}
+p_mzsd_factor <- ggplot(multi_scan_peaks, aes(x = log10(Height), y = ObservedMZSD)) + geom_point()
+p_mzsd_factor
+
+p_mzsd_factor + ylim(c(0, 0.01))
+
+p_mzsd_factor + geom_point(aes(color = NSubset)) + ylim(c(0, 0.01))
+```
+
+So, this implies that we should do a model for the M/Z SD. Can't see how we might
+decide to use the model over the **calculated** value, as there isn't a clear
+
+
+### Model Log10HeightSD
+
+```{r heightsd}
+p_heightsd <- ggplot(multi_scan_peaks, aes(x = log10(Height), y = Log10HeightSD)) + geom_point() + geom_smooth()
+p_heightsd
+```
+
+We can also model the `Log10HeightSD` as a property of the `log10(Height)`.
+
+Can we determine when to use the model instead of the computed value?
+
+```{r when_model}
+p_heightsd + geom_point(aes(color = NSubset))
+```
+
+Doesn't look like it, no.
+
+## Compare Peaks
+
+Lets compare some of the peak metrics.
+
+```{r join_data}
+both_peaks <- dplyr::left_join(multi_scan_peaks, indiv_scan_peaks, by = "PeakID",
+                               suffix = c(".multi", ".indiv"))
+multi_scan_peaks$Type <- "Multi"
+indiv_scan_peaks$Type <- "Indiv"
+
+all_peaks <- rbind(dplyr::select(multi_scan_peaks, -SSR, -type), indiv_scan_peaks)
+```
+
+Width in frequency space??
+
+### Compare Height Values
+
+```{r compare_height}
+ggplot(both_peaks, aes(x = log10(Height.multi), y = log10(Height.indiv))) + geom_point()
+```
+
+```{r compare_heightsd}
+ggplot(both_peaks, aes(x = Log10HeightSD.multi, y = Log10HeightSD.indiv, color = NSubset.multi)) + geom_point()
+```
+
+```{r compare_heightrsd, fig.keep = "all"}
+ggplot(both_peaks, aes(x = HeightSD.multi / Height.multi, y = HeightSD.indiv / Height.indiv)) + geom_point() + xlim(c(0, 1)) + geom_abline(slope = 1, intercept = 0, color = "red") + geom_abline(slope = 1.4, intercept = , color = "blue")
+
+both_peaks <- dplyr::mutate(both_peaks, rsd_ratio = (HeightSD.multi / Height.multi) / (HeightSD.indiv / Height.indiv))
+
+ggplot(dplyr::filter(both_peaks, rsd_ratio <= 3), aes(x = rsd_ratio)) + geom_histogram(bins = 100) +
+  labs(x = "Ratio of Multi-RSD to Indiv-RSD")
+
+all_peaks <- dplyr::mutate(all_peaks, HeightRSD = HeightSD / Height)
+ggplot(dplyr::filter(all_peaks, HeightRSD <= 0.5), aes(x = HeightRSD, color = Type)) + geom_density()
+```
+
+So, basically we halved our RSD values. Yay us!
+
+### Compare M/Z Values
+
+```{r compare_mz_locs}
+ggplot(both_peaks, aes(x = log(ObservedMZ.multi), y = log(ObservedMZ.indiv))) + geom_point() + geom_abline(slope = 1, intercept = 0, color = "red")
+```
+
+Note that we will scale the differences by the point-to-point offset to account
+for the fact that we expect to see larger differences the higher we go in M/Z.
+
+```{r match_points_to_offsets}
+pr_1 <- readRDS("100Cpos_regional.rds")
+point_model <- pr_1$peak_regions$mz_model
+
+peak_offset <- purrr::map_df(multi_scan_peaks$PeakID, function(in_peak){
+  use_mz <- multi_scan_peaks$ObservedMZ[multi_scan_peaks$PeakID %in% in_peak]
+  out_offset <- point_model$y[which.min(abs(point_model$x - use_mz))]
+  data.frame(PeakID = in_peak, Offset = out_offset)
 })
 
-n_scan <- purrr::map_int(split_peak_regions$peaks, function(x){
-  length(unique(x$scan))
-})
-
-has_dup_scans <- purrr::map_lgl(split_peak_regions$peaks, function(x){
-  sum(duplicated(x$scan)) > 0
-})
+both_peaks <- dplyr::left_join(both_peaks, peak_offset, by = "PeakID")
 ```
 
+```{r examine_mz_diffs, fig.keep = "all"}
+both_peaks <- dplyr::mutate(both_peaks, MZDiff = (ObservedMZ.multi - ObservedMZ.indiv) / Offset)
 
-```{r normalization_factors}
-normalize_peaks <- which(has_only_40)
+ggplot(dplyr::filter(both_peaks, abs(MZDiff) <= 0.5), aes(x = MZDiff)) + geom_histogram(bins = 100)
 
-nscan <- 40
+ggplot(dplyr::filter(both_peaks, abs(MZDiff) <= 0.5), aes(x = ObservedMZ.multi, y = MZDiff, color = log10(Height.multi))) + geom_point()
 
-peak_comparisons <- combn(nscan, 2)
-
-peak_mz <- purrr::map_dfc(split_peak_regions$peaks[normalize_peaks], function(x){
-  x$ObservedMZ[order(x$scan)]
-})
-peak_height <- purrr::map_dfc(split_peak_regions$peaks[normalize_peaks], function(x){
-  log(x$Height[order(x$scan)])
-})
-
-scan_distances <- purrr::map_dbl(seq(1, nrow(peak_height)), function(in_scan){
-  scan_peaks <- peak_height[in_scan, ,drop = FALSE]
-  scan_peaks_matrix <- matrix(unlist(scan_peaks), nrow = nscan - 1, ncol = ncol(scan_peaks), byrow = TRUE)
-
-  other_matrix <- as.matrix(peak_height[-in_scan, , drop = FALSE])
-  scan_other_diff <- scan_peaks_matrix - other_matrix
-  scan_distances <- purrr::map_dbl(seq(1, nrow(scan_other_diff)), function(x){
-    sqrt(sum(scan_other_diff[x, ]^2, na.rm = TRUE))
-  })
-  sum(scan_distances)
-})
-
-normalize_scan <- which.min(scan_distances)
-
-scan_norm_matrix <- matrix(unlist(peak_height[normalize_scan, , drop = FALSE]),
-                             nrow = nscan, ncol = ncol(peak_height), byrow = TRUE)
-
-diff_matrix <- as.matrix(peak_height) - scan_norm_matrix
-
-diff_df <- as.data.frame(diff_matrix)
-
-gather_diff <- tidyr::gather(diff_df, key = "peak", value = "diff") %>% dplyr::mutate(scan = rep(seq(1, 40), ncol(diff_df)),
-                           peak_id = paste0(peak, ".", scan))
-
-gather_mz <- tidyr::gather(peak_mz, key = "peak", value = "mz") %>% dplyr::mutate(scan = rep(seq(1, 40), ncol(diff_df)),
-                           peak_id = paste0(peak, ".", scan))
-
-gather_height <- tidyr::gather(peak_height, key = "peak", value = "height") %>% dplyr::mutate(scan = rep(seq(1, 40), ncol(diff_df)),
-                           peak_id = paste0(peak, ".", scan))
-
-height_ratio <- purrr::map_dfr(seq(1, nrow(peak_height)), function(in_row){
-  (peak_height[in_row, ]) / max((peak_height[in_row, ]), na.rm = TRUE)
-})
-gather_ratio <- tidyr::gather(height_ratio, key = "peak", value = "ratio") %>% dplyr::mutate(scan = rep(seq(1, 40), ncol(diff_df)),
-                           peak_id = paste0(peak, ".", scan))
-
-gather_df <- dplyr::left_join(gather_diff, gather_mz) %>% dplyr::left_join(., gather_mz) %>% dplyr::left_join(., gather_height) %>% dplyr::left_join(., gather_ratio)
-
-ggplot(dplyr::filter(gather_df), aes(x = mz, y = diff, color = as.factor(scan))) + geom_smooth(method = "loess", span = 1.5, se = FALSE) + theme(legend.position = "none")
-
-ggplot(dplyr::filter(gather_df, scan == 1), aes(x = mz, y = diff, color = height)) + geom_point()
+ggplot(dplyr::filter(both_peaks, abs(MZDiff) <= 0.5), aes(x = log10(Height.multi), y = MZDiff)) + geom_point()
 ```
 
-Based on these results, we still need to do M/Z aware normalization.
-
-## Noise Detection
-
-```{r smush_scans}
-smush_scan_data <- function(raw_ms) {
-  scan_range <- raw_ms$scan_range
-  smushed_scan_data <- purrr::map_df(scan_range, function(in_scan){
-    scan_data <- as.data.frame(xcms::getScan(raw_ms$raw_data, in_scan))
-    scan_data$scan <- in_scan
-    scan_data
-  })
-  smushed_scan_data
-}
-
-raw_scan_data <- smush_scan_data(zip_data$raw_ms)
-```
-
-## Normalizing Raw Scan Data
-
-```{r normalize_by_mz}
-mz_aware_scan_normalization_models = function(pf_data, intensity_measure = "Height", summary_function = mean){
-
-  mpl <- pf_data$correspondent_peaks$master_peak_list
-  intensity_options <- c(Height = "scan_height", Area = "scan_area", NormalizedArea = "scan_normalizedarea")
-  intensity_internal <- intensity_options[intensity_measure]
-  n_corresponding <- mpl$count_notna()
-
-  normalizing_peaks <- n_corresponding >= quantile(n_corresponding, 0.95)
-
-  n_scan <- ncol(mpl$scan_mz)
-
-  peak_intensities <- log(mpl[[intensity_internal]][normalizing_peaks, ])
-
-  # need to check that there are at least 25 correspondent peaks in each of
-  # the scans, if not we will drop the scan and not bother to normalize it
-  n_peak_scan <- vapply(seq(1, ncol(peak_intensities)), function(in_scan){
-    sum(!is.na(peak_intensities[, in_scan]))
-  }, numeric(1))
-
-  keep_scans <- n_peak_scan >= 25
-
-  if (sum(keep_scans) != n_scan){
-    pf_data$multi_scan_peaklist <- pf_data$multi_scan_peaklist$reorder(keep_scans)
-    mpl <- mpl$reorder(keep_scans)
-    peak_intensities <- peak_intensities[, keep_scans]
-    n_scan <- sum(keep_scans)
-  }
-
-  pf_data$scan_normalized <- pf_data$multi_scan_peaklist$scan_indices
-  
-  peak_mz <- mpl$master[normalizing_peaks]
-
-  # this is getting the difference of a scan to all the other scans.
-  # It uses the fact that the peaks are the rows, and the scans are the columns.
-  # Take out the scan you want, make it a matrix that will be same size as the other.
-  # Remove that scan from the full matrix.
-  # Take their differences, this is the difference of that scan to all other scans
-  # for all of the peaks.
-  # Average the difference in each scan across the peaks
-  # Sum them after to find the total difference
-  scan_diffs <- vapply(seq(1, n_scan), function(in_scan){
-    scan_peaks <- peak_intensities[, in_scan, drop = FALSE]
-    scan_peaks_matrix <- matrix(scan_peaks, nrow = nrow(scan_peaks), ncol = n_scan - 1)
-
-    other_matrix <- peak_intensities[, -in_scan, drop = FALSE]
-    scan_other_diff <- scan_peaks_matrix - other_matrix
-    peak_means <- colMeans(scan_other_diff, na.rm = TRUE)
-    sum(peak_means)
-  }, numeric(1))
-
-  normalize_scan <- which.min(abs(scan_diffs))
-
-  scan_norm_matrix <- matrix(peak_intensities[, normalize_scan, drop = FALSE],
-                             nrow = nrow(peak_intensities), ncol = n_scan)
-
-  diff_matrix <- peak_intensities - scan_norm_matrix
-  
-  # for each scan, fit a loess model based on m/z, and then apply the correction
-  # to the scan
-  normalization_models <- vector("list", ncol(diff_matrix))
-  for (iscan in seq_len(ncol(diff_matrix))) {
-    #if (iscan != normalize_scan) {
-      diff_mz <- data.frame(x = peak_mz, y = diff_matrix[, iscan])
-      loess_fit <- stats::loess(y ~ x, data = diff_mz, control = stats::loess.control(surface = "direct"), span = 1.5)
-      normalization_models[[iscan]] <- loess_fit
-    # 
-    #   loess_predict <- predict(loess_fit, newdata = mpl$scan_mz[, iscan])
-    #   mpl$scan_height[, iscan] <- exp(log(mpl$scan_height[, iscan]) - loess_predict)
-    #   mpl$scan_area[, iscan] <- exp(log(mpl$scan_area[, iscan]) - loess_predict)
-    #   mpl$scan_normalizedarea[, iscan] <- exp(log(mpl$scan_normalizedarea[, iscan]) - loess_predict)
-    # #}
-    
-  }
-  names(normalization_models) <- mpl$scan
-  # mpl$is_normalized <- TRUE
-  # mpl$normalized_by <- intensity_measure
-  # pf_data$correspondent_peaks$master_peak_list <- mpl
-  # pf_data$correspondent_peaks$master_peak_list$calculate_total_intensity()
-  # pf_data
-  normalization_models
-}
-
-normalization_models <- mz_aware_scan_normalization_models(zip_data$peak_finder)
-
-
-apply_mz_scan_normalization <- function(raw_scan_data, normalization_models){
-  raw_scan_list <- split(raw_scan_data, raw_scan_data$scan)
-  
-  do_normalization <- function(scan_points, norm_model){
-    model_predict <- predict(norm_model, newdata = scan_points$mz)
-    
-    corrected_intensity <- exp(log(scan_points$intensity) - model_predict)
-    scan_points$intensity <- corrected_intensity
-    scan_points
-  }
-  
-  normalized_intensities <- purrr::map_df(names(normalization_models), function(x){
-    do_normalization(raw_scan_list[[x]], normalization_models[[x]])
-  })
-  
-  normalized_intensities
-  
-}
-
-raw_scans_normalized <- apply_mz_scan_normalization(raw_scan_data, normalization_models)
-```
-
-## Determine Noise
-
-We use a density of points within a small sliding window to remove things that
-should be noise. This is combined with counts of the noise peaks from every
-scan.
-
-```{r noise_removal}
-create_mz_windows <- function(mz_model, use_range = NULL, 
-                              window_size = 10, delta = window_size / 10){
-  if (is.null(use_range)) {
-    range_start = floor(min(mz_model$x))
-    range_end = ceiling(max(mz_model$x))
-  } else {
-    range_start = floor(min(use_range))
-    range_end <- ceiling(max(use_range))
-  }
-  
-  min_spacing <- min(mz_model$y) * delta
-  mz_start <- vector(mode = "numeric", length = (range_end - range_start) / min_spacing)
-  mz_end <- mz_start
-
-  start_window <- range_start
-  iteration <- 1
-  
-  while (start_window < range_end) {
-    mz_start[iteration] <- start_window
-    curr_spacing <- mz_model[which.min(abs(mz_model$x - start_window)), "y"] * delta
-    mz_end[iteration] <- start_window + (window_size * curr_spacing)
-    start_window <- start_window + (curr_spacing / delta)
-    iteration <- iteration + 1
-  }
-  
-  keep_locs <- mz_start != 0
-  mz_start <- mz_start[keep_locs]
-  mz_end <- mz_end[keep_locs]
-  
-  point_multiplier <- 1 / min(mz_model$y)
-
-  window_start <- round(mz_start * point_multiplier)
-  window_end <- round(mz_end * point_multiplier)
-  
-  windows <- IRanges(start = window_start, end = window_end)
-  
-  mcols(windows) <- list(mz_start = mz_start, mz_end = mz_end)
-  windows@metadata <- list(point_multiplier = point_multiplier,
-                           delta = delta,
-                           window_size = window_size)
-  windows
-  
-}
-
-create_mz_windows <- compiler::cmpfun(create_mz_windows)
-
-mz_points_to_windows <- function(mz_data, point_multiplier){
-  mz_windows <- IRanges(start = round(mz_data[, "mz"] * point_multiplier), width = 1)
-  mcols(mz_windows) <- mz_data
-  mz_windows@metadata <- list(point_multiplier = point_multiplier)
-  mz_windows
-}
-
-mz_points_to_windows <- compiler::cmpfun(mz_points_to_windows)
-
-mz_model <- filter(loess_to_df(zip_data$peak_finder$multi_scan_peaklist$mz_model), which %in% "fitted")
-
-sliding_windows <- create_mz_windows(mz_model, use_range = c(148, 1600), window_size = 10, delta = 1)
-
-tiled_windows <- create_mz_windows(mz_model, use_range = c(148, 1600), window_size = 1, delta = 1)
-
-mz_windows <- mz_points_to_windows(raw_scans_normalized, sliding_windows@metadata$point_multiplier)
-
-count_overlaps <- function(windows, mz_windows){
-  zero_intensities <- mz_windows@elementMetadata$intensity == 0
-  
-  nonzero_counts <- countOverlaps(windows, mz_windows[!zero_intensities])
-  zero_counts <- countOverlaps(windows, mz_windows[zero_intensities])
-  count_ratio <- log10(nonzero_counts + 1) - log10(zero_counts + 1)
-  
-  windows@elementMetadata$nonzero_counts <- nonzero_counts
-  windows@elementMetadata$zero_counts <- zero_counts
-  windows@elementMetadata$count_ratio <- count_ratio
-  windows
-}
-count_overlaps <- compiler::cmpfun(count_overlaps)
-sliding_windows <- count_overlaps(sliding_windows, mz_windows)
-tiled_windows <- count_overlaps(tiled_windows, mz_windows)
-
-calculate_noise_cutoff <- function(mspl, n_windows, window_size = 10){
-  noise_peaks <- purrr::map_df(mspl$get_scan_peak_lists(), function(x){
-    x$peak_list[!x$peak_list$not_noise, c("peak", "not_noise", "n_point")]
-  })
-  all_noise <- nrow(noise_peaks)
-  
-  non_overlapping_windows <- n_windows / (window_size + 2)
-  
-  noise_window_ratio <- all_noise / non_overlapping_windows
-  
-  average_noise_points <- mean(noise_peaks$n_point)
-  
-  find_multiplier <- function(ratio_value, min_perc = 0.9999, use_range = c(1, 10)){
-    test_values <- seq(use_range[1], use_range[2], by = 0.01)
-    out_value <- 1 - (ratio_value ^ test_values)
-    multiplier <- test_values[min(which(out_value >= min_perc))]
-  }
-  use_multiplier <- find_multiplier(noise_window_ratio, min_perc = 0.99985)
-  
-  noise_cutoff <- floor(average_noise_points * use_multiplier)
-}
-
-noise_cutoff <- calculate_noise_cutoff(zip_data$peak_finder$multi_scan_peaklist, n_windows = length(sliding_windows))
-```
-
-## Peak Pick and Characterize
-
-Now we can run peak-picking and characterization.
-
-So, a first attempt at using `pracma::findpeaks` on the normalized data after removing zeros just
-plain out and failed, which isn't really that surprising, given that the zeros
-were a nice way to tell us where a peak started and ended in a given scan. Some other options to
-consider:
-
-* The sliding window really can find the peaks, and merging them together (via `reduce`)
-will give us the peak boundaries. This should be valid given that we have spaced the delta
-by at least the spacing between points. We could use a 2 point spacing to be more sure
-that things really do belong together ...
-
-* A ratio of non-zero to zero points in the sliding windows might tell us where peak
-boundaries are, but there may be some issue where there are only peaks in a few scans.
-
-* Removing any points in those intervals defined by the noise cutoff first, do
-peak picking in each scan, define where the peaks are, and then merge regions
-that overlap by a certain amount
-
-### Sliding Window Reduction
-
-```{r sliding_window_reduction}
-reduce_sliding_window <- function(window_counts, noise_cutoff = 1, min_gapwidth = 1L){
-  has_data_window <- window_counts[mcols(window_counts)$nonzero_counts > noise_cutoff]
-  reduced_data_window <- reduce(has_data_window, min.gapwidth = min_gapwidth, with.revmap = TRUE)
-  
-  original_metadata <- mcols(has_data_window)
-  revmap <- mcols(reduced_data_window)$revmap
-  
-  new_metadata <- purrr::map_df(seq(1, length(revmap)), function(x){
-    mapped_indices <- revmap[[x]]
-    data.frame(mz_start = min(original_metadata$mz_start[mapped_indices]),
-               mz_end = max(original_metadata$mz_end[mapped_indices]),
-               peak = x)
-  })
-  
-  mcols(reduced_data_window) <- new_metadata
-  reduced_data_window@metadata <- window_counts@metadata
-  reduced_data_window
-}
-reduce_sliding_window <- compiler::cmpfun(reduce_sliding_window)
-
-reduced_windows <- reduce_sliding_window(sliding_windows, noise_cutoff = noise_cutoff)
-```
-
-Now we check each region, and do peak-picking on the log10 ratio of the
-non-zero to zero points to find sub-regions if necessary.
-
-```{r test_regions}
-subset_window_by_mz <- function(windows, mz_range, point_multiplier = NULL){
-  if (is.null(point_multiplier)) {
-    point_multiplier <- windows@metadata$point_multiplier
-  }
-  
-  if (is.null(point_multiplier)) {
-    stop("Please provide the point_multiplier value to convert M/Z to points")
-  }
-  
-  point_range <- round(mz_range * point_multiplier)
-  sub_window <- IRanges(start = min(point_range), end = max(point_range))
-  subsetByOverlaps(windows, sub_window)
-}
-
-generate_plottable_data <- function(query_window, mz_points, sliding_points, tiled_points){
-  mz_data <- subsetByOverlaps(mz_points, query_window)
-  plot_data <- as.data.frame(mcols(mz_data)[, c("mz", "intensity")])
-  plot_data$type <- "original"
-  plot_data$intensity <- log10(plot_data$intensity + 1)
-  
-  tiled_data <- subsetByOverlaps(tiled_points, query_window)
-  tiled_frame <- transmute(as.data.frame(mcols(tiled_data)[, c("mz_start", "nonzero_counts")]), mz = mz_start, intensity = log10(nonzero_counts + 1), type = "tiled")
-  
-  sliding_data <- subsetByOverlaps(sliding_points, query_window)
-  sliding_frame <- transmute(as.data.frame(mcols(sliding_data)[, c("mz_start", "nonzero_counts")]), mz = mz_start, intensity = log10(nonzero_counts + 2), type = "sliding")
-  
-  plot_data <- rbind(plot_data, tiled_frame, sliding_frame)
-  plot_data
-
-}
-
-window_1_plot <- generate_plottable_data(reduced_windows[1], mz_windows, sliding_windows, tiled_windows)
-
-reduced2 <- subset_window_by_mz(reduced_windows, mz_range = c(1317.202, 1317.226))
-window_2_plot <- generate_plottable_data(reduced2, mz_windows, sliding_windows, tiled_windows)
-```
-
-Based on these plots, we might be able to use peak-picking, counting peaks
-in the tiled windows, and then peak-picking those to define where the "true" peaks
-lie. Let's give it a shot.
-
-```{r}
-create_na_peak <- function(peak_method = "lm_weighted"){
-  data.frame(ObservedMZ = as.numeric(NA),
-             Height = as.numeric(NA),
-             Area = as.numeric(NA),
-             SSR = as.numeric(NA),
-             type = peak_method,
-             stringsAsFactors = FALSE)
-}
-create_na_peak <- compiler::cmpfun(create_na_peak)
-
-get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points = min_points){
-  range_data <- in_range@elementMetadata
-  
-  possible_peaks <- pracma::findpeaks(range_data$intensity, nups = 2)
-
-  if (!is.null(possible_peaks)) {
-    n_peak <- nrow(possible_peaks)
-    peaks <- purrr::map_df(seq(1, n_peak), function(in_peak){
-    #print(in_peak)
-      "!DEBUG Peak `in_peak`"
-      peak_loc <- seq(possible_peaks[in_peak, 3], possible_peaks[in_peak, 4])
-      out_peak <- get_peak_info(range_data[peak_loc, ], peak_method = peak_method, min_points = min_points)
-      out_peak$n_point <- length(peak_loc)
-      out_peak$mz_width <- max(range_data[peak_loc, "mz"]) - min(range_data[peak_loc, "mz"])
-      out_peak$points <- I(list(start(in_range)[peak_loc]))
-      out_peak$scan <- range_data$scan[1]
-      out_peak
-    })
-  } else {
-    peaks <- create_na_peak()
-    peaks$points <- NA
-    peaks$scan <- range_data$scan[1]
-  }
-  peaks
-}
-get_reduced_peaks <- compiler::cmpfile(get_reduced_peaks)
-
-run_peak_picking_in_reduced <- function(query_window, mz_windows, tiled_windows, peak_method = "lm_weighted", min_points = 4,
-                                        plot_data = FALSE){
-  mz_points <- subsetByOverlaps(mz_windows, query_window)
-  mz_points@elementMetadata$log_int <- log(mz_points@elementMetadata$intensity + 1e-8)
-  mz_points <- split(mz_points, mz_points@elementMetadata$scan)
-  
-  reduced_peaks <- purrr::map_df(names(mz_points), function(in_scan){
-    get_reduced_peaks(mz_points[[in_scan]], peak_method = peak_method, min_points = min_points)
-    
-  })
-  
-  reduced_peaks <- reduced_peaks[!is.na(reduced_peaks$ObservedMZ), ]
-  
-  if (nrow(reduced_peaks) > 0){
-    reduced_peaks$mz <- reduced_peaks$ObservedMZ
-    reduced_mz_points <- mz_points_to_windows(reduced_peaks, mz_windows@metadata$point_multiplier)
-    
-    tiled_points <- subsetByOverlaps(tiled_windows, query_window)
-    #tiled_points@elementMetadata <- NULL
-    tiled_points@elementMetadata$peak_count <- countOverlaps(tiled_points, reduced_mz_points)
-    
-    
-    
-    sub_tiles <- reduce(tiled_points[mcols(tiled_points)$peak_count > 0])
-    mcols(sub_tiles) <- list(region = seq(1, length(sub_tiles)))
-    
-    reduced_mz_points <- mergeByOverlaps(reduced_mz_points, sub_tiles)
-    
-    sub_mz_point <- split(reduced_mz_points, reduced_mz_points$region)
-    
-    sub_mz_region <- IRangesList()
-    
-    for (iregion in seq_len(length(sub_mz_point))) {
-      all_points <- unlist(sub_mz_point[[iregion]]$points)
-      tmp_range <- IRanges(start = min(all_points), end = max(all_points))
-      mcols(tmp_range) <- I(list(as.numeric(sub_mz_point[[iregion]]$scan)))
-      sub_mz_region[[iregion]] <- tmp_range
-    }
-  } else {
-    sub_mz_region <- IRangesList()
-  }
-
-  if (plot_data) {
-    plot_data <- as.data.frame(mcols(unlist(mz_points))[, c("mz", "intensity", "scan")]) %>% mutate(intensity = log10(intensity + 1e-8), type = "original")
-
-    peak_data <- transmute(reduced_peaks, mz = ObservedMZ, intensity = log10(Height), scan = 0, type = "peakpicked")
-
-    tiled_data <- transmute(as.data.frame(mcols(tiled_points)), mz = mz_start, intensity = log10(peak_count + 1e-8), scan = 0, type = "tiled")
-
-    plot_data <- rbind(plot_data, peak_data, tiled_data)
-    return(plot_data)
-  } else {
-    return(unlist(sub_mz_region))
-  }
-
-}
-
-run_peak_picking_in_reduced <- compiler::cmpfun(run_peak_picking_in_reduced)
-
-mcols(reduced_windows) <- NULL
-all_regions <- split(reduced_windows, seq(1, length(reduced_windows)))
-all_regions2 <- all_regions
-library(knitrProgressBar)
-prog_obj <- knitrProgressBar::progress_estimated(length(all_regions))
-for (iregion in seq_len(length(all_regions))) {
-  all_regions2[[iregion]] <- run_peak_picking_in_reduced(all_regions[[iregion]], mz_windows, tiled_windows)
-  update_progress(prog_obj)
-}
-
-all_regions2 <- unlist(all_regions2)
-
-#save(sliding_windows, reduced_windows, all_regions2, tiled_windows, mz_windows, file = "peak_picking_reduced.RData")
-```
-
-```{r check_lengths_duplicates}
-all_scans <- mcols(all_regions2)$X
-
-n_scan <- purrr::map_int(all_scans, length)
-
-sum(n_scan >= 6)
-
-has_dup <- purrr::map_lgl(all_scans, function(x){sum(duplicated(x)) > 0})
-
-tmp_data <- run_peak_picking_in_reduced(subsetByOverlaps(reduced_windows, all_regions2[1095]), mz_windows, tiled_windows, plot_data = TRUE)
-
-use_regions <- seq(1095, 1099)
-for (iregion in use_regions) {
-  region_data <- run_peak_picking_in_reduced(all_regions2[iregion], mz_windows, tiled_windows, plot_data = TRUE)
-  p <- ggplot(filter(region_data, type %in% "original"), aes(x = mz, y = intensity, color = as.factor(scan))) + geom_point() + geom_line()
-  q <- p + geom_point(data = filter(region_data, !(type %in% "original")), color = "black")
-  print(q)
-}
-```
-
-```{r check_width_distribution}
-region_widths <- countOverlaps(all_regions2, tiled_windows)
-
-reduced_widths <- countOverlaps(reduced_windows, tiled_windows)
-```
-
-## Actually Do Some Peak Characterization
-
-```{r peak_characterization}
-get_merged_peak_info <- function(in_points, peak_method = "lm_weighted", min_points = 4){
-  use_points <- unlist(IRangesList(in_points))
-  
-  use_data <- mcols(use_points)
-  use_data <- use_data[use_data$intensity > 0, ]
-  get_peak_info(use_data, peak_method = peak_method, min_points = min_points)
-}
-
-get_merged_peak_info <- compiler::cmpfun(get_merged_peak_info)
-
-regional_peak_characterization <- function(mz_points, min_peaks = 4, max_selection = 100, peak_method = "lm_weighted", min_points = 4){
-  
-  mz_points@elementMetadata$log_int <- log(mz_points@elementMetadata$intensity + 1e-8)
-  mz_data <- mcols(mz_points)
-  reduced_peaks <- purrr::map_df(unique(mz_data$scan), function(in_scan){
-    get_reduced_peaks(mz_points[mz_data$scan %in% in_scan], peak_method = peak_method, min_points = min_points)
-  })
-  reduced_peaks <- reduced_peaks[!is.na(reduced_peaks$ObservedMZ), ]
-  n_peaks <- nrow(reduced_peaks)
-  if (n_peaks >= min_peaks) {
-    reduced_peaks$peak <- seq(1, nrow(reduced_peaks))
-  
-    peak_points <- purrr::map(seq(1, nrow(reduced_peaks)), function(in_peak){
-      use_points <- IRanges(start = reduced_peaks[in_peak, "points"][[1]], width = 1)
-      use_scan <- reduced_peaks[in_peak, "scan"]
-      subsetByOverlaps(mz_points[mz_data$scan %in% use_scan], use_points)
-    })
-    
-    peak_info <- get_merged_peak_info(peak_points)
-    peak_samples <- utils::combn(n_peaks, 3)
-  
-    if (ncol(peak_samples) > max_selection) {
-      peak_samples <- peak_samples[, sample(ncol(peak_samples), max_selection)]
-    }
-    
-    sampled_peaks <- purrr::map_df(seq_len(ncol(peak_samples)), function(in_sample){
-      get_merged_peak_info(peak_points[peak_samples[, in_sample]])
-    })
-    
-    peak_info$ObservedMZSD <- sd(sampled_peaks$ObservedMZ)
-    peak_info$HeightSD <- sd(sampled_peaks$Height)
-    peak_info$Log10HeightSD <- sd(log10(sampled_peaks$Height))
-    peak_info$ObservedMZSD2 <- sd(reduced_peaks$ObservedMZ)
-    peak_info$Height2 <- mean(reduced_peaks$Height)
-    peak_info$HeightSD2 <- sd(reduced_peaks$Height)
-  } else {
-    peak_info <- create_na_peak()
-    peak_info$ObservedMZSD <- NA
-    peak_info$HeightSD <- NA
-    peak_info$Log10HeightSD <- NA
-    peak_info$ObservedMZSD2 <- NA
-    peak_info$Height2 <- NA
-    peak_info$HeightSD2 <- NA
-  }
-  
- peak_info
-}
-regional_peak_characterization <- compiler::cmpfun(regional_peak_characterization)
-```
-
-```{r run_subsamples}
-n_regions <- length(all_regions2)
-subsample_progress <- knitrProgressBar::progress_estimated(n_regions)
-peak_subsamples <- purrr::map_df(seq_len(n_regions), function(in_region){
-  #print(in_region)
-  update_progress(subsample_progress)
-  regional_peak_characterization(subsetByOverlaps(mz_windows, all_regions2[in_region]))
-})
-
-save(peak_subsamples2, sliding_windows, reduced_windows, all_regions2, tiled_windows, mz_windows, file = "peak_picking_reduced2.RData")
-```
-
-So current plan:
-
-* create m/z models for each scan using non-zero points
-* calculate number of non-zero points across sliding windows
-* actually use the 99% criterion to remove windows that are likely noise
-  * this would avoid doing peak picking and characterization across every single
-  scan as a first step.
-* merge the windows that are above this cutoff
-* for each of the merged windows, find the overlapping non-zero data points
-* then for each m/z window:
-  * for each scan, try and find and characterize peaks within
-  * remove peaks that are far from the median m/z in a peak region, and choose a single peak for each scan
-  * choose peak regions that contain lots of scans for normalization
-  * create a normalization model between scans using these characterized peaks
-  * normalize raw data in each region
-  * choose the points in each scan that are within the kept peaks from each scan
-  * for each region, now get full peak information using all the raw points
-  * choose subsets of scans, and their points, and get new peak information for each subset.
-
-
-Some notes on this plan:
-
-* Can check how well the noise reduction went by taking the characterized peak intensities from each scan and plotting them, should have a largely unimodal distribution now
-* Can check if we need to write code for splitting regions with multiple peaks by checking:
-  * the sizes of regions in delta units (dependent or independently of M/Z)
-  * The distributions of ObservedMZ within each region. Have seen outliers (this was part of yesterdays work was to remove outliers), but true multi-modality would imply multiple peaks.
-
+This final figure makes sense. 
