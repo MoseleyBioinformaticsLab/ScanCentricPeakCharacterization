@@ -124,7 +124,7 @@ RawMS <- R6::R6Class("RawMS",
      },
 
      get_mz_models = function(){
-       self$mz_model_list <- furrr::future_map(self$scan_range, function(in_scan){
+       self$mz_model_list <- internal_map$map_function(self$scan_range, function(in_scan){
          create_mz_model(as.data.frame(xcms::getScan(self$raw_data, in_scan)), self$sd_fit_function)
        })
      },
@@ -142,7 +142,7 @@ RawMS <- R6::R6Class("RawMS",
        mz_ranges <- round(range(unlist(purrr::map(model_list, function(x){range(x$x)}))))
 
        mz_values <- seq(mz_ranges[1], mz_ranges[2], 0.5)
-       sd_predictions <- furrr::future_map(model_list, self$sd_predict_function, mz_values)
+       sd_predictions <- internal_map$map_function(model_list, self$sd_predict_function, mz_values)
        mean_sd_preds <- colMeans(do.call(rbind, sd_predictions))
 
        self$mz_model <- self$sd_fit_function(mz_values, mean_sd_preds)

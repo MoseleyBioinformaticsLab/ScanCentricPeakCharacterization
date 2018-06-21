@@ -484,7 +484,7 @@ split_region_by_peaks <- function(mz_point_regions, tiled_regions, peak_method =
 
 
 split_regions <- function(signal_regions, mz_point_regions, tiled_regions, peak_method = "lm_weighted", min_points = 4) {
-  split_data <- furrr::future_map(seq(1, length(signal_regions)), function(in_region){
+  split_data <- internal_map$map_function(seq(1, length(signal_regions)), function(in_region){
     split_region_by_peaks(IRanges::subsetByOverlaps(mz_point_regions, signal_regions[in_region]),
                           IRanges::subsetByOverlaps(tiled_regions, signal_regions[in_region]),
                           peak_method = peak_method, min_points = min_points)
@@ -582,7 +582,7 @@ apply_normalization_peak_regions <- function(peak_regions, normalization_factors
   if ("scan_peaks" %in% to_normalize) {
     scan_peaks <- peak_regions$scan_peaks
 
-    normed_peaks <- furrr::future_map(scan_peaks, function(in_peak){
+    normed_peaks <- internal_map$map_function(scan_peaks, function(in_peak){
       peak_index <- seq_len(nrow(in_peak))
       split_peak_by_scan <- split(peak_index, in_peak$scan)
 
@@ -661,9 +661,10 @@ characterize_peaks_in_regions <- function(mz_point_regions, peak_regions, use_sc
   peak_regions <- peak_regions[keep_regions]
   n_scans <- n_scans[keep_regions]
 
-  peak_data <- furrr::future_map_dfr(seq_len(length(peak_regions)), function(in_region){
+  peak_data <- internal_map$map_function(seq_len(length(peak_regions)), function(in_region){
     characterize_mz_points(IRanges::subsetByOverlaps(mz_point_regions, peak_regions[in_region]), peak_region_scans[[in_region]], max_subsets = max_subsets)
   })
+  peak_data <- dplyr::bind_rows(peak_data)
   peak_data$NScan <- n_scans
   peak_data$PeakID <- seq_len(nrow(peak_data))
   peak_data
