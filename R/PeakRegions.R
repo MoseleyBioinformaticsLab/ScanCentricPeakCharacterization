@@ -65,9 +65,9 @@ create_mz_regions <- function(mz_model, use_range = NULL,
 
   while (start_region < range_end) {
     mz_start[iteration] <- start_region
-    curr_spacing <- mz_model[which.min(abs(mz_model$x - start_region)), "y"] * delta
+    curr_spacing <- mz_model[which.min(abs(mz_model$x - start_region)), "y"]
     mz_end[iteration] <- start_region + (region_size * curr_spacing)
-    start_region <- start_region + (curr_spacing / delta)
+    start_region <- start_region + (curr_spacing * delta)
     iteration <- iteration + 1
   }
 
