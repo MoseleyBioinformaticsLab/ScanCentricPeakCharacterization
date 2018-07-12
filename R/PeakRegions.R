@@ -211,7 +211,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       #self$peak_regions$peak_regions <- subset_signal_regions(self$)
     },
 
-    normalize_data = function(which_data = "raw"){
+    normalize_data = function(which_data = "both"){
       if (self$progress) {
         message("Normalizing scans ...")
       }
