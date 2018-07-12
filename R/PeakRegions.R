@@ -635,6 +635,8 @@ characterize_mz_points <- function(in_points, use_scans = NULL, max_subsets = 10
   })
 
   peak_info$ObservedMZSD <- sd(sampled_peaks$ObservedMZ)
+  peak_info$Log10ObservedMZSD <- sd(log10(sampled_peaks$ObservedMZ))
+  peak_info$Log10Height <- log10(peak_info$Height)
   peak_info$HeightSD <- sd(sampled_peaks$Height)
   peak_info$Log10HeightSD <- sd(log10(sampled_peaks$Height))
 
@@ -681,8 +683,11 @@ characterize_picked_peaks <- function(scan_peaks, use_scans, min_scan = 4){
   peak_data <- purrr::map_df(scan_peaks, function(in_peak){
     data.frame(ObservedMZ = mean(in_peak$ObservedMZ),
                Height = mean(in_peak$Height),
+               Log10Height = mean(log10(in_peak$Height)),
                Area = mean(in_peak$Area),
+               Log10Area = mean(log10(in_peak$Area)),
                ObservedMZSD = sd(in_peak$ObservedMZ),
+               Log10ObservedMZSD = sd(log10(in_peak$ObservedMZSD)),
                HeightSD = sd(in_peak$Height),
                Log10HeightSD = sd(log10(in_peak$Height)),
                Start = min(in_peak$ObservedMZ),
