@@ -494,7 +494,30 @@ split_regions <- function(signal_regions, mz_point_regions, tiled_regions, peak_
   return(list(regions = peak_regions, peaks = peak_peaks))
 }
 
-calculate_scan_normalization <- function(scan_peaks, intensity_measure = "Height", summary_function = median){
+two_pass_normalization <- function(peak_regions, intensity_measure = "Height", summary_function = median, normalize_peaks = "both"){
+  scan_peaks <- peak_regions$scan_peaks
+
+  normalization_factors <- single_pass_normalization(scan_peaks, intensity_measure = intensity_measure, summary_function = summary_function)
+
+  normed_peaks <- internal_map$map_function(scan_peaks, normalize_scan_peaks, normalization_factors)
+
+  normed_scan_cor <- purrr::map_dbl(normed_peaks, intensity_scan_correlation)
+  low_cor <- abs(normed_scan_cor) <= 0.5
+
+  normalization_factors <- single_pass_normalization(scan_peaks, intensity_measure = intensity_measure, summary_function = summary_function, use_peaks = low_cor)
+
+  normed_peaks <- internal_map$map_function(scan_peaks, normalize_scan_peaks, normalization_factors)
+
+  normed_raw <- normalize_raw_points(peak_regions$mz_point_regions, normalization_factors)
+
+
+}
+
+intensity_scan_correlation <- function(scan_peak){
+  cor(scan_peak$Height, scan_peak$scan, method = "spearman", use = "complete.obs")
+}
+
+single_pass_normalization <- function(scan_peaks, intensity_measure = "Height", summary_function = median, use_peaks = NULL){
   n_scan_per_peak <- purrr::map_int(scan_peaks, function(x){
     if (sum(duplicated(x$scan)) == 0) {
       return(length(x$scan))
@@ -504,7 +527,12 @@ calculate_scan_normalization <- function(scan_peaks, intensity_measure = "Height
   })
 
   scan_cutoff <- quantile(n_scan_per_peak, 0.95)
-  normalize_peaks <- which(n_scan_per_peak >= scan_cutoff)
+
+  if (is.null(use_peaks)) {
+    use_peaks <- rep(TRUE, length(scan_peaks))
+  }
+
+  normalize_peaks <- which((n_scan_per_peak >= scan_cutoff) & use_peaks)
 
   all_scans <- data.frame(scan = unique(unlist(purrr::map(scan_peaks, function(x){unique(x$scan)}))))
 
@@ -557,6 +585,37 @@ calculate_scan_normalization <- function(scan_peaks, intensity_measure = "Height
     summary_function(diff_matrix[in_row, ], na.rm = TRUE)
   })
   data.frame(scan = all_scans$scan, normalization = normalization_factors)
+}
+
+normalize_raw_points <- function(raw_points, normalization_factors){
+  split_normalization <- split(normalization_factors$normalization, normalization_factors$scan)
+
+  split_points <- as.list(split(raw_points, raw_points@elementMetadata$scan))
+  split_points <- split_points[names(split_points) %in% names(split_normalization)]
+
+  normed_points <- purrr::map2(split_points, split_normalization, function(in_points, in_norm){
+    in_points@elementMetadata$intensity <- exp(log(in_points@elementMetadata$intensity) - in_norm)
+    in_points
+  })
+
+  normed_points <- unlist(IRanges::IRangesList(normed_points))
+  normed_points
+}
+
+normalize_scan_peaks <- function(in_peak, normalization_factors){
+  #split_normalization <- split(normalization_factors$normalization, normalization_factors$scan)
+
+  #normed_peaks <- internal_map$map_function(scan_peaks, function(in_peak){
+  in_peak$index <- seq(1, nrow(in_peak))
+  height_scan <- as.data.frame(in_peak[, c("index", "Height", "scan")])
+  height_scan <- dplyr::right_join(height_scan, normalization_factors, by = "scan")
+  height_scan <- height_scan[!is.na(height_scan$index), ]
+  height_scan <- height_scan[order(height_scan$index), ]
+
+  in_peak <- in_peak[in_peak$index %in% height_scan$index, ]
+  in_peak <- in_peak[order(in_peak$index), ]
+  in_peak$Height <- exp(log(height_scan$Height) - height_scan$normalization)
+  in_peak
 }
 
 apply_normalization_peak_regions <- function(peak_regions, normalization_factors, which_data = "both") {
