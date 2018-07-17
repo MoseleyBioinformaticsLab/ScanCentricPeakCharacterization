@@ -740,17 +740,21 @@ characterize_picked_peaks <- function(scan_peaks, use_scans, min_scan = 4){
   scan_peaks <- scan_peaks[keep_peaks]
 
   peak_data <- purrr::map_df(scan_peaks, function(in_peak){
+    n_point <- purrr::map_int(in_peak$points, length)
     data.frame(ObservedMZ = mean(in_peak$ObservedMZ),
                Height = mean(in_peak$Height),
                Log10Height = mean(log10(in_peak$Height)),
                Area = mean(in_peak$Area),
                Log10Area = mean(log10(in_peak$Area)),
                ObservedMZSD = sd(in_peak$ObservedMZ),
-               Log10ObservedMZSD = sd(log10(in_peak$ObservedMZSD)),
+               Log10ObservedMZSD = sd(log10(in_peak$ObservedMZ)),
                HeightSD = sd(in_peak$Height),
                Log10HeightSD = sd(log10(in_peak$Height)),
+               AreaSD = sd(in_peak$Area),
+               Log10AreaSD = sd(log10(in_peak$Area)),
                Start = min(in_peak$ObservedMZ),
-               Stop = max(in_peak$ObservedMZ))
+               Stop = max(in_peak$ObservedMZ),
+               NPoint = mean(n_point))
   })
   peak_data$NSubset <- n_scans[keep_peaks]
   peak_data$NScan <- n_scans[keep_peaks]
