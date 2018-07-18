@@ -260,15 +260,13 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     },
 
     model_mzsd = function(){
-      self$peak_regions$peak_data$ObservedMZSDModel <- model_sds(self$peak_regions$peak_data$ObservedMZ,
-                            self$peak_regions$peak_data$ObservedMZSD, loess_span = 1)
+      self$peak_regions$peak_data$ObservedMZSDModel <- mz_sd_model(self$peak_regions$peak_data)
       invisible(self)
     },
 
     model_heightsd = function(){
       self$peak_regions$peak_data$Log10HeightSDModel <-
-        model_sds(log10(self$peak_regions$peak_data$Height),
-                  self$peak_regions$peak_data$Log10HeightSD, loess_span = 0.5)
+        int_sd_model(self$peak_regions$peak_data)
       invisible(self)
     },
 
@@ -820,6 +818,31 @@ add_offset <- function(peak_data, mz_model){
   })
   dplyr::left_join(peak_data, offsets, by = "PeakID")
 }
+
+mz_sd_model <- function(in_data){
+  min_scan <- min(in_data$NScan)
+  fit_data <- in_data[in_data$NScan >= min_scan, ]
+  weight_1 <- fit_data$NScan / max(fit_data$NScan)
+  fit_data$width <- fit_data$Stop - fit_data$Start
+  weight_2 <- 1 - (fit_data$width / max(fit_data$width))
+  sd_fit <- lm(log10(ObservedMZSD) ~ ObservedMZ + log10(Height), data = fit_data, weights = weight_1 * weight_2)
+  sd_pred <- 10^predict.lm(sd_fit, newdata = in_data)
+  sd_pred
+}
+
+int_sd_model <- function(in_data){
+  min_scan <- quantile(in_data$NScan, 0.75)
+  in_data$logHeight <- log10(in_data$Height)
+  fit_data <- in_data[in_data$NScan >= min_scan, ]
+  fit_data <- fit_data[!is.na(fit_data$Log10HeightSD), ]
+  fit_data <- fit_data[fit_data$Height > 10, ]
+  fit_data$width <- fit_data$Stop - fit_data$Start
+  fit_data$weight_2 <- 1 - (fit_data$width / max(fit_data$width))
+  sd_fit <- lm(I(1/Log10HeightSD) ~ I(1/logHeight), data = fit_data, weights = fit_data$weight_2)
+  sd_pred <- 1/predict(sd_fit, newdata = in_data)
+  sd_pred
+}
+
 
 model_sds <- function(values, sds, loess_span = 0.75){
   sd_frame <- data.frame(x = values, y = sds)
