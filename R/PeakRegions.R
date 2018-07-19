@@ -119,6 +119,7 @@ PeakRegions <- R6::R6Class("PeakRegions",
 
     scan_correlation = NULL,
     keep_peaks = NULL,
+    peak_index = NULL,
 
     set_min_scan = function(){
       self$n_scan <- length(unique(self$mz_point_regions@elementMetadata$scan))
@@ -212,7 +213,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       peak_data <- split_regions(self$peak_regions$peak_regions[use_regions], self$peak_regions$mz_point_regions, self$peak_regions$tiled_regions, peak_method = self$peak_method, min_points = self$min_points)
       self$peak_regions$peak_regions <- peak_data$regions
       self$peak_regions$scan_peaks <- peak_data$peaks
-      self$peak_regions$peak_index <- seq_len(peak_data$regions)
+      self$peak_regions$peak_index <- seq_len(length(peak_data$regions))
       #self$peak_regions$peak_regions <- subset_signal_regions(self$)
     },
 
@@ -229,8 +230,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
         message("Finding peaks in regions ...")
       }
       if (is.null(self$peak_regions$scans_per_peak)) {
-        self$peak_regions$scans_per_peak <- calculate_number_of_scans_normalized(self$peak_regions$scan_peaks,
-                                                        self$normalization_factors$scan)
+        self$peak_regions$scans_per_peak <- purrr::map_int(self$peak_regions$scan_peaks, calculate_number_of_scans_normalized, self$peak_regions$normalization_factors$scan)
       }
       if (is.null(self$peak_regions$keep_peaks)) {
 
@@ -822,6 +822,10 @@ add_offset <- function(peak_data, mz_model){
 mz_sd_model <- function(in_data){
   min_scan <- min(in_data$NScan)
   fit_data <- in_data[in_data$NScan >= min_scan, ]
+  if ("Ignore" %in% names(fit_data)) {
+    fit_data <- fit_data[!fit_data$Ignore, ]
+  }
+
   weight_1 <- fit_data$NScan / max(fit_data$NScan)
   fit_data$width <- fit_data$Stop - fit_data$Start
   weight_2 <- 1 - (fit_data$width / max(fit_data$width))
@@ -834,6 +838,9 @@ int_sd_model <- function(in_data){
   min_scan <- quantile(in_data$NScan, 0.75)
   in_data$logHeight <- log10(in_data$Height)
   fit_data <- in_data[in_data$NScan >= min_scan, ]
+  if ("Ignore" %in% names(fit_data)) {
+    fit_data <- fit_data[!fit_data$Ignore, ]
+  }
   fit_data <- fit_data[!is.na(fit_data$Log10HeightSD), ]
   fit_data <- fit_data[fit_data$Height > 10, ]
   fit_data$width <- fit_data$Stop - fit_data$Start
