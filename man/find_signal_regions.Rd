@@ -16,6 +16,6 @@ IRanges
 }
 \description{
 Given some regions and point_regions, find the regions that actually should
-contain **real** data. See *details* for an explanation of what is considered
-**real**.
+contain \strong{real} data. See \emph{details} for an explanation of what is considered
+\strong{real}.
 }

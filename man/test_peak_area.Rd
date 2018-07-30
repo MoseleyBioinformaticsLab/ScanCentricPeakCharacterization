@@ -21,8 +21,8 @@ significant amount of area and are a certain number of points
 \details{
 returns a matrix of vectors, where the vector is:
 \enumerate{
-  \item start of points
-  \item end of points
-  \item area
+\item start of points
+\item end of points
+\item area
 }
 }

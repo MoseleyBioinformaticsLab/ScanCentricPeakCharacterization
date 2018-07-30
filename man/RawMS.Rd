@@ -15,7 +15,7 @@ RawMS
 }
 \value{
 A reference class with methods \code{set_scans()}, \code{plot_tic()},
- \code{find_peaks()}.
+\code{find_peaks()}.
 }
 \description{
 This reference class represents a storage container for the raw mass-spec
@@ -25,11 +25,11 @@ be used for peak picking
 }
 \details{
 The \code{find_peaks()} method is not set by default, it must be set
- by the user after instantiation. The \code{find_peaks()} function definition
- should take the \code{raw_data}, and either \code{scan_range} or \code{rt_range}.
- It should also store the function name that is actually used for finding the peaks,
- and the variables, and then generate a \code{peaks} object. See the examples
- below for how to generate these functions.
+by the user after instantiation. The \code{find_peaks()} function definition
+should take the \code{raw_data}, and either \code{scan_range} or \code{rt_range}.
+It should also store the function name that is actually used for finding the peaks,
+and the variables, and then generate a \code{peaks} object. See the examples
+below for how to generate these functions.
 }
 \examples{
 

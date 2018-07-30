@@ -103,28 +103,28 @@ zip_ms_from_mzml <- function(in_file, out_dir){
 #' is heavily recommended to use the AnalyzeMS object
 #' for carrying out the various steps of an analysis, including peak finding.
 #'
-#' @section \code{ZipMS} Methods:
+#' @section `ZipMS` Methods:
 #'
-#'  use \code{?method-name} to see more details about each individual method
+#'  use `?method-name` to see more details about each individual method
 #'
 #'  \describe{
-#'   \item{\code{zip_ms}}{make a new \code{ZipMS}}
-#'   \item{\code{show_temp_dir}}{show where files are stored}
-#'   \item{\code{save}}{save the file}
-#'   \item{\code{cleanup}}{unlink the \code{temp_directory}}
-#'   \item{\code{add_peak_list}}{add a \code{Peaks} to the data}
+#'   \item{`zip_ms`}{make a new `ZipMS`}
+#'   \item{`show_temp_dir`}{show where files are stored}
+#'   \item{`save`}{save the file}
+#'   \item{`cleanup`}{unlink the `temp_directory`}
+#'   \item{`add_peak_list`}{add a `Peaks` to the data}
 #'  }
 #'
 #'
-#' @section \code{ZipMS} Data Members:
+#' @section `ZipMS` Data Members:
 #'  \describe{
-#'    \item{\code{zip_file}}{the zip file that was read in}
-#'    \item{\code{metadata}}{the actual metadata for the file}
-#'    \item{\code{metadata_file}}{the metadata file}
-#'    \item{\code{raw_ms}}{a \code{RawMS} holding the raw data}
-#'    \item{\code{peaks}}{a \code{Peaks} holding the peak analysis}
-#'    \item{\code{id}}{the sample id}
-#'    \item{\code{out_file}}{the file where data will be saved}
+#'    \item{`zip_file`}{the zip file that was read in}
+#'    \item{`metadata`}{the actual metadata for the file}
+#'    \item{`metadata_file`}{the metadata file}
+#'    \item{`raw_ms`}{a `RawMS` holding the raw data}
+#'    \item{`peaks`}{a `Peaks` holding the peak analysis}
+#'    \item{`id`}{the sample id}
+#'    \item{`out_file`}{the file where data will be saved}
 #'  }
 #'
 #' @seealso AnalyzeMS
@@ -153,10 +153,10 @@ zip_ms <- function(in_file, mzml_meta_file = NULL, out_file = NULL, load_raw = T
 #' @name save
 #' @param out_file the file to save to
 #'
-#' @details \code{out_file}, if it is \code{NULL}, will be taken from when the
-#'  object was generated, and by default will be set to the same as the \code{in_file}.
-#'  If not \code{NULL}, then it is checked that the \code{id} is part of the
-#'  \code{out_file}, and if not, the \code{id} is added to the actual file name.
+#' @details `out_file`, if it is `NULL`, will be taken from when the
+#'  object was generated, and by default will be set to the same as the `in_file`.
+#'  If not `NULL`, then it is checked that the `id` is part of the
+#'  `out_file`, and if not, the `id` is added to the actual file name.
 #'
 #' @examples
 #' \dontrun{
@@ -168,7 +168,7 @@ NULL
 
 #' ZipMS - show_temp_dir
 #'
-#' shows where the temp directory \code{ZipMS} is using is
+#' shows where the temp directory `ZipMS` is using is
 #'
 #' @name show_temp_dir
 #' @usage ZipMS$show_temp_dir()
@@ -186,11 +186,11 @@ NULL
 
 #' ZipMS - add_peak_list
 #'
-#' adds a peak list to the \code{ZipMS}
+#' adds a peak list to the `ZipMS`
 #'
 #' @name add_peak_list
 #' @usage ZipMS$add_peak_list(peak_list_data)
-#' @param peak_list_data a \code{\link{Peaks}} object
+#' @param peak_list_data a [Peaks()] object
 #'
 NULL
 

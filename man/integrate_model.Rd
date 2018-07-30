@@ -4,7 +4,8 @@
 \alias{integrate_model}
 \title{integrate model}
 \usage{
-integrate_model(model_mz, model_coeff, n_point = 100, log_transform = "log")
+integrate_model(model_mz, model_coeff, n_point = 100,
+  log_transform = "log")
 }
 \arguments{
 \item{model_mz}{the mz values for the model peak}

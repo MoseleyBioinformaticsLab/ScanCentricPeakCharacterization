@@ -7,7 +7,7 @@
 ZipMS$add_peak_list(peak_list_data)
 }
 \arguments{
-\item{peak_list_data}{a \code{\link{Peaks}} object}
+\item{peak_list_data}{a \code{\link[=Peaks]{Peaks()}} object}
 }
 \description{
 adds a peak list to the \code{ZipMS}

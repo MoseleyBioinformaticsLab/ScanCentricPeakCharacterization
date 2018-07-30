@@ -1,6 +1,6 @@
 #' return peaks
 #'
-#' returns peaks found by \code{pracma::findpeaks}
+#' returns peaks found by `pracma::findpeaks`
 #'
 #' @param avg_spectra the avg spectra data
 #' @param ... other findpeaks parameters
@@ -171,7 +171,7 @@ test_peak_rsq <- function(mz_peak, min_points = 5){
 
 #' choose peak rsq
 #'
-#' @param rsq_results matrix of results from \code{test_peak_rsq}
+#' @param rsq_results matrix of results from `test_peak_rsq`
 #' @param min_rsq minimum cutoff for the fit to use
 #'
 #' @return numeric
@@ -314,7 +314,7 @@ test_peak_area_slope <- function(mz_peak, min_points = 5, min_area = 0.1, max_sl
 #' given a matrix that defines the possible sets of points for a parabolic,
 #' choose the longest set with an r-squared fit above a certain criteria
 #'
-#' @param area_results vector of information from \code{test_peak_area}
+#' @param area_results vector of information from `test_peak_area`
 #' @param min_area the minimum area to consider
 #'
 #' @return numeric
@@ -371,7 +371,7 @@ exponential_fit <- function(x, y, w = NULL, n_exp = 1, center = FALSE){
 #' Given a model coefficients, and X's, calculate the Y values. Note that this
 #' function makes a very simple assumption, that the length of the coefficients
 #' corresponds to a number of exponential terms in the model, i.e. if the
-#' coefficients has 3 terms, then the model was \emph{Y = a + bx + cx^2}.
+#' coefficients has 3 terms, then the model was *Y = a + bx + cx^2*.
 #'
 #' @param coef model coefficients
 #' @param x the new x-values
@@ -502,7 +502,7 @@ model_peak_center_intensity <- function(x, coefficients){
 
 #' sum of squares residuals
 #'
-#' returns the sum of squares residuals from an \code{lm} object
+#' returns the sum of squares residuals from an `lm` object
 #'
 #' @param object the lm object
 #'
@@ -779,7 +779,7 @@ get_rsq_peak <- function(possible_peak, min_rsq, min_points){
 #' Given a set of points that make up a peak, use the provided method to find
 #' the center, intensity and area of the peak.
 #'
-#' @param peak_data data.frame with \code{mz}, \code{intensity}, and log intensity \code{log_int}
+#' @param peak_data data.frame with `mz`, `intensity`, and log intensity `log_int`
 #' @param peak_method which method to use to get information about the peak (see Details)
 #' @param min_points how many points have to still be in a peak to return something useful?
 #'
@@ -999,7 +999,7 @@ define_peak_type <- function(peak_data, flat_cut = 0.98){
 
 #' find the peaks
 #'
-#' Uses the \code{pracma::findpeaks} regular expression diff algorithm to find
+#' Uses the `pracma::findpeaks` regular expression diff algorithm to find
 #' possible peaks, then tests each one to fit to parabolic model on log-intensities,
 #' returning the statistics about the peak.
 #'

@@ -24,6 +24,6 @@ to any of the previous ones
 }
 \details{
 this function allows one to check that an object "matches" any of the
-  objects in a provided list. How an object "matches" is determined by the
-  \emph{check_function}, it should merely return TRUE or FALSE
+objects in a provided list. How an object "matches" is determined by the
+\emph{check_function}, it should merely return TRUE or FALSE
 }

@@ -1,11 +1,11 @@
 #' import raw mass spec data
 #'
 #' function to import raw mass spec data in a way that provides what we need to work
-#' with it. \code{raw_data} should be the \emph{full path} to the data.
+#' with it. `raw_data` should be the *full path* to the data.
 #'
 #' @param raw_data the raw mass spec file to import
 #' @param profstep the profile step to use, should be 0 to make our lives easier
-#' @param includeMSn whether to include MSn data, should be TRUE to get \emph{all data}.
+#' @param includeMSn whether to include MSn data, should be TRUE to get *all data*.
 #' @param ... other xcmsRaw parameters
 #'
 #' @importFrom xcms xcmsRaw
@@ -23,8 +23,8 @@ import_raw_ms <- function(raw_data, profstep = 0, includeMSn = TRUE){
 #' function to plot the total intensity chromatogram of the data, with information
 #' about which scans are which
 #'
-#' @param xcms_raw an \code{xcmsRaw} object (ideally from \code{import_mzML})
-#' @param color_ms should scans be colored by their \emph{ms} level and type?
+#' @param xcms_raw an `xcmsRaw` object (ideally from `import_mzML`)
+#' @param color_ms should scans be colored by their *ms* level and type?
 #'
 #' @import ggplot2
 #' @importFrom forcats fct_relevel
@@ -102,7 +102,7 @@ import_xcalibur <- function(xcal_file, sheet = 1){
 #' @param mz_range a range of m/z's to return the scans by
 #'
 #' @details
-#'   Returns a list of \code{tbl_df}'s, with \code{mz} and \code{intensity}.
+#'   Returns a list of `tbl_df`'s, with `mz` and `intensity`.
 #'
 #' @importFrom xcms xcmsRaw getScan
 #' @importFrom dplyr tbl_df

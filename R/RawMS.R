@@ -2,21 +2,21 @@
 #'
 #' This reference class represents a storage container for the raw mass-spec
 #' data from a zipped mzML file and associated metadata. It provides methods
-#' for plotting the \emph{total-ion chromatogram}, and setting which scans will
+#' for plotting the *total-ion chromatogram*, and setting which scans will
 #' be used for peak picking
 #'
 #' @param raw_file the zip or mzML file to use
 #' @param metadata_file the metadata file to use
 #'
-#' @details The \code{find_peaks()} method is not set by default, it must be set
-#'  by the user after instantiation. The \code{find_peaks()} function definition
-#'  should take the \code{raw_data}, and either \code{scan_range} or \code{rt_range}.
+#' @details The `find_peaks()` method is not set by default, it must be set
+#'  by the user after instantiation. The `find_peaks()` function definition
+#'  should take the `raw_data`, and either `scan_range` or `rt_range`.
 #'  It should also store the function name that is actually used for finding the peaks,
-#'  and the variables, and then generate a \code{peaks} object. See the examples
+#'  and the variables, and then generate a `peaks` object. See the examples
 #'  below for how to generate these functions.
 #'
-#' @return A reference class with methods \code{set_scans()}, \code{plot_tic()},
-#'  \code{find_peaks()}.
+#' @return A reference class with methods `set_scans()`, `plot_tic()`,
+#'  `find_peaks()`.
 #' @keywords internal
 #' @export
 #'

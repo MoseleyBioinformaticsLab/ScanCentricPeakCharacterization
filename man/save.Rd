@@ -11,9 +11,9 @@ ZipMS - save
 }
 \details{
 \code{out_file}, if it is \code{NULL}, will be taken from when the
- object was generated, and by default will be set to the same as the \code{in_file}.
- If not \code{NULL}, then it is checked that the \code{id} is part of the
- \code{out_file}, and if not, the \code{id} is added to the actual file name.
+object was generated, and by default will be set to the same as the \code{in_file}.
+If not \code{NULL}, then it is checked that the \code{id} is part of the
+\code{out_file}, and if not, the \code{id} is added to the actual file name.
 }
 \examples{
 \dontrun{

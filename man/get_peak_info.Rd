@@ -25,8 +25,8 @@ This function can choose from several methods to get information
 about the peak. Currently available methods include:
 
 \describe{
-  \item{lm_weighted}{quadratic linear fit to log-intensities, with weights for
-     each point relative to the maximum intensity point (current default)}
-  \item{lm_unweighted}{quadratic linear fit to log-intensities}
+\item{lm_weighted}{quadratic linear fit to log-intensities, with weights for
+each point relative to the maximum intensity point (current default)}
+\item{lm_unweighted}{quadratic linear fit to log-intensities}
 }
 }

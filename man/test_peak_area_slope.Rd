@@ -25,8 +25,8 @@ points that have relatively low slope on either side of the peak
 \details{
 returns a matrix of vectors, where the vector is:
 \enumerate{
-  \item start of points
-  \item end of points
-  \item area
+\item start of points
+\item end of points
+\item area
 }
 }

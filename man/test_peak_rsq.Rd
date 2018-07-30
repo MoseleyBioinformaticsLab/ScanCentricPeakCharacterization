@@ -21,9 +21,9 @@ to a parabolic function.
 \details{
 returns a matrix of vectors, where the vector is:
 \enumerate{
-  \item start of points
-  \item end of points
-  \item number of points
-  \item r-square fit for the set of points
+\item start of points
+\item end of points
+\item number of points
+\item r-square fit for the set of points
 }
 }

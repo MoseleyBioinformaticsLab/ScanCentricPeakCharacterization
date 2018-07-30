@@ -17,7 +17,7 @@ zip_list_contents <- function(zip_file){
 #' @param filename the file that it should be
 #' @param zip_file the zip file to add to
 #'
-#' @details a directory created by \code{tempdir} is used to hold the file,
+#' @details a directory created by `tempdir` is used to hold the file,
 #' which is then added to the zip file.
 #' @export
 add_to_zip <- function(object, filename, zip_file){
@@ -38,7 +38,7 @@ add_to_zip <- function(object, filename, zip_file){
 #' create initial zip from mzML
 #'
 #' given an mzML file, create the initial zip file containing the
-#' zipped \emph{mzML}, \emph{metadata.json}, and \emph{raw_metadata.json}.
+#' zipped *mzML*, *metadata.json*, and *raw_metadata.json*.
 #' This zip file is what will be operated on by anything that accesses files,
 #' so that our interface is consistent.
 #'

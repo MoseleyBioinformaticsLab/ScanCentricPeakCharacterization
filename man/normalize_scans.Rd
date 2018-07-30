@@ -4,7 +4,8 @@
 \alias{normalize_scans}
 \title{normalize scans}
 \usage{
-normalize_scans(mpl, intensity_measure = "Height", summary_function = mean)
+normalize_scans(mpl, intensity_measure = "Height",
+  summary_function = mean)
 }
 \arguments{
 \item{mpl}{the MasterPeakList object}
@@ -19,6 +20,6 @@ normalize the scans against each other.
 }
 \details{
 To do the normalization, we find the set of peaks that have a large
-  number of corresponding peaks, and using these peaks, for each peak, for each
-  scan get the log-ratio of the peak in that scan against all the other scans
+number of corresponding peaks, and using these peaks, for each peak, for each
+scan get the log-ratio of the peak in that scan against all the other scans
 }

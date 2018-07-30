@@ -7,12 +7,12 @@
 mz_points_to_regions(mz_data, point_multiplier = 20000)
 }
 \arguments{
-\item{mz_data}{a `data.frame` with at least a column named `mz`}
+\item{mz_data}{a \code{data.frame} with at least a column named \code{mz}}
 
 \item{point_multiplier}{a value used to convert to integers.}
 }
 \description{
 Given M/Z point data in a data.frame, create IRanges based point "regions" of
-width 1, using the `point_multiplier` argument to convert from the floating
-point double to an `integer`.
+width 1, using the \code{point_multiplier} argument to convert from the floating
+point double to an \code{integer}.
 }

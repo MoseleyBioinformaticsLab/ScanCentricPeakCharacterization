@@ -22,28 +22,28 @@ for carrying out the various steps of an analysis, including peak finding.
 \section{\code{ZipMS} Methods}{
 
 
- use \code{?method-name} to see more details about each individual method
+use \code{?method-name} to see more details about each individual method
 
- \describe{
-  \item{\code{zip_ms}}{make a new \code{ZipMS}}
-  \item{\code{show_temp_dir}}{show where files are stored}
-  \item{\code{save}}{save the file}
-  \item{\code{cleanup}}{unlink the \code{temp_directory}}
-  \item{\code{add_peak_list}}{add a \code{Peaks} to the data}
- }
+\describe{
+\item{\code{zip_ms}}{make a new \code{ZipMS}}
+\item{\code{show_temp_dir}}{show where files are stored}
+\item{\code{save}}{save the file}
+\item{\code{cleanup}}{unlink the \code{temp_directory}}
+\item{\code{add_peak_list}}{add a \code{Peaks} to the data}
+}
 }
 
 \section{\code{ZipMS} Data Members}{
 
- \describe{
-   \item{\code{zip_file}}{the zip file that was read in}
-   \item{\code{metadata}}{the actual metadata for the file}
-   \item{\code{metadata_file}}{the metadata file}
-   \item{\code{raw_ms}}{a \code{RawMS} holding the raw data}
-   \item{\code{peaks}}{a \code{Peaks} holding the peak analysis}
-   \item{\code{id}}{the sample id}
-   \item{\code{out_file}}{the file where data will be saved}
- }
+\describe{
+\item{\code{zip_file}}{the zip file that was read in}
+\item{\code{metadata}}{the actual metadata for the file}
+\item{\code{metadata_file}}{the metadata file}
+\item{\code{raw_ms}}{a \code{RawMS} holding the raw data}
+\item{\code{peaks}}{a \code{Peaks} holding the peak analysis}
+\item{\code{id}}{the sample id}
+\item{\code{out_file}}{the file where data will be saved}
+}
 }
 
 \seealso{

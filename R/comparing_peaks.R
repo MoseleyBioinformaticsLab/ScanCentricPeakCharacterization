@@ -1,9 +1,9 @@
 #' find closest peaks
 #'
-#' taking a \code{query_data}, go through the \code{subject_data}
-#' and find the closest peaks in \code{query_data}.
+#' taking a `query_data`, go through the `subject_data`
+#' and find the closest peaks in `query_data`.
 #'
-#' @param query_data the query peaks \code{tbl_df}
+#' @param query_data the query peaks `tbl_df`
 #' @param subject_data the subject peaks
 #' @param q_name identifier for query
 #' @param s_name identifier for subject

@@ -4,7 +4,8 @@
 \alias{calculate_density}
 \title{peak density}
 \usage{
-calculate_density(peak_data, use_range = NULL, window = 1, delta = 0.1)
+calculate_density(peak_data, use_range = NULL, window = 1,
+  delta = 0.1)
 }
 \arguments{
 \item{peak_data}{numeric vector of m/z values representing peaks}

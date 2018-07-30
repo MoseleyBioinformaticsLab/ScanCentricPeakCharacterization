@@ -25,14 +25,14 @@ peaks as to whether they are "not_noise".
 }
 \details{
 This calculation is based on the premise that a distribution of
- only noise peaks should have a standard deviation to mean ratio of about 1.
- Therefore, but sorting the list of peak intensities, and incrementally adding
- peaks, when the sd to mean ratio becomes larger than the cutoff, we say
- that we are out of the noise region of the data.
+only noise peaks should have a standard deviation to mean ratio of about 1.
+Therefore, but sorting the list of peak intensities, and incrementally adding
+peaks, when the sd to mean ratio becomes larger than the cutoff, we say
+that we are out of the noise region of the data.
 
- The multiplier determines how much higher than the median of the noise do
- we want to consider a peak as \emph{real}, i.e. definitely not noise.
+The multiplier determines how much higher than the median of the noise do
+we want to consider a peak as \emph{real}, i.e. definitely not noise.
 
- A list is returned, with the original data.frame with a new column "not_noise",
- and the actual noise cutoff that was used to determine whether peaks are noise.
+A list is returned, with the original data.frame with a new column "not_noise",
+and the actual noise cutoff that was used to determine whether peaks are noise.
 }

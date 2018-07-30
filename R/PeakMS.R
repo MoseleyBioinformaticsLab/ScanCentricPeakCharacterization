@@ -291,7 +291,7 @@ noise_detector <- function(peaklist, intensity_measure = "Height", transform = l
 #' peaks as to whether they are "not_noise".
 #'
 #' @param peaklist the data.frame with at least "Height" or "Area"
-#' @param intensity_measure which value of \emph{intensity} should be used? Default is "Height"
+#' @param intensity_measure which value of *intensity* should be used? Default is "Height"
 #' @param sd_mean_ratio the ratio of standard deviation to mean to use as a cutoff
 #' @param noise_multiplier how high above the noise should the cutoff be
 #'
@@ -302,7 +302,7 @@ noise_detector <- function(peaklist, intensity_measure = "Height", transform = l
 #'  that we are out of the noise region of the data.
 #'
 #'  The multiplier determines how much higher than the median of the noise do
-#'  we want to consider a peak as \emph{real}, i.e. definitely not noise.
+#'  we want to consider a peak as *real*, i.e. definitely not noise.
 #'
 #'  A list is returned, with the original data.frame with a new column "not_noise",
 #'  and the actual noise cutoff that was used to determine whether peaks are noise.
@@ -767,11 +767,11 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 
 #' collapse correspondent peaks
 #'
-#' Given a \code{MasterPeakList} object, examines the m/z values for subsequent
+#' Given a `MasterPeakList` object, examines the m/z values for subsequent
 #' peaks to find peaks within tolerances, and checks to see if two peaks should
 #' be collapsed based on some simple heuristics.
 #'
-#' @param mpl the \code{MasterPeakList} object
+#' @param mpl the `MasterPeakList` object
 #'
 #' @export
 #' @import dplyr
@@ -1439,7 +1439,7 @@ FindCorrespondenceSamples <- R6::R6Class("FindCorrespondenceSamples",
 #'
 #' @details this function allows one to check that an object "matches" any of the
 #'   objects in a provided list. How an object "matches" is determined by the
-#'   \emph{check_function}, it should merely return TRUE or FALSE
+#'   *check_function*, it should merely return TRUE or FALSE
 #'
 #' @importFrom purrr map2_df
 #'
@@ -1480,7 +1480,7 @@ compare_object_to_list_diff <- function(object_check, object_list, min_check = 3
 #'
 #' @details this function allows one to check that an object "matches" any of the
 #'   objects in a provided list. How an object "matches" is determined by the
-#'   \emph{check_function}, it should merely return TRUE or FALSE
+#'   *check_function*, it should merely return TRUE or FALSE
 #'
 #' @importFrom purrr map2_df
 #'
@@ -1612,7 +1612,7 @@ df_of_model_predictions <- function(predict_function, x, list_of_models){
 #'
 #' normalize scans
 #'
-#' Given a \code{MasterPeakList} object that has the peaks across scans corresponded,
+#' Given a `MasterPeakList` object that has the peaks across scans corresponded,
 #' normalize the scans against each other.
 #'
 #' @param mpl the MasterPeakList object
@@ -1677,11 +1677,11 @@ normalize_scans <- function(mpl, intensity_measure = "Height", summary_function 
 
 #' normalize MultiScanPeakList
 #'
-#' Given a set of normalization factors and a \code{MultiScanPeakList}, normalize
-#' the peaks in each scan of the \code{MultiScanPeakList}
+#' Given a set of normalization factors and a `MultiScanPeakList`, normalize
+#' the peaks in each scan of the `MultiScanPeakList`
 #'
 #' @param normalization_factors the factors used for normalization
-#' @param mspl the \code{MultiScanPeakList} object that needs normalization
+#' @param mspl the `MultiScanPeakList` object that needs normalization
 #'
 #' @return MultiScanPeakList
 #' @export

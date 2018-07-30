@@ -13,7 +13,7 @@ default_scan_filter(raw_ms)
 RawMS
 }
 \description{
-The default scan filter, currently calls `scan_time_filter`. This will
-be added to all `CharacterizeMSPeaks` objects. To remove it, simply provide
-another function, or set it to `NULL` after object creation.
+The default scan filter, currently calls \code{scan_time_filter}. This will
+be added to all \code{CharacterizeMSPeaks} objects. To remove it, simply provide
+another function, or set it to \code{NULL} after object creation.
 }
