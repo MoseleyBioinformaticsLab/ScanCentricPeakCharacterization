@@ -738,16 +738,11 @@ characterize_mz_points <- function(in_points, use_scans = NULL, max_subsets = 10
   in_points <- in_points[in_points@elementMetadata$scan %in% use_scans]
 
   split_points <- as.list(split(in_points, in_points@elementMetadata$scan))
-  n_split <- length(split_points)
 
   peak_info <- get_merged_peak_info(split_points)
-  peak_samples <- utils::combn(n_split, 3)
+  peak_samples <- subset_samples(seq_len(length(split_points)), 3, max_subsets = max_subsets)
 
-  if (ncol(peak_samples) > max_subsets) {
-    peak_samples <- peak_samples[, sample(ncol(peak_samples), max_subsets)]
-  }
-
-  sampled_peaks <- purrr::map_df(seq_len(ncol(peak_samples)), function(in_sample){
+  sampled_peaks <- purrr::map_df(peak_samples, function(in_sample){
     get_merged_peak_info(split_points[peak_samples[, in_sample]])
   })
 
@@ -856,4 +851,62 @@ model_sds <- function(values, sds, loess_span = 0.75){
   loess_fit <- stats::loess(y ~ x, data = sd_frame, span = loess_span, control = loess.control(surface = "direct"))
   loess_pred <- predict(loess_fit, values)
   loess_pred
+}
+
+
+#' generate bootstrap samples
+#'
+#' Generates `n_bootstrap` samples, each with `n_sample` entries, from the provided
+#' `indices`. See **Details** for more information.
+#'
+#' @param indices the indices to take the bootstrap sample from
+#' @param n_bootstrap how many bootstrap samples to generate? (default is 1000)
+#' @param n_sample how many items should be in each sample? See **Details**.
+#'
+#' @details A *bootstrap* sample is a sample where the entries have been sampled
+#'  **[with replacement](https://en.wikipedia.org/wiki/Bootstrapping_(statistics))**.
+#'  In general, a *bootstrap* sample has the same number of entries as the original
+#'  sample. However, there may be cases where *upsampling* to specific number
+#'  may be useful. Therefore, the parameter `n_sample` is provided to enable
+#'  *upsampling* the original indices to a larger number. If `n_sample` is NULL,
+#'  then no *upsampling* will be done.
+#'
+#' @return list of bootstrap sampled indices
+#' @export
+#'
+#' @examples
+bootstrap_samples <- function(indices, n_bootstrap = 1000, n_sample = NULL){
+  if (is.null(n_sample)) {
+    n_sample <- length(indices)
+  }
+  purrr::map(seq_len(n_bootstrap), function(x){
+    sample(indices, n_sample, replace = TRUE)
+  })
+}
+
+
+#' generate subset samples
+#'
+#' From N `indices`, find the `n_point` combinations, up to `max_subsets` if
+#' there are more than them available. See **Details** for more information.
+#'
+#' @param n_indices
+#' @param n_point
+#' @param max_subsets
+#'
+#' @details
+#'
+#' @return list of indices
+#' @export
+#'
+#' @examples
+subset_samples <- function(indices, n_point = 3, max_subsets = 100){
+  index_combinations <- utils::combn(indices, n_point)
+
+  if (ncol(index_combinations) > max_subsets) {
+    index_combinations <- index_combinations[, sample(ncol(index_combinations), max_subsets)]
+  }
+  split_combinations <- split(t(index_combinations), seq(1, ncol(index_combinations)))
+  names(split_combinations) <- NULL
+  split_combinations
 }
