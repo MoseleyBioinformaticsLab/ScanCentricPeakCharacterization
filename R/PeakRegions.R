@@ -804,8 +804,8 @@ characterize_picked_peaks <- function(scan_peaks, n_scans, peak_index = NULL){
                Stop = max(in_peak$ObservedMZ),
                NPoint = mean(n_point))
   })
-  peak_data$NSubset <- n_scans[keep_peaks]
-  peak_data$NScan <- n_scans[keep_peaks]
+  peak_data$NSubset <- n_scans
+  peak_data$NScan <- n_scans
   peak_data$PeakID <- seq_len(nrow(peak_data))
   peak_data
 }
