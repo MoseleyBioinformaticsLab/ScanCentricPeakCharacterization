@@ -220,12 +220,20 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       #self$peak_regions$peak_regions <- subset_signal_regions(self$)
     },
 
+    remove_double_peaks_in_scans <- function(){
+      self$peak_regions$scan_peaks <-  internal_map$map_function(self$peak_regions$scan_peaks, function(in_peaks){
+        dup_scans <- in_peaks[, "scan"][duplicated(in_peaks[, "scan"])]
+        in_peaks[!(in_peaks[, "scan"] %in% dup_scans), ]
+      })
+    },
+
     normalize_data = function(which_data = "both"){
       if (self$progress) {
         message("Normalizing scans ...")
       }
 
-      self$peak_regions <- two_pass_normalization(self$peak_regions)
+      self$peak_regions <- two_pass_normalization(self$peak_regions, summary_function = median,
+                                                  normalize_peaks = which_data)
     },
 
     find_peaks_in_regions = function(which_data = "raw"){
@@ -291,6 +299,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       self$add_tiled_regions()
       self$reduce_sliding_regions()
       self$split_peak_regions()
+      self$remove_double_peaks_in_scans()
       self$normalize_data()
       self$find_peaks_in_regions()
       if (nrow(self$peak_regions$peak_data) == 0) {
