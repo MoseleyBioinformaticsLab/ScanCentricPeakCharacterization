@@ -4,14 +4,17 @@
 \alias{bootstrap_samples}
 \title{generate bootstrap samples}
 \usage{
-bootstrap_samples(indices, n_bootstrap = 1000, n_sample = NULL)
+bootstrap_samples(n_indices, n_bootstrap = 100, n_sample = NULL,
+  min_indices = 4)
 }
 \arguments{
-\item{indices}{the indices to take the bootstrap sample from}
+\item{n_indices}{the indices to take the bootstrap sample from}
 
 \item{n_bootstrap}{how many bootstrap samples to generate? (default is 1000)}
 
 \item{n_sample}{how many items should be in each sample? See \strong{Details}.}
+
+\item{min_indices}{the minimum number of indices to be willing to work with}
 }
 \value{
 list of bootstrap sampled indices
