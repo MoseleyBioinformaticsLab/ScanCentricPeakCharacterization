@@ -221,10 +221,19 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     },
 
     remove_double_peaks_in_scans <- function(){
-      self$peak_regions$scan_peaks <-  internal_map$map_function(self$peak_regions$scan_peaks, function(in_peaks){
+      scan_peaks <- self$peak_regions$scan_peaks
+
+      scan_peaks <-  internal_map$map_function(scan_peaks, function(in_peaks){
         dup_scans <- in_peaks[, "scan"][duplicated(in_peaks[, "scan"])]
         in_peaks[!(in_peaks[, "scan"] %in% dup_scans), ]
       })
+
+      n_remain <- purrr::map_int(scan_peaks, nrow)
+      keep_remain <- n_remain > 0
+      scan_peaks <- scan_peaks[keep_remain]
+      self$peak_regions$peak_regions <- self$peak_regions$peak_regions[keep_remain]
+      self$peak_regions$scan_peaks <- scan_peaks
+      invisible(self)
     },
 
     normalize_data = function(which_data = "both"){
