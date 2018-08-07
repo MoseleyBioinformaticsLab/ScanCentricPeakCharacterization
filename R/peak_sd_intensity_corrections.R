@@ -92,8 +92,49 @@ correct_mean <- function(observed_mean, corrected_sd, fraction){
 #'
 #' @examples
 correct_peak <- function(observed_mean, observed_sd, n_observed, n_should_observe){
-  percentage <- n_observed / n_should_observe
-  corrected_sd <- sqrt(correct_variance(observed_sd^2, percentage))
-  corrected_mean <- correct_mean(observed_mean, corrected_sd, percentage)
+  fraction <- n_observed / (n_should_observe)
+  corrected_sd <- sqrt(correct_variance(observed_sd^2, fraction))
+  corrected_mean <- correct_mean(observed_mean, corrected_sd, fraction)
   return(data.frame(mean = corrected_mean, sd = corrected_sd))
 }
+
+#' correct peak height and sd
+#'
+#' @param list_of_heights the set of peak heights
+#' @param n_observed how many were observed
+#' @param n_should_observe how many should have been observed
+#'
+#' @return
+#' @export
+#'
+#' @examples
+correct_peak_sd_height <- function(list_of_heights, n_observed, n_should_observe, use_log = TRUE){
+  model_peaks <- which(n_observed == n_should_observe)
+  correct_peaks <- which(n_observed < n_should_observe)
+  fractions <- seq(0.05, 0.95, 0.05)
+
+
+}
+
+sd_ratio_fractions <- function(point_data, fractions = seq(0.05, 0.95, 0.05)){
+  point_data <- sort(point_data, decreasing = TRUE)
+  full_stats <- data.frame(mean = mean(point_data),
+                           sd = sd(point_data))
+
+
+  out_stats <- purrr::map_df(fractions, function(in_frac){
+    n_data <- (round(in_frac * length(point_data)))
+    use_data <- point_data[1:n_data]
+    bad_estimates <- data.frame(mean = mean(use_data),
+                                sd = sd(use_data),
+                                type = "original",
+                                fraction = in_frac,
+                                full_mean = full_stats$mean,
+                                full_sd = full_stats$sd)
+    bad_estimates
+  })
+  out_stats$sd_ratio <- out_stats$sd / full_stats$sd
+  out_stats$mean_ratio <- out_stats$mean / full_stats$mean
+  out_stats
+}
+
