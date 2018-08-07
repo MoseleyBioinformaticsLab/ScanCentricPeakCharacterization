@@ -114,12 +114,15 @@ PeakRegions <- R6::R6Class("PeakRegions",
     scan_perc = NULL,
     min_scan = NULL,
     max_subsets = NULL,
+    scan_subsets = NULL,
 
     mz_range = NULL,
 
     scan_correlation = NULL,
     keep_peaks = NULL,
     peak_index = NULL,
+
+    scan_indices = NULL,
 
     set_min_scan = function(){
       self$n_scan <- length(unique(self$mz_point_regions@elementMetadata$scan))
@@ -730,7 +733,7 @@ get_merged_peak_info <- function(in_points, peak_method = "lm_weighted", min_poi
 }
 
 
-characterize_mz_points <- function(in_points, use_scans = NULL, max_subsets = 100){
+characterize_mz_points <- function(in_points, scan_indices, use_scans = NULL){
   if (is.null(use_scans)) {
     use_scans <- unique(in_points@elementMetadata$scan)
   }
@@ -859,9 +862,10 @@ model_sds <- function(values, sds, loess_span = 0.75){
 #' Generates `n_bootstrap` samples, each with `n_sample` entries, from the provided
 #' `indices`. See **Details** for more information.
 #'
-#' @param indices the indices to take the bootstrap sample from
+#' @param n_indices the indices to take the bootstrap sample from
 #' @param n_bootstrap how many bootstrap samples to generate? (default is 1000)
 #' @param n_sample how many items should be in each sample? See **Details**.
+#' @param min_indices the minimum number of indices to be willing to work with
 #'
 #' @details A *bootstrap* sample is a sample where the entries have been sampled
 #'  **[with replacement](https://en.wikipedia.org/wiki/Bootstrapping_(statistics))**.
@@ -875,24 +879,29 @@ model_sds <- function(values, sds, loess_span = 0.75){
 #' @export
 #'
 #' @examples
-bootstrap_samples <- function(indices, n_bootstrap = 1000, n_sample = NULL){
+bootstrap_samples <- function(n_indices, n_bootstrap = 100, n_sample = NULL, min_indices = 4){
+  if (n_indices < min_indices) {
+    return(NULL)
+  }
+
   if (is.null(n_sample)) {
-    n_sample <- length(indices)
+    n_sample <- n_indices
   }
   purrr::map(seq_len(n_bootstrap), function(x){
-    sample(indices, n_sample, replace = TRUE)
+    sample(n_indices, n_sample, replace = TRUE)
   })
 }
 
 
 #' generate subset samples
 #'
-#' From N `indices`, find the `n_point` combinations, up to `max_subsets` if
+#' From N `n_indices`, find the `n_point` combinations, up to `max_subsets` if
 #' there are more than them available. See **Details** for more information.
 #'
 #' @param n_indices
 #' @param n_point
 #' @param max_subsets
+#' @param min_indices
 #'
 #' @details
 #'
@@ -900,8 +909,12 @@ bootstrap_samples <- function(indices, n_bootstrap = 1000, n_sample = NULL){
 #' @export
 #'
 #' @examples
-subset_samples <- function(indices, n_point = 3, max_subsets = 100){
-  index_combinations <- utils::combn(indices, n_point)
+subset_samples <- function(n_indices, n_point = 3, max_subsets = 100, min_indices = 4){
+  if (n_indices < min_indices) {
+    return(NULL)
+  }
+
+  index_combinations <- utils::combn(n_indices, n_point)
 
   if (ncol(index_combinations) > max_subsets) {
     index_combinations <- index_combinations[, sample(ncol(index_combinations), max_subsets)]
@@ -910,3 +923,4 @@ subset_samples <- function(indices, n_point = 3, max_subsets = 100){
   names(split_combinations) <- NULL
   split_combinations
 }
+
