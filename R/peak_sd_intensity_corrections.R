@@ -60,7 +60,7 @@ correct_variance <- function(observed_variance, fraction){
 #' @examples
 #' @seealso correct_peak correct_variance
 correct_mean <- function(observed_mean, corrected_sd, fraction){
-  if (fraction >= 1) {
+  if ((fraction >= 1) || (is.na(corrected_sd))) {
     return(observed_mean)
   }
   x <- qnorm(1 - fraction)
@@ -100,6 +100,7 @@ correct_peak <- function(observed_mean, observed_sd, n_observed, n_should_observ
 
 #' correct peak height and sd
 #'
+#' @param original_height the original height estimate to correct
 #' @param list_of_heights the set of peak heights
 #' @param n_observed how many were observed
 #' @param n_should_observe how many should have been observed
@@ -108,12 +109,28 @@ correct_peak <- function(observed_mean, observed_sd, n_observed, n_should_observ
 #' @export
 #'
 #' @examples
-correct_peak_sd_height <- function(list_of_heights, n_observed, n_should_observe, use_log = TRUE){
-  model_peaks <- which(n_observed == n_should_observe)
-  correct_peaks <- which(n_observed < n_should_observe)
+correct_peak_sd_height <- function(original_height, list_of_heights, n_observed, n_should_observe){
+  model_peaks <- list_of_heights[which(n_observed == n_should_observe)]
   fractions <- seq(0.05, 0.95, 0.05)
 
+  fractional_data <- purrr::map_df(model_peaks, sd_ratio_fractions, fractions = fractions)
 
+  fractional_model <- lm(sd_ratio ~ fraction + I(fraction^2) + I(fraction^3), data = fractional_data)
+
+  sd_estimates <- purrr::map_dbl(list_of_heights, sd)
+  peak_fractions <- data.frame(fraction = n_observed / n_should_observe)
+
+  sd_correction_factor <- predict.lm(fractional_model, peak_fractions)
+
+  corrected_sd <- sd_estimates / sd_correction_factor
+
+  corrected_height <- correct_mean(original_height, corrected_sd, peak_fractions$fraction)
+
+  data.frame(OriginalHeight = original_height,
+             OriginalSD = sd_estimates,
+             Fraction = peak_fractions$fraction,
+             CorrectedHeight = corrected_height,
+             CorrectedSD = corrected_sd)
 }
 
 sd_ratio_fractions <- function(point_data, fractions = seq(0.05, 0.95, 0.05)){
