@@ -233,6 +233,11 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       scan_peaks <- scan_peaks[keep_remain]
       self$peak_regions$peak_regions <- self$peak_regions$peak_regions[keep_remain]
       self$peak_regions$scan_peaks <- scan_peaks
+      self$peak_regions$scan_correlation <- self$peak_regions$scan_correlation[keep_remain, ]
+
+      if (!is.null(self$peak_regions$scans_per_peak)) {
+        self$peak_regions$scans_per_peak <- self$peak_regions$scans_per_peak[keep_remain]
+      }
       invisible(self)
     },
 
