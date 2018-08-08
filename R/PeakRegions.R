@@ -220,7 +220,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       #self$peak_regions$peak_regions <- subset_signal_regions(self$)
     },
 
-    remove_double_peaks_in_scans <- function(){
+    remove_double_peaks_in_scans = function(){
       scan_peaks <- self$peak_regions$scan_peaks
 
       scan_peaks <-  internal_map$map_function(scan_peaks, function(in_peaks){
