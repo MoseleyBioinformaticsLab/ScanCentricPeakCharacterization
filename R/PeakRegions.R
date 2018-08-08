@@ -234,6 +234,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       self$peak_regions$peak_regions <- self$peak_regions$peak_regions[keep_remain]
       self$peak_regions$scan_peaks <- scan_peaks
       self$peak_regions$scan_correlation <- self$peak_regions$scan_correlation[keep_remain, ]
+      self$peak_regions$peak_index <- self$peak_regions$peak_index[keep_remain]
 
       if (!is.null(self$peak_regions$scans_per_peak)) {
         self$peak_regions$scans_per_peak <- self$peak_regions$scans_per_peak[keep_remain]
@@ -745,38 +746,121 @@ apply_normalization_peak_regions <- function(peak_regions, normalization_factors
   return(peak_regions)
 }
 
-get_merged_peak_info <- function(in_points, peak_method = "lm_weighted", min_points = 4){
-  use_points <- unlist(IRanges::IRangesList(in_points))
+get_merged_peak_info <- function(point_data, peak_method = "lm_weighted", min_points = 4){
 
-  use_data <- mcols(use_points)
-  use_data <- use_data[use_data$intensity > 0, ]
-  use_data$log_int <- log(use_data$intensity + 1e-8)
-  get_peak_info(use_data, peak_method = peak_method, min_points = min_points)
+  point_data <- point_data[point_data$intensity > 0, ]
+  point_data$log_int <- log(point_data$intensity + 1e-8)
+  get_peak_info(point_data, peak_method = peak_method, min_points = min_points)
 
 }
 
 
-characterize_mz_points <- function(in_points, scan_indices, use_scans = NULL){
-  if (is.null(use_scans)) {
-    use_scans <- unique(in_points@elementMetadata$scan)
-  }
+#' characterize peaks from points and picked peaks
+#'
+#' @param peak_region the PeakRegion object to work on
+#'
+#' @return list
+#' @export
+characterize_peaks <- function(peak_region){
 
-  in_points <- in_points[in_points@elementMetadata$scan %in% use_scans]
+  stopifnot(peak_region$is_normalized == "both")
 
-  split_points <- as.list(split(in_points, in_points@elementMetadata$scan))
+  peak_ranges <- peak_region$peak_regions
+  picked_peaks <- peak_region$scan_peaks
+  mz_point_regions <- peak_region$mz_point_regions
+  use_scans <- peak_region$normalization_factors$scan
+  peak_region$n_scan <- n_scan <- length(use_scans)
 
-  peak_info <- get_merged_peak_info(split_points)
-  peak_samples <- subset_samples(seq_len(length(split_points)), 3, max_subsets = max_subsets)
 
-  sampled_peaks <- purrr::map_df(peak_samples, function(in_sample){
-    get_merged_peak_info(split_points[peak_samples[, in_sample]])
+  stopifnot(length(peak_ranges) == length(picked_peaks))
+
+  peak_data <- internal_map$map_function(seq_len(length(peak_regions)),
+                                         function(in_region){
+                                           print(in_region)
+    characterize_mz_points(IRanges::subsetByOverlaps(mz_point_regions, peak_regions[in_region]), picked_peaks[[in_region]], peak_scans = use_scans)
   })
 
-  peak_info$ObservedMZSD <- sd(sampled_peaks$ObservedMZ)
-  peak_info$Log10ObservedMZSD <- sd(log10(sampled_peaks$ObservedMZ))
+  individual_peak_heights <- log10(purrr::map_dbl(peak_data, function(x){x$peak_info$Height}))
+  scan_peak_heights <- purrr::map(peak_data, function(x){x$scan_data$LogHeight})
+
+  individual_peak_nscan <- purrr::map_int(peak_data, function(x){x$peak_info$NScan})
+
+  # update the minimum number of scans required, and then filter
+  # all of the relevant bits
+  peak_region$min_scan <- round(peak_region$scan_perc * n_scan)
+  peak_region$keep_peaks <- keep_peaks <- individual_peak_nscan >= peak_region$min_scan
+
+  individual_peak_heights <- individual_peak_heights[keep_peaks]
+  scan_peak_heights <- scan_peak_heights[keep_peaks]
+  individual_peak_nscan <- individual_peak_nscan[keep_peaks]
+  peak_index <- peak_region$peak_index[keep_peaks]
+
+  corrected_data <- correct_peak_sd_height(individual_peak_heights,
+                                           scan_peak_heights,
+                                           individual_peak_nscan,
+                                           n_scan)
+
+  template_scan_data <- matrix(NA, nrow = 1, ncol = n_scan)
+  colnames(template_scan_data) <- sort(use_scans)
+
+  correction_ratios <- corrected_data$OriginalHeight - corrected_data$CorrectedHeight
+
+  corrected_peak_info <- purrr::map(seq_len(length(peak_data)),
+                                      function(in_peak){
+      original_data <- peak_data[[in_peak]]
+      scan_data <- original_data$scan_data
+      corrected_scan_data <- scan_data
+      corrected_scan_data$LogHeight <- scan_data$LogHeight - correction_ratios[in_peak]
+      peak_info <- original_data$peak_info
+      peak_info$CorrectedLog10Height <- corrected_data[in_peak, "CorrectedHeight"]
+      peak_info$CorrectedLog10SD <- corrected_data[in_peak, "CorrectedSD"]
+      peak_info$PeakID <- peak_index[in_peak]
+      rownames(peak_info) <- NULL
+
+      original_scan_heights <- corrected_scan_heights <- template_scan_data
+      original_scan_heights[1, as.character(scan_data$Scan)] <- scan_data$LogHeight
+      rownames(original_scan_heights) <- peak_index[in_peak]
+      corrected_scan_heights[1, as.character(corrected_scan_data$Scan)] <- corrected_scan_data$LogHeight
+      rownames(corrected_scan_heights) <- peak_index[in_peak]
+
+      list(peak = peak_info, original_scan = original_scan_heights,
+           corrected_scan = corrected_scan_heights)
+                                      })
+
+  peak_info <- purrr::map_df(corrected_peak_info, "peak")
+
+  original_height <- do.call(rbind, purrr::map(corrected_peak_info, "original_scan"))
+  corrected_height <- do.call(rbind, purrr::map(corrected_peak_info, "corrected_scan"))
+
+  list(Peaks = peak_info,
+       ScanLevelData = list(OriginalLogHeight = original_height,
+                        CorrectedLogHeight = corrected_height,
+                        Scan = colnames(original_height),
+                        PeakID = rownames(original_height)))
+
+}
+
+characterize_mz_points <- function(in_points, scan_peaks, peak_scans = NULL){
+  if (is.null(n_scan)) {
+    stop("The maximum number of scans (n_scan) must be provided!")
+  }
+
+  if (is.null(peak_scans)) {
+    peak_scans <- unique(in_points@elementMetadata$scan)
+  }
+
+  # first trim to the scans actually available from the scan peaks
+  peak_scans <- base::intersect(peak_scans, scan_peaks$scan)
+
+  in_points <- in_points[in_points@elementMetadata$scan %in% peak_scans]
+
+  peak_info <- get_merged_peak_info(as.data.frame(S4Vectors::mcols(in_points)))
+
+  peak_info$ObservedMZSD <- sd(scan_peaks$ObservedMZ)
+  peak_info$Log10ObservedMZSD <- sd(log10(scan_peaks$ObservedMZ))
   peak_info$Log10Height <- log10(peak_info$Height)
-  peak_info$HeightSD <- sd(sampled_peaks$Height)
-  peak_info$Log10HeightSD <- sd(log10(sampled_peaks$Height))
+  peak_info$HeightSD <- sd(scan_peaks$Height)
+  peak_info$Log10HeightSD <- sd(log10(scan_peaks$Height))
 
   point_data <- S4Vectors::mcols(in_points)
   peak_start <- min(point_data[point_data$intensity > 0, "mz"])
@@ -784,17 +868,19 @@ characterize_mz_points <- function(in_points, scan_indices, use_scans = NULL){
 
   peak_info$Start <- peak_start
   peak_info$Stop <- peak_stop
-  peak_info$NSubset <- ncol(peak_samples)
-  peak_info
+  peak_info$NScan <- length(peak_scans)
+
+  scan_heights <- data.frame(Scan = scan_peaks$scan, LogHeight = log10(scan_peaks$Height))
+
+  list(peak_info = peak_info, scan_data = scan_heights)
 }
 
 
 characterize_peaks_in_regions <- function(mz_point_regions, peak_regions, n_scans, max_subsets = 100, peak_index = NULL){
   peak_region_scans <- peak_regions@elementMetadata$X
 
-  peak_data <- internal_map$map_function(seq_len(length(peak_regions)), function(in_region){
-    characterize_mz_points(IRanges::subsetByOverlaps(mz_point_regions, peak_regions[in_region]), peak_region_scans[[in_region]], max_subsets = max_subsets)
-  })
+
+
   peak_data <- dplyr::bind_rows(peak_data)
   peak_data$NScan <- n_scans
 
