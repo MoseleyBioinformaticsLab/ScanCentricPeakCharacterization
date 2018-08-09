@@ -2,7 +2,7 @@
 % Please edit documentation in R/PeakMS.R
 \name{find_correspondence_scans}
 \alias{find_correspondence_scans}
-\title{generate correspondent peaks}
+\title{find_correspondence_scans}
 \usage{
 find_correspondence_scans(multi_scan_peak_list,
   peak_calc_type = "lm_weighted", max_iteration = 20,
@@ -50,5 +50,5 @@ find_correspondence_scans(multi_scan_peak_list,
 FindCorrespondenceScans
 }
 \description{
-generate correspondent peaks
+Initializes a FindCorrespondenceScans object to actually do correspondence.
 }

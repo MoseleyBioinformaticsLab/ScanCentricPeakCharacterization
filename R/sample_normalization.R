@@ -103,7 +103,7 @@ anova_matrix_test <- function(intensity, groups){
 #' @param intensity the vector of intensities
 #'
 #' @export
-#' @return
+#' @return double
 calculate_rsd <- function(intensity, na.rm = TRUE){
   mn_value <- abs(mean(intensity, na.rm = na.rm))
   sd_value <- sd(intensity, na.rm = na.rm)

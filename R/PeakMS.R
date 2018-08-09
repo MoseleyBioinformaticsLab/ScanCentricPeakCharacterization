@@ -914,9 +914,6 @@ check_model_sd <- function(predict_function, model_1, model_2, reject_frac = 0.1
   }
 }
 
-#' generate correspondent peaks
-#'
-#' @export FindCorrespondenceScans
 
 #' find_correspondence_scans
 #'
