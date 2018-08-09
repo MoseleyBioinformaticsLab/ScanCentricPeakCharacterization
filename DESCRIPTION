@@ -1,6 +1,6 @@
 Package: FTMS.peakCharacterization
 Title: Functionality for Detecting and Characterizing Peaks
-Version: 0.0.497
+Version: 0.0.498
 Date: 2018-08-08
 Authors@R: person(given = c("Robert", "M"), family = c("Flight"), email
         = "rflight79@gmail.com", role = c("aut", "cre"))

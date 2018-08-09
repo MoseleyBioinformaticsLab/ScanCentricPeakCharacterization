@@ -106,6 +106,7 @@ PeakRegions <- R6::R6Class("PeakRegions",
     point_multiplier = NULL,
     scan_peaks = NULL,
     peak_data = NULL,
+    scan_level_arrays = NULL,
     is_normalized = FALSE,
     normalization_factors = NULL,
 
@@ -828,16 +829,18 @@ characterize_peaks <- function(peak_region){
                                       })
 
   peak_info <- purrr::map_df(corrected_peak_info, "peak")
+  peak_info <- add_offset(peak_info, peak_region$mz_model)
 
   original_height <- do.call(rbind, purrr::map(corrected_peak_info, "original_scan"))
   corrected_height <- do.call(rbind, purrr::map(corrected_peak_info, "corrected_scan"))
 
-  list(Peaks = peak_info,
-       ScanLevelData = list(OriginalLogHeight = original_height,
-                        CorrectedLogHeight = corrected_height,
-                        Scan = colnames(original_height),
-                        PeakID = rownames(original_height)))
+  peak_region$peak_data <- peak_info
+  peak_region$scan_level_arrays <- list(OriginalLogHeight = original_height,
+                                        CorrectedLogHeight = corrected_height,
+                                        Scan = colnames(original_height),
+                                        PeakID = rownames(original_height))
 
+  invisible(peak_region)
 }
 
 characterize_mz_points <- function(in_points, scan_peaks, peak_scans = NULL){
