@@ -24,7 +24,6 @@ Z <- function(x){
 #' @return corrected variance
 #' @export
 #'
-#' @examples
 #' @seealso correct_mean correct_peak
 correct_variance <- function(observed_variance, fraction){
   if (fraction >= 1) {
@@ -57,7 +56,6 @@ correct_variance <- function(observed_variance, fraction){
 #' @return corrected mean
 #' @export
 #'
-#' @examples
 #' @seealso correct_peak correct_variance
 correct_mean <- function(observed_mean, corrected_sd, fraction){
   if ((fraction >= 1) || (is.na(corrected_sd))) {
@@ -90,7 +88,6 @@ correct_mean <- function(observed_mean, corrected_sd, fraction){
 #'
 #' @seealso correct_mean correct_variance
 #'
-#' @examples
 correct_peak <- function(observed_mean, observed_sd, n_observed, n_should_observe){
   fraction <- n_observed / (n_should_observe)
   corrected_sd <- sqrt(correct_variance(observed_sd^2, fraction))
@@ -105,10 +102,9 @@ correct_peak <- function(observed_mean, observed_sd, n_observed, n_should_observ
 #' @param n_observed how many were observed
 #' @param n_should_observe how many should have been observed
 #'
-#' @return
+#' @return data.frame
 #' @export
 #'
-#' @examples
 correct_peak_sd_height <- function(original_height, list_of_heights, n_observed, n_should_observe){
   model_peaks <- list_of_heights[which(n_observed == n_should_observe)]
   fractions <- seq(0.05, 0.95, 0.05)

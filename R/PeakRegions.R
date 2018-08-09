@@ -967,8 +967,6 @@ model_sds <- function(values, sds, loess_span = 0.75){
 #'
 #' @return list of bootstrap sampled indices
 #' @export
-#'
-#' @examples
 bootstrap_samples <- function(n_indices, n_bootstrap = 100, n_sample = NULL, min_indices = 4){
   if (n_indices < min_indices) {
     return(NULL)
@@ -981,36 +979,3 @@ bootstrap_samples <- function(n_indices, n_bootstrap = 100, n_sample = NULL, min
     sample(n_indices, n_sample, replace = TRUE)
   })
 }
-
-
-#' generate subset samples
-#'
-#' From N `n_indices`, find the `n_point` combinations, up to `max_subsets` if
-#' there are more than them available. See **Details** for more information.
-#'
-#' @param n_indices
-#' @param n_point
-#' @param max_subsets
-#' @param min_indices
-#'
-#' @details
-#'
-#' @return list of indices
-#' @export
-#'
-#' @examples
-subset_samples <- function(n_indices, n_point = 3, max_subsets = 100, min_indices = 4){
-  if (n_indices < min_indices) {
-    return(NULL)
-  }
-
-  index_combinations <- utils::combn(n_indices, n_point)
-
-  if (ncol(index_combinations) > max_subsets) {
-    index_combinations <- index_combinations[, sample(ncol(index_combinations), max_subsets)]
-  }
-  split_combinations <- split(t(index_combinations), seq(1, ncol(index_combinations)))
-  names(split_combinations) <- NULL
-  split_combinations
-}
-

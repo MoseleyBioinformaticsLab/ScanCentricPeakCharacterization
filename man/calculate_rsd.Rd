@@ -9,6 +9,9 @@ calculate_rsd(intensity, na.rm = TRUE)
 \arguments{
 \item{intensity}{the vector of intensities}
 }
+\value{
+double
+}
 \description{
 calculate the relative standard deviation across all samples. Note that by default
 NA and Inf values are removed, so they do not need to be filtered out first.

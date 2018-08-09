@@ -16,6 +16,9 @@ correct_peak_sd_height(original_height, list_of_heights, n_observed,
 
 \item{n_should_observe}{how many should have been observed}
 }
+\value{
+data.frame
+}
 \description{
 correct peak height and sd
 }
