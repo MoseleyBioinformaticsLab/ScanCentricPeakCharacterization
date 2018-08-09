@@ -256,34 +256,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       if (self$progress) {
         message("Finding peaks in regions ...")
       }
-      if (is.null(self$peak_regions$scans_per_peak)) {
-        self$peak_regions$scans_per_peak <- purrr::map_int(self$peak_regions$scan_peaks, calculate_number_of_scans_normalized, self$peak_regions$normalization_factors$scan)
-      }
-      if (is.null(self$peak_regions$keep_peaks)) {
-
-        self$peak_regions$keep_peaks <- self$peak_regions$scans_per_peak >= self$peak_regions$min_scan
-      }
-      if (which_data == "raw") {
-        self$peak_regions$peak_data <- characterize_peaks_in_regions(
-          self$peak_regions$mz_point_regions,
-          self$peak_regions$peak_regions[self$peak_regions$keep_peaks],
-          self$peak_regions$scans_per_peak[self$peak_regions$keep_peaks],
-          max_subsets = self$peak_regions$max_subsets,
-          peak_index = self$peak_regions$peak_index[self$peak_regions$keep_peaks])
-      } else {
-        self$peak_regions$peak_data <- characterize_picked_peaks(
-          self$peak_regions$scan_peaks[self$peak_regions$keep_peaks],
-          self$peak_regions$scans_per_peak[self$peak_regions$keep_peaks],
-          peak_index = self$peak_regions$peak_index[self$peak_regions$keep_peaks])
-      }
-      self$peak_regions$peak_data$Ignore <-
-        self$peak_regions$scan_correlation[self$peak_regions$keep_peaks, "Ignore"]
-
-    },
-
-    add_offsets = function(){
-      self$peak_regions$peak_data <- add_offset(self$peak_regions$peak_data, self$peak_regions$mz_model)
-      invisible(self)
+      self$peak_regions <- characterize_peaks(self$peak_regions)
     },
 
     model_mzsd = function(){
@@ -307,7 +280,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     summarize_peaks = function(){
       list(TIC = sum(self$peak_regions$peak_data$Height),
            Sample = self$sample_id,
-           Peaks = self$peak_regions$peak_data
+           Peaks = self$peak_regions$peak_data,
            ScanLevel = self$peak_regions$scan_level_arrays)
     },
 
@@ -322,9 +295,9 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       if (nrow(self$peak_regions$peak_data) == 0) {
         stop("No peaks meeting criteria!")
       }
-      self$add_offsets()
-      self$model_mzsd()
-      self$model_heightsd()
+      #self$add_offsets()
+      #self$model_mzsd()
+      #self$model_heightsd()
     },
 
     summarize = function(package_used = "package:FTMS.peakCharacterization"){
@@ -776,14 +749,15 @@ characterize_peaks <- function(peak_region){
   mz_point_regions <- peak_region$mz_point_regions
   use_scans <- peak_region$normalization_factors$scan
   peak_region$n_scan <- n_scan <- length(use_scans)
+  peak_region$set_min_scan()
 
 
   stopifnot(length(peak_ranges) == length(picked_peaks))
 
-  peak_data <- internal_map$map_function(seq_len(length(peak_regions)),
+  peak_data <- internal_map$map_function(seq_len(length(peak_ranges)),
                                          function(in_region){
-                                           print(in_region)
-    characterize_mz_points(IRanges::subsetByOverlaps(mz_point_regions, peak_regions[in_region]), picked_peaks[[in_region]], peak_scans = use_scans)
+                                           #print(in_region)
+    characterize_mz_points(IRanges::subsetByOverlaps(mz_point_regions, peak_ranges[in_region]), picked_peaks[[in_region]], peak_scans = use_scans)
   })
 
   individual_peak_heights <- log10(purrr::map_dbl(peak_data, function(x){x$peak_info$Height}))
@@ -793,9 +767,9 @@ characterize_peaks <- function(peak_region){
 
   # update the minimum number of scans required, and then filter
   # all of the relevant bits
-  peak_region$min_scan <- round(peak_region$scan_perc * n_scan)
   peak_region$keep_peaks <- keep_peaks <- individual_peak_nscan >= peak_region$min_scan
 
+  peak_data <- peak_data[keep_peaks]
   individual_peak_heights <- individual_peak_heights[keep_peaks]
   scan_peak_heights <- scan_peak_heights[keep_peaks]
   individual_peak_nscan <- individual_peak_nscan[keep_peaks]
@@ -850,9 +824,6 @@ characterize_peaks <- function(peak_region){
 }
 
 characterize_mz_points <- function(in_points, scan_peaks, peak_scans = NULL){
-  if (is.null(n_scan)) {
-    stop("The maximum number of scans (n_scan) must be provided!")
-  }
 
   if (is.null(peak_scans)) {
     peak_scans <- unique(in_points@elementMetadata$scan)
@@ -928,6 +899,7 @@ characterize_picked_peaks <- function(scan_peaks, n_scans, peak_index = NULL){
 
 add_offset <- function(peak_data, mz_model){
   offsets <- purrr::map_df(peak_data$PeakID, function(in_id){
+    #print(in_id)
     peak_mz <- peak_data$ObservedMZ[peak_data$PeakID %in% in_id]
     offset_value <- mz_model$y[which.min(abs(peak_mz - mz_model$x))]
     data.frame(PeakID = in_id, Offset = offset_value)
