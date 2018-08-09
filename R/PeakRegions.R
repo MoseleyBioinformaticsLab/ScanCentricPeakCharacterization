@@ -307,7 +307,8 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     summarize_peaks = function(){
       list(TIC = sum(self$peak_regions$peak_data$Height),
            Sample = self$sample_id,
-           Peaks = self$peak_regions$peak_data)
+           Peaks = self$peak_regions$peak_data
+           ScanLevel = self$peak_regions$scan_level_arrays)
     },
 
     characterize_peaks = function(){
@@ -354,6 +355,10 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       p_regions$scan_peaks <- NULL
       p_regions$peak_data <- NULL
       p_regions$peak_regions <- NULL
+      p_regions$scan_level_arrays <- NULL
+      p_regions$keep_peaks <- NULL
+      p_regions$normalization_factors <- NULL
+      p_regions$scan_level_arrays <- NULL
 
       processing_info <- list(Package = package_used,
                               Version = pkg_description$Version,
@@ -830,6 +835,7 @@ characterize_peaks <- function(peak_region){
 
   peak_info <- purrr::map_df(corrected_peak_info, "peak")
   peak_info <- add_offset(peak_info, peak_region$mz_model)
+  peak_info$ScanCorrelated <- peak_region$scan_correlation[keep_peaks, "Ignore"]
 
   original_height <- do.call(rbind, purrr::map(corrected_peak_info, "original_scan"))
   corrected_height <- do.call(rbind, purrr::map(corrected_peak_info, "corrected_scan"))
