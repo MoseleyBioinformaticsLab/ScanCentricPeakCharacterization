@@ -815,14 +815,18 @@ characterize_peaks <- function(peak_region){
       peak_info$PeakID <- peak_index[in_peak]
       rownames(peak_info) <- NULL
 
-      original_scan_heights <- corrected_scan_heights <- template_scan_data
+      mz_scans <- original_scan_heights <- corrected_scan_heights <- template_scan_data
       original_scan_heights[1, as.character(scan_data$Scan)] <- scan_data$LogHeight
       rownames(original_scan_heights) <- peak_index[in_peak]
       corrected_scan_heights[1, as.character(corrected_scan_data$Scan)] <- corrected_scan_data$LogHeight
       rownames(corrected_scan_heights) <- peak_index[in_peak]
 
+      mz_scans[1, as.character(scan_data$Scan)] <- scan_data$ObservedMZ
+      rownames(mz_scans) <- peak_index[in_peak]
+
       list(peak = peak_info, original_scan = original_scan_heights,
-           corrected_scan = corrected_scan_heights)
+           corrected_scan = corrected_scan_heights,
+           mz_scan = mz_scans)
                                       })
 
   peak_info <- purrr::map_df(corrected_peak_info, "peak")
@@ -831,10 +835,12 @@ characterize_peaks <- function(peak_region){
 
   original_height <- do.call(rbind, purrr::map(corrected_peak_info, "original_scan"))
   corrected_height <- do.call(rbind, purrr::map(corrected_peak_info, "corrected_scan"))
+  mz_scan <- do.call(rbind, purrr::map(corrected_peak_info, "mz_scan"))
 
   peak_region$peak_data <- peak_info
   peak_region$scan_level_arrays <- list(OriginalLogHeight = original_height,
                                         CorrectedLogHeight = corrected_height,
+                                        ObservedMZ = mz_scan,
                                         Scan = colnames(original_height),
                                         PeakID = rownames(original_height))
 
@@ -868,7 +874,7 @@ characterize_mz_points <- function(in_points, scan_peaks, peak_scans = NULL){
   peak_info$Stop <- peak_stop
   peak_info$NScan <- length(peak_scans)
 
-  scan_heights <- data.frame(Scan = scan_peaks$scan, LogHeight = log10(scan_peaks$Height))
+  scan_heights <- data.frame(Scan = scan_peaks$scan, LogHeight = log10(scan_peaks$Height), ObservedMZ = scan_peaks$mz)
 
   list(peak_info = peak_info, scan_data = scan_heights)
 }
