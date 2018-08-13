@@ -5,7 +5,6 @@
 #' @param peak_list the tbl_df of peaks
 #' @param mean_int the mean intensities to also plot
 #'
-#' @import cowplot
 #' @import ggplot2
 #'
 #' @export

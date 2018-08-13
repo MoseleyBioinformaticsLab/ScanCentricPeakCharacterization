@@ -18,61 +18,6 @@ import_raw_ms <- function(raw_data, profstep = 0, includeMSn = TRUE){
   raw_data
 }
 
-#' plot tic
-#'
-#' function to plot the total intensity chromatogram of the data, with information
-#' about which scans are which
-#'
-#' @param xcms_raw an `xcmsRaw` object (ideally from `import_mzML`)
-#' @param color_ms should scans be colored by their *ms* level and type?
-#'
-#' @import ggplot2
-#' @importFrom forcats fct_relevel
-#' @return ggplot
-#' @export
-plot_tic <- function(xcms_raw, color_ms = TRUE, log_transform = TRUE){
-  ms1_data <- data.frame(ms_level = paste0("ms", 1),
-                         tic = xcms_raw@tic,
-                         scantime = xcms_raw@scantime,
-                         index = xcms_raw@scanindex,
-                         type = "normal",
-                         stringsAsFactors = FALSE)
-  if (length(xcms_raw@msnLevel) != 0) {
-    msn_data <- data.frame(ms_level = paste0("ms", xcms_raw@msnLevel),
-                           tic = xcms_raw@msnPrecursorIntensity,
-                           scantime = xcms_raw@msnRt,
-                           index = xcms_raw@msnScanindex,
-                           type = "normal",
-                           stringsAsFactors = FALSE)
-    msn_precursors <- unique(xcms_raw@msnPrecursorScan)
-    ms1_data$type[msn_precursors] <- "precursor"
-    all_data <- rbind(ms1_data, msn_data)
-  } else {
-    all_data <- ms1_data
-  }
-
-
-  if ((length(unique(all_data$ms_level)) > 1) || (length(unique(all_data$type)) > 1)) {
-    all_data$ms_type <- paste0(all_data$type, ".", all_data$ms_level)
-  }
-
-  if (log_transform) {
-    all_data$tic <- log10(all_data$tic + 1)
-    y_lab <- "Log10(TIC)"
-  } else {
-    y_lab <- "TIC"
-  }
-
-  if (!is.null(all_data$ms_type)) {
-    all_data$ms_type <- forcats::fct_relevel(all_data$ms_type, "normal.ms1", "precursor.ms1", "normal.ms2")
-    tic_plot <- ggplot(all_data, aes(x = scantime, xend = scantime, y = 0, yend = tic, color = ms_type)) + geom_segment() +
-      labs(y = y_lab)
-  } else {
-    tic_plot <- ggplot(all_data, aes(x = scantime, xend = scantime, y = 0, yend = tic)) + geom_segment() +
-      labs(y = y_lab)
-  }
-  tic_plot
-}
 
 #' import Xcalibur data
 #'

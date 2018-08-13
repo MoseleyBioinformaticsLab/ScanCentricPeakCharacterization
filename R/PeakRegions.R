@@ -331,7 +331,8 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       p_regions$scan_level_arrays <- NULL
       p_regions$keep_peaks <- NULL
       p_regions$normalization_factors <- NULL
-      p_regions$scan_level_arrays <- NULL
+      p_regions$peak_index <- NULL
+      p_regions$scan_correlation <- NULL
 
       processing_info <- list(Package = package_used,
                               Version = pkg_description$Version,
@@ -344,6 +345,23 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       list(processing_metadata.json = processing_info,
            peak_list.json = self$summarize_peaks())
 
+    },
+
+    peak_meta = function(){
+      mz_point_data <- as.data.frame(self$peak_regions$mz_point_regions@elementMetadata)
+      mz_point_data <- split(mz_point_data, mz_point_data$scan)
+      mz_point_data <- mz_point_data[names(mz_point_data) %in% as.character(self$peak_regions$normalization_factors$scan)]
+
+      list(run_time_info = list(
+              run_time = as.numeric(difftime(self$stop_time, self$start_time, units = "s")),
+              n_peak = length(self$peak_regions$peak_regions),
+              n_scans = length(self$peak_regions$normalization_factors$scan)
+              ),
+           ms_info = purrr::map_df(mz_point_data, function(in_scan){
+             data.frame(scan = in_scan[1, "scan"],
+                        tic = sum(in_scan[, "intensity"]),
+                        raw_tic = sum(in_scan[, "RawIntensity"]))
+           }))
     },
 
     initialize = function(raw_ms = NULL, sliding_region_size = 10, sliding_region_delta = 1, tiled_region_size = 1, tiled_region_delta = 1,
