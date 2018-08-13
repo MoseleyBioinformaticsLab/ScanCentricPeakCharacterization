@@ -59,6 +59,91 @@ get_ms1_scans <- function(raw_data){
   list(scan_range = scan_range, rt_range = rt_range)
 }
 
+#' plot tic
+#'
+#' function to plot the total intensity chromatogram of the data, with information
+#' about which scans are which
+#'
+#' @param raw_data an `xcmsRaw` object (ideally from `import_mzML`)
+#' @param color_ms should scans be colored by their *ms* level and type?
+#'
+#' @import ggplot2
+#' @importFrom forcats fct_relevel
+#' @return ggplot
+#' @export
+plot_tic <- function(raw_data, color_ms = TRUE, log_transform = TRUE){
+  all_data <- get_ms_info(raw_data, include_msn = TRUE, include_precursor = TRUE)
+
+
+  if ((length(unique(all_data$ms_level)) > 1) || (length(unique(all_data$type)) > 1)) {
+    all_data$ms_type <- paste0(all_data$ms_type, ".", all_data$ms_level)
+  }
+
+  if (log_transform) {
+    all_data$tic <- log10(all_data$tic + 1)
+    y_lab <- "Log10(TIC)"
+  } else {
+    y_lab <- "TIC"
+  }
+
+  if (!is.null(all_data$ms_type)) {
+    all_data$ms_type <- forcats::fct_relevel(all_data$ms_type, "normal.1", "precursor.1", "normal.2")
+    tic_plot <- ggplot(all_data, aes(x = time, xend = time, y = 0, yend = tic, color = ms_type)) + geom_segment() +
+      labs(y = y_lab)
+  } else {
+    tic_plot <- ggplot(all_data, aes(x = time, xend = time, y = 0, yend = tic)) + geom_segment() +
+      labs(y = y_lab)
+  }
+  tic_plot
+}
+
+
+#' get MS info
+#'
+#' @param raw_data the xcms raw data object
+#' @param include_msn should information from MSn scans be included?
+#' @param include_precursor should the precursor scans be included?
+#'
+#' @return data.frame with scan, time, acquisition, tic, ms_level and ms_type
+#' @export
+get_ms_info <- function(raw_data, include_msn = FALSE, include_precursor = FALSE){
+  ms_scan_info <- data.frame(scan = seq_along(raw_data@scantime),
+                             time = raw_data@scantime,
+                             acquisition = raw_data@acquisitionNum,
+                             tic = raw_data@tic,
+                             ms_level = 1,
+                             ms_type = "normal",
+                             stringsAsFactors = FALSE)
+
+
+  msn_precursor_scans <- raw_data@msnPrecursorScan
+  if (!include_precursor && (length(msn_precursor_scans) != 0)) {
+    msn_precursor_scans <- unique(msn_precursor_scans)
+    msn_precursor_scans <- msn_precursor_scans[!is.na(msn_precursor_scans)]
+    ms_scan_info <- ms_scan_info[!(ms_scan_info$scan %in% msn_precursor_scans), ]
+  } else {
+    ms_scan_info$scan_index <- seq_len(nrow(ms_scan_info))
+    msn_precursor_scans <- unique(msn_precursor_scans)
+    msn_precursor_scans <- msn_precursor_scans[!is.na(msn_precursor_scans)]
+    ms_scan_info[(ms_scan_info$scan_index %in% msn_precursor_scans), "ms_type"] <- "precursor"
+    ms_scan_info$scan_index <- NULL
+  }
+
+  if (include_msn && (length(raw_data@msnLevel) > 0)) {
+    msn_info <- data.frame(scan = NA,
+                           time = raw_data@msnRt,
+                           acquisition = raw_data@msnAcquisitionNum,
+                           tic = raw_data@msnPrecursorIntensity,
+                           ms_level = raw_data@msnLevel,
+                           ms_type = "normal",
+                           scan_msn = seq_along(raw_data@msnRt),
+                           stringsAsFactors = FALSE)
+    ms_scan_info$scan_msn <- NA
+    ms_scan_info <- rbind(ms_scan_info, msn_info)
+  }
+  ms_scan_info
+}
+
 #' @importFrom R6 R6Class
 #' @importFrom jsonlite fromJSON
 #' @export
@@ -74,25 +159,25 @@ RawMS <- R6::R6Class("RawMS",
      mz_model_list = NULL,
      mz_model_differences = NULL,
      mz_model = NULL,
+     ms_info = NULL,
 
      plot_tic = function(color_ms = TRUE, log_transform = TRUE){
        plot_tic(self$raw_data, color_ms = color_ms, log_transform = log_transform)
      },
      set_scans = function(scan_range = NULL, rt_range = NULL){
+
+       ms_scan_info <- get_ms_info(self$raw_data)
+       ms_info <- ms_scan_info
        if (is.null(scan_range) && is.null(rt_range)) {
          message("Setting scans to be MS1 non-precursor scans!")
-         ranges <- get_ms1_scans(self$raw_data)
-         self$scan_range <- ranges$scan_range
-         self$rt_range <- ranges$rt_range
+         self$scan_range <- ms_scan_info$scan
+         self$rt_range <- range(ms_scan_info$time)
        } else {
-         ms_scan_info <- data.frame(time = self$raw_data@scantime,
-                                    scan = seq_along(self$raw_data@scantime))
-
          if (!is.null(scan_range)) {
            if ((length(scan_range) == 2) && ((scan_range[2] - scan_range[1]) != 1)) {
              scan_range <- seq(scan_range[1], scan_range[2])
            }
-           ms_scan_info <- filter(ms_scan_info, scan %in% scan_range)
+           ms_scan_info <- ms_scan_info[(ms_scan_info$scan %in% scan_range),]
          } else if (!is.null(rt_range)) {
            assert_that(length(rt_range) == 2)
 
@@ -103,6 +188,7 @@ RawMS <- R6::R6Class("RawMS",
 
          self$scan_range <- ms_scan_info$scan
          self$rt_range <- range(ms_scan_info$time)
+
        }
      },
      count_raw_peaks = function(){
@@ -170,6 +256,8 @@ RawMS <- R6::R6Class("RawMS",
        #self$noise_info <- self$noise_info[keep_scans, ]
 
        self$scan_range <- keep_scans
+       self$ms_info$kept <- FALSE
+       self$ms_info[self$ms_info$scan %in% keep_scans, "kept"] <- TRUE
        self$mz_model_list <- NULL
        self$average_mz_models()
        invisible(self)
@@ -198,9 +286,9 @@ RawMS <- R6::R6Class("RawMS",
      # default is to use the MS1 non-precursor scans
      if (is.null(scan_range) && is.null(rt_range)) {
        # message("Using MS1 non-precursor scans!")
-       ranges <- get_ms1_scans(self$raw_data)
-       self$scan_range <- ranges$scan_range
-       self$rt_range <- ranges$rt_range
+       self$ms_info <- get_ms_info(self$raw_data)
+       self$scan_range <- self$ms_info$scan
+       self$rt_range <- range(self$ms_info$time)
 
      } else {
        self$set_scans(scan_range, rt_range)

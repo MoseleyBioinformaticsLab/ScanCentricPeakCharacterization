@@ -478,6 +478,18 @@ get_zip_raw_metdata <- function(zip_obj){
 write_zip_file_metadata <- function(zip_obj){
   zip_metadata <- zip_obj$zip_metadata
 
+  if (!is.null(zip_obj$raw_ms$ms_info)) {
+    raw_ms_info <- zip_obj$raw_ms$ms_info
+  } else {
+    raw_ms_info <- NULL
+  }
+
+  if (!is.null(zip_obj$peak_finder$peak_meta)) {
+    peak_info <- zip_obj$peak_finder$peak_meta()
+  } else {
+    peak_info <- NULL
+  }
+
   if (file.exists(zip_obj$out_file)) {
     sha1 <- digest::digest(zip_obj$out_file, algo = "sha1", file = TRUE)
 
@@ -488,6 +500,8 @@ write_zip_file_metadata <- function(zip_obj){
     json_loc <- paste0(tools::file_path_sans_ext(zip_obj$out_file), ".json")
 
     zip_metadata$zip <- zip_file_metadata
+    zip_metadata$raw <- raw_ms_info
+    zip_metadata$peak <- peak_info
     cat(jsonlite::toJSON(zip_metadata, pretty = TRUE, auto_unbox = TRUE), file = json_loc)
 
   } else {
