@@ -866,13 +866,16 @@ characterize_mz_points <- function(in_points, scan_peaks, peak_scans = NULL){
   peak_info$HeightSD <- sd(scan_peaks$Height)
   peak_info$Log10HeightSD <- sd(log10(scan_peaks$Height))
 
-  point_data <- S4Vectors::mcols(in_points)
+  point_data <- as.data.frame(S4Vectors::mcols(in_points))
   peak_start <- min(point_data[point_data$intensity > 0, "mz"])
   peak_stop <- max(point_data[point_data$intensity > 0, "mz"])
 
   peak_info$Start <- peak_start
   peak_info$Stop <- peak_stop
   peak_info$NScan <- length(peak_scans)
+
+  point_by_scan <- split(point_data, point_data$scan)
+  peak_info$NPoint <- median(purrr::map_int(point_by_scan, nrow))
 
   scan_heights <- data.frame(Scan = scan_peaks$scan, LogHeight = log10(scan_peaks$Height), ObservedMZ = scan_peaks$mz)
 
