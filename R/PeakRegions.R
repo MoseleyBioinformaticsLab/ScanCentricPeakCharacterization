@@ -811,7 +811,7 @@ characterize_peaks <- function(peak_region){
       corrected_scan_data$LogHeight <- scan_data$LogHeight - correction_ratios[in_peak]
       peak_info <- original_data$peak_info
       peak_info$CorrectedLog10Height <- corrected_data[in_peak, "CorrectedHeight"]
-      peak_info$CorrectedLog10SD <- corrected_data[in_peak, "CorrectedSD"]
+      peak_info$CorrectedLog10HeightSD <- corrected_data[in_peak, "CorrectedSD"]
       peak_info$PeakID <- peak_index[in_peak]
       rownames(peak_info) <- NULL
 
@@ -838,8 +838,8 @@ characterize_peaks <- function(peak_region){
   mz_scan <- do.call(rbind, purrr::map(corrected_peak_info, "mz_scan"))
 
   peak_region$peak_data <- peak_info
-  peak_region$scan_level_arrays <- list(OriginalLogHeight = original_height,
-                                        CorrectedLogHeight = corrected_height,
+  peak_region$scan_level_arrays <- list(Log10Height = original_height,
+                                        CorrectedLog10Height = corrected_height,
                                         ObservedMZ = mz_scan,
                                         Scan = colnames(original_height),
                                         PeakID = rownames(original_height))
