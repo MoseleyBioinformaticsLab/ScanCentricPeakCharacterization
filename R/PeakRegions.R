@@ -747,7 +747,11 @@ get_merged_peak_info <- function(point_data, peak_method = "lm_weighted", min_po
 
   point_data <- point_data[point_data$intensity > 0, ]
   point_data$log_int <- log(point_data$intensity + 1e-8)
-  get_peak_info(point_data, peak_method = peak_method, min_points = min_points)
+  peak_info <- get_peak_info(point_data, peak_method = peak_method, min_points = min_points)
+  peak_info$ObservedMZMean <- mean(point_data[, "mz"])
+  peak_info$ObservedMZMedian <- median(point_data[, "mz"])
+
+  peak_info
 
 }
 
