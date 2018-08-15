@@ -6,13 +6,20 @@
 #' @export
 CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
   public = list(
+   progress = NULL,
    load_file = function(){
+     if (self$progress) {
+       message("Loading raw data ...")
+     }
      self$zip_ms <- ZipMS$new(self$in_file, self$metadata_file, self$out_file, temp_loc = self$temp_loc)
    },
    found_peaks = NULL,
    raw_scan_filter = NULL,
 
    find_peaks = function(...){
+     if (self$progress) {
+       message("Characterizing peaks ...")
+     }
      if (inherits(self$peak_finder, "R6")) {
        self$zip_ms$peak_finder <- self$peak_finder
        self$zip_ms$peak_finder$add_data(self$zip_ms$raw_ms)
@@ -38,6 +45,9 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
    },
 
    write_zip = function(){
+     if (self$progress) {
+       message("Writing zip file ...")
+     }
      if (!is.null(self$out_file)) {
        self$zip_ms$write_zip(out_file = self$out_file)
      } else {
@@ -51,6 +61,9 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
    },
 
    filter_raw_scans = function(){
+     if (self$progress) {
+       message("Filtering and removing bad scans ...")
+     }
      if (!is.null(self$raw_scan_filter)) {
        self$zip_ms$raw_ms <- self$raw_scan_filter(self$zip_ms$raw_ms)
      }
@@ -76,7 +89,7 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
      self$zip_ms$cleanup()
    },
 
-   initialize = function(in_file, metadata_file = NULL, out_file = NULL, peak_finder = NULL, temp_loc = NULL, raw_scan_filter = NULL){
+   initialize = function(in_file, metadata_file = NULL, out_file = NULL, peak_finder = NULL, temp_loc = NULL, raw_scan_filter = NULL, progress = FALSE){
      self$in_file <- in_file
 
      if (!is.null(metadata_file)) {
@@ -95,11 +108,15 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
 
      if (!is.null(peak_finder)) {
        self$peak_finder <- peak_finder
+     } else {
+       self$peak_finder <- PeakRegionFinder$new(progress = self$progress)
      }
 
      if (!is.null(temp_loc)) {
        self$temp_loc <- temp_loc
      }
+
+     self$progress <- progress
    }
   )
 )

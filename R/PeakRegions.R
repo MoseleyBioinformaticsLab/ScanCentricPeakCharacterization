@@ -183,6 +183,9 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     progress = NULL,
 
     add_regions = function(){
+      if (self$progress) {
+        message("Adding sliding and tiled regions ...")
+      }
       sliding_regions <- function(self){
         create_mz_regions(self$peak_regions$mz_model, use_range = self$peak_regions$mz_range, region_size = self$sliding_region_size,
                                            delta = self$sliding_region_delta,
