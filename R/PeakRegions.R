@@ -145,7 +145,7 @@ PeakRegions <- R6::R6Class("PeakRegions",
       invisible(self)
     },
 
-    initialize = function(mz_data = NULL, mz_model = NULL, point_multiplier = 20000, scan_perc = 0.1, max_subsets = 100){
+    initialize = function(mz_data = NULL, mz_model = NULL, point_multiplier = 200000, scan_perc = 0.1, max_subsets = 100){
       self$point_multiplier <- point_multiplier
       self$scan_perc <- scan_perc
       self$max_subsets <- max_subsets
@@ -182,23 +182,29 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
     progress = NULL,
 
-    add_sliding_regions = function(){
-      if (self$progress) {
-        message("Adding sliding regions ...")
+    add_regions = function(){
+      sliding_regions <- function(self){
+        create_mz_regions(self$peak_regions$mz_model, use_range = self$peak_regions$mz_range, region_size = self$sliding_region_size,
+                                           delta = self$sliding_region_delta,
+                                           point_multiplier = self$peak_regions$point_multiplier)
       }
-      self$peak_regions$sliding_regions <- create_mz_regions(self$peak_regions$mz_model, use_range = self$peak_regions$mz_range, region_size = self$sliding_region_size,
-                                                             delta = self$sliding_region_delta,
-                                                             point_multiplier = self$peak_regions$point_multiplier)
+      tiled_regions <- function(self){
+        create_mz_regions(self$peak_regions$mz_model, use_range = self$peak_regions$mz_range, region_size = self$tiled_region_size,
+                          delta = self$tiled_region_delta,
+                          point_multiplier = self$peak_regions$point_multiplier)
+      }
+      run_regions <- list(sliding = sliding_regions,
+                          tiled = tiled_regions)
+      new_regions <- internal_map$map_function(names(run_regions), function(region){
+        run_regions[[region]](self)
+      })
+      names(new_regions) <- names(run_regions)
+      self$peak_regions$sliding_regions <- new_regions[["sliding"]]
+      self$peak_regions$tiled_regions <- new_regions[["tiled"]]
+      invisible(self)
     },
 
-    add_tiled_regions = function(){
-      if (self$progress) {
-        message("Adding tiled regions ...")
-      }
-      self$peak_regions$tiled_regions <- create_mz_regions(self$peak_regions$mz_model, use_range = self$peak_regions$mz_range, region_size = self$tiled_region_size,
-                                     delta = self$tiled_region_delta,
-                                     point_multiplier = self$peak_regions$point_multiplier)
-    },
+
 
     reduce_sliding_regions = function(){
       if (self$progress) {
