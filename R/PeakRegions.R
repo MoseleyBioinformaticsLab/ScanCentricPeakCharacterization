@@ -260,7 +260,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     },
 
     model_mzsd = function(){
-      self$peak_regions$peak_data$ObservedMZSDModel <- mz_sd_model(self$peak_regions$peak_data)
+      self$peak_regions$peak_data$Log10ObservedMZSDModel <- mz_sd_model(self$peak_regions$peak_data)
       invisible(self)
     },
 
@@ -296,7 +296,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
         stop("No peaks meeting criteria!")
       }
       #self$add_offsets()
-      #self$model_mzsd()
+      self$model_mzsd()
       #self$model_heightsd()
     },
 
@@ -939,17 +939,14 @@ add_offset <- function(peak_data, mz_model){
 }
 
 mz_sd_model <- function(in_data){
-  min_scan <- min(in_data$NScan)
-  fit_data <- in_data[in_data$NScan >= min_scan, ]
-  if ("Ignore" %in% names(fit_data)) {
-    fit_data <- fit_data[!fit_data$Ignore, ]
+  min_scan <- max(in_data$NScan)
+  fit_data <- in_data[(in_data$NScan >= min_scan) & (in_data$Height > 1), ]
+  if ("ScanCorrelated" %in% names(fit_data)) {
+    fit_data <- fit_data[!fit_data$ScanCorrelated, ]
   }
 
-  weight_1 <- fit_data$NScan / max(fit_data$NScan)
-  fit_data$width <- fit_data$Stop - fit_data$Start
-  weight_2 <- 1 - (fit_data$width / max(fit_data$width))
-  sd_fit <- lm(log10(ObservedMZSD) ~ ObservedMZ + log10(Height), data = fit_data, weights = weight_1 * weight_2)
-  sd_pred <- 10^predict.lm(sd_fit, newdata = in_data)
+  lm_fit <- lm(Log10ObservedMZSD ~ CorrectedLog10Height + CorrectedLog10HeightSD + Offset + NPoint, data = fit_data)
+  sd_pred <- abs(predict(lm_fit, newdata = in_data))
   sd_pred
 }
 
