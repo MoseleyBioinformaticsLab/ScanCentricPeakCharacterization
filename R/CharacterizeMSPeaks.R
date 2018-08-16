@@ -106,6 +106,8 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
        self$raw_scan_filter <- default_scan_filter
      }
 
+     self$progress <- progress
+
      if (!is.null(peak_finder)) {
        self$peak_finder <- peak_finder
      } else {
@@ -115,8 +117,6 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
      if (!is.null(temp_loc)) {
        self$temp_loc <- temp_loc
      }
-
-     self$progress <- progress
    }
   )
 )

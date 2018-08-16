@@ -294,8 +294,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     },
 
     characterize_peaks = function(){
-      self$add_sliding_regions()
-      self$add_tiled_regions()
+      self$add_regions()
       self$reduce_sliding_regions()
       self$split_peak_regions()
       self$remove_double_peaks_in_scans()
