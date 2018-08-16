@@ -580,6 +580,9 @@ calculate_number_of_scans_normalized <- function(in_peak, normalized_scans){
 }
 
 intensity_scan_correlation <- function(scan_peak){
+  if (nrow(scan_peak) < 3) {
+    return(NA)
+  }
   cor(scan_peak$Height, scan_peak$scan, method = "spearman", use = "complete.obs")
 }
 
