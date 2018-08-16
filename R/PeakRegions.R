@@ -871,28 +871,52 @@ characterize_mz_points <- function(in_points, scan_peaks, peak_scans = NULL){
   # first trim to the scans actually available from the scan peaks
   peak_scans <- base::intersect(peak_scans, scan_peaks$scan)
 
-  in_points <- in_points[in_points@elementMetadata$scan %in% peak_scans]
+  if ((nrow(scan_peaks) == 0) || (length(peak_scans) == 0)) {
+    peak_info <- data.frame(ObservedMZ = NA,
+                            Height = NA,
+                            Area = NA,
+                            SSR = NA,
+                            type = "NA",
+                            ObservedMZMean = NA,
+                            ObservedMZMedian = NA,
+                            ObservedMZSD = NA,
+                            Log10ObservedMZSD = NA,
+                            Log10Height = NA,
+                            HeightSD = NA,
+                            Log10HeightSD = NA,
+                            Start = NA,
+                            Stop = NA,
+                            NScan = 0L,
+                            NPoint = NA)
+    scan_heights <- data.frame(Scan = NA,
+                               LogHeight = NA,
+                               ObservedMZ = NA)
+  } else {
+    in_points <- in_points[in_points@elementMetadata$scan %in% peak_scans]
 
-  peak_info <- get_merged_peak_info(as.data.frame(S4Vectors::mcols(in_points)))
+    peak_info <- get_merged_peak_info(as.data.frame(S4Vectors::mcols(in_points)))
 
-  peak_info$ObservedMZSD <- sd(scan_peaks$ObservedMZ)
-  peak_info$Log10ObservedMZSD <- sd(log10(scan_peaks$ObservedMZ))
-  peak_info$Log10Height <- log10(peak_info$Height)
-  peak_info$HeightSD <- sd(scan_peaks$Height)
-  peak_info$Log10HeightSD <- sd(log10(scan_peaks$Height))
+    peak_info$ObservedMZSD <- sd(scan_peaks$ObservedMZ)
+    peak_info$Log10ObservedMZSD <- sd(log10(scan_peaks$ObservedMZ))
+    peak_info$Log10Height <- log10(peak_info$Height)
+    peak_info$HeightSD <- sd(scan_peaks$Height)
+    peak_info$Log10HeightSD <- sd(log10(scan_peaks$Height))
 
-  point_data <- as.data.frame(S4Vectors::mcols(in_points))
-  peak_start <- min(point_data[point_data$intensity > 0, "mz"])
-  peak_stop <- max(point_data[point_data$intensity > 0, "mz"])
+    point_data <- as.data.frame(S4Vectors::mcols(in_points))
+    peak_start <- min(point_data[point_data$intensity > 0, "mz"])
+    peak_stop <- max(point_data[point_data$intensity > 0, "mz"])
 
-  peak_info$Start <- peak_start
-  peak_info$Stop <- peak_stop
-  peak_info$NScan <- length(peak_scans)
+    peak_info$Start <- peak_start
+    peak_info$Stop <- peak_stop
+    peak_info$NScan <- length(peak_scans)
 
-  point_by_scan <- split(point_data, point_data$scan)
-  peak_info$NPoint <- median(purrr::map_int(point_by_scan, nrow))
+    point_by_scan <- split(point_data, point_data$scan)
+    peak_info$NPoint <- median(purrr::map_int(point_by_scan, nrow))
 
-  scan_heights <- data.frame(Scan = scan_peaks$scan, LogHeight = log10(scan_peaks$Height), ObservedMZ = scan_peaks$mz)
+    scan_heights <- data.frame(Scan = scan_peaks$scan, LogHeight = log10(scan_peaks$Height), ObservedMZ = scan_peaks$mz)
+  }
+
+
 
   list(peak_info = peak_info, scan_data = scan_heights)
 }
