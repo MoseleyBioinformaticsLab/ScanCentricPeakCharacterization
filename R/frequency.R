@@ -51,3 +51,17 @@ convert_to_frequency = function(frequency_model, mz_values){
   frequency_values[which(outlier_values)] = unlist(outlier_f[which(outlier_values)], use.names = FALSE)
   frequency_values
 }
+
+frequency_models_scans = function(scan_values){
+  split_scans = split(scan_values, scan_values$scan)
+
+  scan_models = internal_map$map_function(split_scans, function(x){
+    frequency_model = create_frequency_model(x)
+    frequency_model$scan = x$scan[1]
+    frequency_model
+  })
+
+  all_scan_models = do.call(rbind, scan_models)
+  all_scan_models$frequency = max(all_scan_models$frequency, na.rm = TRUE) - all_scan_models$frequency
+  all_scan_models
+}
