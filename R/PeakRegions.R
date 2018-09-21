@@ -104,6 +104,7 @@ PeakRegions <- R6::R6Class("PeakRegions",
     tiled_regions = NULL,
 
     point_multiplier = NULL,
+    frequency_multiplier = NULL,
     scan_peaks = NULL,
     peak_data = NULL,
     scan_level_arrays = NULL,
@@ -145,8 +146,11 @@ PeakRegions <- R6::R6Class("PeakRegions",
       invisible(self)
     },
 
-    initialize = function(mz_data = NULL, mz_model = NULL, point_multiplier = 200000, scan_perc = 0.1, max_subsets = 100){
+    initialize = function(mz_data = NULL, mz_model = NULL,
+                          point_multiplier = 200000, frequency_multiplier = 1000,
+                          scan_perc = 0.1, max_subsets = 100){
       self$point_multiplier <- point_multiplier
+      self$frequency_multiplier <- frequency_multiplier
       self$scan_perc <- scan_perc
       self$max_subsets <- max_subsets
 
