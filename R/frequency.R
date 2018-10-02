@@ -35,8 +35,8 @@
 #' @return data.frame
 convert_mz_frequency = function(mz_data, valid_range = c(0.49, 0.51), keep_all = FALSE){
   original_vars = names(mz_data)
-  stopifnot("mz" %in% names(scan_data))
-  frequency_data = scan_data
+  stopifnot("mz" %in% names(mz_data))
+  frequency_data = mz_data
   frequency_data = dplyr::mutate(frequency_data, mean_mz = NA,
                                  mean_offset = NA,
                                  mean_frequency = NA,
@@ -114,7 +114,7 @@ linear_prediction = function(data, fit_model){
 #'
 #' @export
 #' @return data.frame
-mz_scans_to_frequency = function(mz_scan_df){
+mz_scans_to_frequency = function(mz_scan_df, ...){
   split_mz = split(mz_scan_df, mz_scan_df$scan)
 
   mz_frequency = internal_map$map_function(split_mz, function(in_scan){

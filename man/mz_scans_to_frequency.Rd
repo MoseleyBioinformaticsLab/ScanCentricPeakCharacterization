@@ -4,7 +4,7 @@
 \alias{mz_scans_to_frequency}
 \title{convert mz to frequency across scans}
 \usage{
-mz_scans_to_frequency(mz_scan_df)
+mz_scans_to_frequency(mz_scan_df, ...)
 }
 \arguments{
 \item{mz_scan_df}{a data.frame with at least \code{mz} and \code{scan} columns}
