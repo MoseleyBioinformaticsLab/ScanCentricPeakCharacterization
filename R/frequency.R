@@ -5,65 +5,82 @@
 # we then have to worry about getting "to" frequency space, and possibly
 # getting "back" to M/Z space.
 
-create_frequency_model = function(scan_data){
+
+#' Convert M/Z to Frequency
+#'
+#' Given a data.frame of m/z, generate frequency values for the data.
+#'
+#' The **M/Z** values from FTMS data do not have constant spacing between them.
+#' This produces challenges in working with ranged intervals and windows. The
+#' solution for FTMS data then is to convert them to **frequency** space. This
+#' is done by:
+#'   * taking subsequent M/Z points
+#'   * averaging their M/Z
+#'   * taking the difference to get an `offset` value
+#'   * dividing averaged M/Z by offset to generate **frequency**
+#'   * taking subsequent differences of frequency points
+#'   * keep points with a difference in the supplied range as valid for modeling
+#'
+#' After deciding on the valid points for modeling, each point gets an interpolated
+#' frequency value using the two averaged points to the left and right in M/Z.
+#'
+#' @param mz_data a data.frame with `mz`
+#' @param valid_range points with a frequency difference in this range can be used for modeling
+#' @param keep_all keep **all** the variables generated, or just the original + **frequency**?
+#'
+#' @export
+#'
+#' @seealso mz_scans_to_frequency
+#'
+#' @return data.frame
+convert_mz_frequency = function(mz_data, valid_range = c(0.49, 0.51), keep_all = FALSE){
+  original_vars = names(mz_data)
   stopifnot("mz" %in% names(scan_data))
-  model_values = data.frame(mz = rep(NA, nrow(scan_data)),
-                            offset = NA, frequency = NA,
-                            freq_diff = NA)
+  frequency_data = scan_data
+  frequency_data = dplyr::mutate(frequency_data, mean_mz = NA,
+                                 mean_offset = NA,
+                                 mean_frequency = NA,
+                                 mean_freq_diff = NA,
+                                 convertable = FALSE)
 
-  # we need the offset or differences between subsequent m/z points to get to
-  # frequency, so we assume that if it doesn't exist, then we need both it
-  # and the frequency for model generation
-  if ("offset" %in% names(scan_data)) {
-    model_values$mz = scan_data$mz
-    model_values$offset = scan_data$offset
-  } else {
-    tmp_data = cbind(scan_data$mz, dplyr::lag(scan_data$mz))
-    model_values$mz = rowMeans(tmp_data)
-    model_values$offset = tmp_data[, 1] - tmp_data[, 2]
-    model_values$frequency = model_values$mz / model_values$offset
+  tmp_data = cbind(frequency_data$mz, dplyr::lag(frequency_data$mz))
+  frequency_data$mean_mz = rowMeans(tmp_data)
+  frequency_data$mean_offset = tmp_data[, 1] - tmp_data[, 2]
+  frequency_data$mean_frequency = frequency_data$mean_mz / frequency_data$mean_offset
+  frequency_data$mean_freq_diff = dplyr::lag(frequency_data$mean_frequency) - frequency_data$mean_frequency
+
+  is_convertable = dplyr::between(frequency_data$mean_freq_diff, valid_range[1], valid_range[2])
+  is_convertable[is.na(is_convertable)] = FALSE
+
+  frequency_data[is_convertable, "convertable"] = TRUE
+
+  which_convertable = which(frequency_data$convertable)
+
+  frequency_data$frequency = NA
+
+  prev_point = which_convertable[1]
+  next_point = which_convertable[2]
+
+  start_point = min(which_convertable)
+  end_point = max(which_convertable)
+
+  for (ipoint in seq(start_point, end_point - 2)) {
+    #print(c(ipoint, prev_point, next_point))
+    frequency_data$frequency[ipoint] = simple_interpolation(frequency_data$mean_mz[c(prev_point, next_point)],
+                                                            frequency_data$mean_frequency[c(prev_point, next_point)], frequency_data$mz[ipoint])
+
+    if ((ipoint + 1) >= next_point) {
+      prev_point = next_point
+      next_point = min(which_convertable[which_convertable > next_point])
+    }
   }
 
-  if (all(c("offset", "frequency") %in% names(scan_data))) {
-    model_values$frequency = scan_data$frequency
-  } else {
-    model_values$frequency = model_values$mz / model_values$offset
+  if (!keep_all) {
+    keep_vars = c(original_vars, "frequency")
+    frequency_data = frequency_data[, keep_vars]
   }
 
-  model_values$freq_diff = dplyr::lag(model_values$frequency) - model_values$frequency
-  model_values = dplyr::filter(model_values, (freq_diff <= 0.510) & (freq_diff >= 0.490))
-  #model_values$freq_diff = NULL
-  model_values
-}
-
-convert_to_frequency = function(mz_values, frequency_model){
-  outlier_values = (mz_values < min(frequency_model$mz)) | (mz_values > max(frequency_model$mz))
-  inlier_values = !outlier_values
-
-  interpolate_frequency = function(single_mz, frequency_model){
-    #print(single_mz)
-    frequency_model_dists = single_mz - frequency_model$mz
-    pos_point = min(frequency_model_dists[frequency_model_dists > 0])
-    neg_point = max(frequency_model_dists[frequency_model_dists < 0])
-
-    fit_data = frequency_model[frequency_model_dists %in% c(neg_point, pos_point), ]
-    #fit_data$weight = fit_data$weight / max(fit_data$weight)
-
-    frequency_value = simple_interpolation(fit_data$mz, fit_data$frequency, single_mz)
-    frequency_value
-  }
-
-  outlier_frequency = function(single_mz, frequency_model){
-    frequency_model_dists = abs(single_mz - frequency_model$mz)
-    frequency_model$frequency[which.min(frequency_model_dists)]
-  }
-
-  inlier_f = purrr::map_at(mz_values, which(inlier_values), interpolate_frequency, frequency_model = frequency_model)
-  outlier_f = purrr::map_at(mz_values, which(outlier_values), outlier_frequency, frequency_model = frequency_model)
-
-  frequency_values = unlist(inlier_f, use.names = FALSE)
-  frequency_values[which(outlier_values)] = unlist(outlier_f[which(outlier_values)], use.names = FALSE)
-  frequency_values
+  frequency_data
 }
 
 linear_fit_frequency <- function(x, y, w = NULL){
@@ -86,22 +103,28 @@ linear_prediction = function(data, fit_model){
   data2 %*% coef_matrix
 }
 
-
-mz_scans_to_frequency = function(mz_scan_df, frequency_model){
+#' convert mz to frequency across scans
+#'
+#' Given a multi-scan data.frame of m/z, generate frequency values for the data.
+#'
+#' @param mz_scan_df a data.frame with at least `mz` and `scan` columns
+#' @param ... other parameters for `convert_mz_frequency`
+#'
+#' @seealso convert_mz_frequency
+#'
+#' @export
+#' @return data.frame
+mz_scans_to_frequency = function(mz_scan_df){
   split_mz = split(mz_scan_df, mz_scan_df$scan)
-  split_model = split(frequency_model, frequency_model$scan)
 
-  match_names = intersect(names(split_mz), names(split_model))
-  split_model = split_model[match_names]
-  split_mz = split_mz[match_names]
-
-  mz_frequency = internal_map$map_function(match_names, function(scan_name){
-    message(scan_name)
-    mz_df = split_mz[[scan_name]]
-    mz_df$frequency = convert_to_frequency(mz_df$mz, split_model[[scan_name]])
-    mz_df
+  mz_frequency = internal_map$map_function(split_mz, function(in_scan){
+    #message(scan_name)
+    out_scan = convert_mz_frequency(in_scan, ...)
+    out_scan
   })
   mz_frequency_df = do.call(rbind, mz_frequency)
+  mz_frequency_df$frequency = max(mz_frequency_df$frequency, na.rm = TRUE) -
+    mz_frequency_df$frequency
   mz_frequency_df
 }
 
