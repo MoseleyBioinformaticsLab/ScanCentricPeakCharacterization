@@ -221,7 +221,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       if (is.null(use_regions)) {
         use_regions <- seq_len(length(self$peak_regions$peak_regions))
       }
-      peak_data <- split_regions(self$peak_regions$peak_regions[use_regions], self$peak_regions$mz_point_regions, self$peak_regions$tiled_regions, peak_method = self$peak_method, min_points = self$min_points)
+      peak_data <- split_regions(self$peak_regions$peak_regions[use_regions], self$peak_regions$frequency_point_regions, self$peak_regions$tiled_regions, peak_method = self$peak_method, min_points = self$min_points)
       self$peak_regions$peak_regions <- peak_data$regions
       self$peak_regions$scan_peaks <- peak_data$peaks
       self$peak_regions$peak_index <- seq_len(length(peak_data$regions))
@@ -436,7 +436,7 @@ find_signal_regions <- function(regions, point_regions, data_cutoff = 0.99){
 }
 
 create_na_peak <- function(peak_method = "lm_weighted"){
-  data.frame(ObservedMZ = as.numeric(NA),
+  data.frame(ObservedCenter = as.numeric(NA),
              Height = as.numeric(NA),
              Area = as.numeric(NA),
              SSR = as.numeric(NA),
@@ -444,7 +444,8 @@ create_na_peak <- function(peak_method = "lm_weighted"){
              stringsAsFactors = FALSE)
 }
 
-get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points = min_points){
+get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points = min_points,
+                              which = c("mz", "frequency")){
   range_data <- in_range@elementMetadata
 
   possible_peaks <- pracma::findpeaks(range_data$log_int, nups = round(min_points / 2))
@@ -457,14 +458,23 @@ get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points 
       peak_loc <- seq(possible_peaks[in_peak, 3], possible_peaks[in_peak, 4])
       peak_data <- range_data[peak_loc, ]
       weights <- peak_data$intensity / max(peak_data$intensity)
-      out_peak <- get_fitted_peak_info(peak_data, w = weights)
+      out_peak = purrr::map_dfc(which, function(in_which){
+        tmp_peak = get_fitted_peak_info(peak_data, use_loc = in_which, w = weights)
+        names(tmp_peak) = paste0(names(tmp_peak), ".", in_which)
+        tmp_peak
+      })
+      #out_peak <- get_fitted_peak_info(peak_data, w = weights)
       #out_peak <- get_peak_info(range_data[peak_loc, ], peak_method = peak_method, min_points = min_points)
       out_peak$points <- I(list(IRanges::start(in_range)[peak_loc]))
       out_peak$scan <- range_data$scan[1]
       out_peak
     })
   } else {
-    peaks <- create_na_peak()
+    peaks <- purrr::map_dfc(which, function(in_which){
+      tmp_peak = create_na_peak()
+      names(tmp_peak) = paste0(names(tmp_peak), ".", in_which)
+      tmp_peak
+    })
     peaks$points <- NA
     peaks$scan <- range_data$scan[1]
   }
@@ -477,19 +487,19 @@ get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points 
 #' find the peaks, and return the region, and the set of points that make
 #' up each point from each scan.
 #'
-#' @param mz_point_regions the mz point regions to use
+#' @param frequency_point_regions the frequency point regions to use
 #' @param tiled_regions the tiled regions
 #' @param peak_method the method for getting the peaks
 #' @param min_points how many points are needed for a peak
 #'
 #' @export
 #' @return list
-split_region_by_peaks <- function(mz_point_regions, tiled_regions, peak_method = "lm_weighted", min_points = 4){
-  mz_point_regions@elementMetadata$log_int <- log(mz_point_regions@elementMetadata$intensity + 1e-8)
-  mz_point_regions <- split(mz_point_regions, mz_point_regions@elementMetadata$scan)
+split_region_by_peaks <- function(frequency_point_regions, tiled_regions, peak_method = "lm_weighted", min_points = 4){
+  frequency_point_regions@elementMetadata$log_int <- log(frequency_point_regions@elementMetadata$intensity + 1e-8)
+  frequency_point_regions <- split(frequency_point_regions, frequency_point_regions@elementMetadata$scan)
 
-  reduced_peaks <- purrr::map_df(names(mz_point_regions), function(in_scan){
-    get_reduced_peaks(mz_point_regions[[in_scan]], peak_method = peak_method, min_points = min_points)
+  reduced_peaks <- purrr::map_df(names(frequency_point_regions), function(in_scan){
+    get_reduced_peaks(frequency_point_regions[[in_scan]], peak_method = peak_method, min_points = min_points, which = c("mz", "frequency"))
 
   })
 
