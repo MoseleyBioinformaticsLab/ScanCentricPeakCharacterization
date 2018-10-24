@@ -4,8 +4,7 @@
 \alias{mz_points_to_frequency_regions}
 \title{mz points to frequency regions}
 \usage{
-mz_points_to_frequency_regions(mz_data, frequency_model = NULL,
-  point_multiplier = 1000)
+mz_points_to_frequency_regions(mz_data, point_multiplier = 1000)
 }
 \arguments{
 \item{data}{a \code{data.frame} with either \code{m/z} or \code{frequency}}
