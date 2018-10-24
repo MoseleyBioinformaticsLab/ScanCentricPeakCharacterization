@@ -403,9 +403,10 @@ count_overlaps <- function(regions, point_regions){
   zero_counts <- IRanges::countOverlaps(regions, point_regions[zero_intensities])
   count_ratio <- log10(nonzero_counts + 1) - log10(zero_counts + 1)
 
-  regions@elementMetadata$nonzero_counts <- nonzero_counts
-  regions@elementMetadata$zero_counts <- zero_counts
-  regions@elementMetadata$count_ratio <- count_ratio
+  count_data = data.frame(nonzero_counts = nonzero_counts,
+                          zero_counts = zero_counts,
+                          count_ratio = count_ratio)
+  S4Vectors::mcols(regions) = count_data
   regions
 }
 
