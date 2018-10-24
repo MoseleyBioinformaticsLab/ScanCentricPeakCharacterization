@@ -128,12 +128,14 @@ PeakRegions <- R6::R6Class("PeakRegions",
 
         self$frequency_point_regions = mz_points_to_frequency_regions(raw_mz_data,
                                                                       self$frequency_multiplier)
+
       }
 
       if (!is.null(frequency_data)) {
         self$frequency_point_regions = mz_points_to_frequency_regions(frequency_data, point_multiplier = self$frequency_multiplier)
       }
 
+      self$frequency_range = range(S4Vectors::mcols(self$frequency_point_regions)$frequency)
       self$set_min_scan()
       invisible(self)
     },
