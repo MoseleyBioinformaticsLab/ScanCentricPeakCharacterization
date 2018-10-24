@@ -185,12 +185,12 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       sliding_regions <- function(self){
         create_frequency_regions(frequency_range = self$peak_regions$frequency_range, region_size = self$sliding_region_size,
                                            delta = self$sliding_region_delta,
-                                           point_multiplier = self$peak_regions$point_multiplier)
+                                           point_multiplier = self$peak_regions$frequency_multiplier)
       }
       tiled_regions <- function(self){
-        create_frequency_regions(frequency_range = self$peak_regions$mz_range, region_size = self$tiled_region_size,
+        create_frequency_regions(frequency_range = self$peak_regions$frequency_range, region_size = self$tiled_region_size,
                           delta = self$tiled_region_delta,
-                          point_multiplier = self$peak_regions$point_multiplier)
+                          point_multiplier = self$peak_regions$frequency_multiplier)
       }
       run_regions <- list(sliding = sliding_regions,
                           tiled = tiled_regions)
@@ -209,7 +209,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       if (self$progress) {
         message("Finding initial signal regions ...")
       }
-      self$peak_regions$peak_regions <- find_signal_regions(self$peak_regions$sliding_regions, self$peak_regions$mz_point_regions, self$region_percentage)
+      self$peak_regions$peak_regions <- find_signal_regions(self$peak_regions$sliding_regions, self$peak_regions$frequency_point_regions, self$region_percentage)
     },
 
     split_peak_regions = function(use_regions = NULL){
