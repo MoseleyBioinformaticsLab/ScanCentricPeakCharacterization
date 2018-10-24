@@ -10,15 +10,14 @@
 #' @importFrom IRanges IRanges
 #' @importFrom S4Vectors mcols
 #' @export
-mz_points_to_frequency_regions <- function(mz_data, frequency_model = NULL, point_multiplier = 1000){
-  if (("frequency" %in% names(mz_data)) & (is.null(frequency_model))) {
+mz_points_to_frequency_regions <- function(mz_data, point_multiplier = 1000){
+  if (("frequency" %in% names(mz_data))) {
     frequency_data = mz_data
+  } else {
+    frequency_data = mz_scans_to_frequency(mz_data)
   }
 
-  if (!is.null(frequency_model)) {
-    frequency_data = mz_scans_to_frequency(mz_data, frequency_model)
-  }
-
+  frequency_data = frequency_data[!is.na(frequency_data$frequency), ]
   frequency_regions <- IRanges(start = round(frequency_data[, "frequency"] * point_multiplier), width = 1)
   if (is.null(frequency_data$point)) {
     frequency_data$point <- seq(1, nrow(frequency_data))
@@ -39,7 +38,7 @@ mz_points_to_frequency_regions <- function(mz_data, frequency_model = NULL, poin
 #' @param frequency_range the range of frequency to use
 #' @param region_size how *big* is each of the regions
 #' @param delta the *step* size between the beginning of each subsequent region
-#' @param point_multiplier multiplier to convert from M/Z to integer space
+#' @param point_multiplier multiplier to convert from frequency to integer space
 #'
 #' @details For Fourier-transform mass spec, points are equally spaced in
 #'   frequency space, which will lead to unequal spacing in M/Z space. Therefore,
@@ -76,7 +75,6 @@ create_frequency_regions <- function(point_spacing = 0.5, frequency_range = NULL
 PeakRegions <- R6::R6Class("PeakRegions",
   public = list(
     frequency_point_regions = NULL,
-    frequency_model = NULL,
 
     peak_regions = NULL,
     sliding_regions = NULL,
@@ -97,7 +95,7 @@ PeakRegions <- R6::R6Class("PeakRegions",
     max_subsets = NULL,
     scan_subsets = NULL,
 
-    mz_range = NULL,
+    frequency_range = NULL,
 
     scan_correlation = NULL,
     keep_peaks = NULL,
@@ -106,36 +104,35 @@ PeakRegions <- R6::R6Class("PeakRegions",
     scan_indices = NULL,
 
     set_min_scan = function(){
-      self$n_scan <- length(unique(self$mz_point_regions@elementMetadata$scan))
-      self$min_scan <- round(self$scan_perc * self$n_scan)
+      if (!is.null(self$frequency_point_regions)) {
+        self$n_scan <- length(unique(self$frequency_point_regions@elementMetadata$scan))
+        self$min_scan <- round(self$scan_perc * self$n_scan)
+      } else {
+        warning("No frequency points to pull scan data from!")
+      }
+
       invisible(self)
     },
 
     add_data = function(raw_ms = NULL, frequency_data = NULL){
-      if (!is.null(raw_ms) & !is.null(frequency_data)){
+      if (!is.null(raw_ms) & !is.null(frequency_data)) {
         stop("Only pass in either raw_ms or frequency_data, not both!")
       }
 
       if (is.null(raw_ms) & is.null(frequency_data)) {
-        stop("One of raw_ms or frequency_data must be supplied!")
+        warning("One of raw_ms or frequency_data must be supplied!")
       }
 
       if (!is.null(raw_ms)) {
         raw_mz_data = raw_ms$extract_raw_data()
-        self$frequency_model = frequency_models_scans(raw_mz_data)
+
         self$frequency_point_regions = mz_points_to_frequency_regions(raw_mz_data,
-                                                                      self$frequency_model,
                                                                       self$frequency_multiplier)
       }
 
       if (!is.null(frequency_data)) {
-        self$frequency_model = create_frequency_model(frequency_data)
-
-        self$frequency_point_regions = mz_points_to_frequency_regions(frequency_data,
-                                                                      frequency_model = NULL,
-                                                                      point_multiplier = self$frequency_multiplier)
+        self$frequency_point_regions = mz_points_to_frequency_regions(frequency_data, point_multiplier = self$frequency_multiplier)
       }
-      self$frequency_point_regions <- mz_points_to_frequency_regions(raw_ms$extract_raw_data(), self$frequency_multiplier)
 
       self$set_min_scan()
       invisible(self)
@@ -186,12 +183,12 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
         message("Adding sliding and tiled regions ...")
       }
       sliding_regions <- function(self){
-        create_mz_regions(self$peak_regions$mz_model, use_range = self$peak_regions$mz_range, region_size = self$sliding_region_size,
+        create_frequency_regions(frequency_range = self$peak_regions$frequency_range, region_size = self$sliding_region_size,
                                            delta = self$sliding_region_delta,
                                            point_multiplier = self$peak_regions$point_multiplier)
       }
       tiled_regions <- function(self){
-        create_mz_regions(self$peak_regions$mz_model, use_range = self$peak_regions$mz_range, region_size = self$tiled_region_size,
+        create_frequency_regions(frequency_range = self$peak_regions$mz_range, region_size = self$tiled_region_size,
                           delta = self$tiled_region_delta,
                           point_multiplier = self$peak_regions$point_multiplier)
       }
@@ -372,13 +369,13 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     },
 
     initialize = function(raw_ms = NULL, sliding_region_size = 10, sliding_region_delta = 1, tiled_region_size = 1, tiled_region_delta = 1,
-                          region_percentage = 0.99, point_multiplier = 20000, peak_method = "lm_weighted", min_points = 4, progress = FALSE){
+                          region_percentage = 0.99, point_multiplier = 1000, peak_method = "lm_weighted", min_points = 4, progress = FALSE){
       if (inherits(raw_ms, "RawMS")) {
-        self$peak_regions <- PeakRegions$new(raw_ms$extract_raw_data(), raw_ms$mz_model, point_multiplier)
+        self$peak_regions <- PeakRegions$new(raw_ms = raw_ms$extract_raw_data(), point_multiplier)
       } else if (inherits(raw_ms, "PeakRegions")) {
         self$peak_regions <- raw_ms
       } else {
-        self$peak_regions <- PeakRegions$new(mz_data = NULL, mz_model = NULL, point_multiplier = point_multiplier)
+        self$peak_regions <- PeakRegions$new(raw_ms = NULL, point_multiplier = point_multiplier)
       }
 
       self$sliding_region_size <- sliding_region_size
