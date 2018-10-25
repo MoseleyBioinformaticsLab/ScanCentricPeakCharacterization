@@ -36,8 +36,8 @@ mz_points_to_frequency_regions <- function(mz_data, point_multiplier = 1000){
 #'
 #' @param point_spacing how far away are subsequent points.
 #' @param frequency_range the range of frequency to use
-#' @param region_size how *big* is each of the regions
-#' @param delta the *step* size between the beginning of each subsequent region
+#' @param n_point how many points you want to cover
+#' @param delta_point the *step* size between the beginning of each subsequent region
 #' @param point_multiplier multiplier to convert from frequency to integer space
 #'
 #' @details For Fourier-transform mass spec, points are equally spaced in
@@ -50,23 +50,26 @@ mz_points_to_frequency_regions <- function(mz_data, point_multiplier = 1000){
 #' @export
 #' @return IRanges
 create_frequency_regions <- function(point_spacing = 0.5, frequency_range = NULL,
-                              region_size = 10, delta = 1,
+                              n_point = 10, delta_point = 1,
                               point_multiplier = 1000){
   if (is.null(frequency_range)) {
     stop("A valid range of frequencies must be supplied!")
   }
 
+  region_size = n_point * point_spacing
+  step_size = point_spacing * delta_point
   use_frequencies = round(frequency_range)
 
-  frequency_start = round(seq(use_frequencies[1], use_frequencies[2] - region_size, by = point_spacing * delta) * point_multiplier)
-  frequency_end = round(seq(use_frequencies[1] + region_size, use_frequencies[2], by = point_spacing * delta) * point_multiplier)
+  frequency_start = round(seq(use_frequencies[1], use_frequencies[2] - region_size, by = step_size) * point_multiplier)
+  frequency_end = round(seq(use_frequencies[1] + region_size, use_frequencies[2], by = step_size) * point_multiplier)
 
   regions <- IRanges::IRanges(start = frequency_start, end = frequency_end)
 
   #S4Vectors::mcols(regions) <- list(mz_start = mz_start, mz_end = mz_end)
   regions@metadata <- list(point_multiplier = point_multiplier,
-                           delta = delta,
-                           region_size = region_size)
+                           point_spacing = point_spacing,
+                           n_point = n_point,
+                           delta_point = delta_point)
   regions
 
 }
@@ -175,13 +178,13 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
         message("Adding sliding and tiled regions ...")
       }
       sliding_regions <- function(self){
-        create_frequency_regions(frequency_range = self$peak_regions$frequency_range, region_size = self$sliding_region_size,
-                                           delta = self$sliding_region_delta,
+        create_frequency_regions(frequency_range = self$peak_regions$frequency_range, n_point = self$sliding_region_size,
+                                           delta_point = self$sliding_region_delta,
                                            point_multiplier = self$peak_regions$frequency_multiplier)
       }
       tiled_regions <- function(self){
-        create_frequency_regions(frequency_range = self$peak_regions$frequency_range, region_size = self$tiled_region_size,
-                          delta = self$tiled_region_delta,
+        create_frequency_regions(frequency_range = self$peak_regions$frequency_range, n_point = self$tiled_region_size,
+                          delta_point = self$tiled_region_delta,
                           point_multiplier = self$peak_regions$frequency_multiplier)
       }
       run_regions <- list(sliding = sliding_regions,
