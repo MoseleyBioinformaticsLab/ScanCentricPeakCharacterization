@@ -114,43 +114,33 @@ PeakRegions <- R6::R6Class("PeakRegions",
       invisible(self)
     },
 
-    add_data = function(raw_ms = NULL, frequency_data = NULL){
-      if (!is.null(raw_ms) & !is.null(frequency_data)) {
-        stop("Only pass in either raw_ms or frequency_data, not both!")
-      }
-
-      if (is.null(raw_ms) & is.null(frequency_data)) {
-        warning("One of raw_ms or frequency_data must be supplied!")
-      }
-
+    add_data = function(raw_ms){
       if (!is.null(raw_ms)) {
-        raw_mz_data = raw_ms$extract_raw_data()
-
+        if (inherits(raw_ms, "RawMS")) {
+          raw_mz_data = raw_ms$extract_raw_data()
+        } else if (inherits(raw_ms, "data.frame")) {
+          raw_mz_data = raw_ms
+        }
         self$frequency_point_regions = mz_points_to_frequency_regions(raw_mz_data,
                                                                       self$frequency_multiplier)
+        self$frequency_range = range(S4Vectors::mcols(self$frequency_point_regions)$frequency)
+        self$set_min_scan()
 
       }
-
-      if (!is.null(frequency_data)) {
-        self$frequency_point_regions = mz_points_to_frequency_regions(frequency_data, point_multiplier = self$frequency_multiplier)
-      }
-
-      self$frequency_range = range(S4Vectors::mcols(self$frequency_point_regions)$frequency)
-      self$set_min_scan()
       invisible(self)
     },
 
     initialize = function(raw_ms = NULL,
-                          frequency_data = NULL,
                           point_multiplier = 200000,
                           frequency_multiplier = 1000,
                           scan_perc = 0.1, max_subsets = 100){
+      #browser(expr = TRUE)
       self$point_multiplier <- point_multiplier
       self$frequency_multiplier <- frequency_multiplier
       self$scan_perc <- scan_perc
       self$max_subsets <- max_subsets
 
-      self$add_data(raw_ms, frequency_data)
+      self$add_data(raw_ms)
 
       invisible(self)
     }
@@ -503,43 +493,43 @@ split_region_by_peaks <- function(frequency_point_regions, tiled_regions, peak_m
 
   })
 
-  reduced_peaks <- reduced_peaks[!is.na(reduced_peaks$ObservedMZ), ]
+  reduced_peaks <- reduced_peaks[!is.na(reduced_peaks$ObservedCenter.frequency), ]
 
   if (nrow(reduced_peaks) > 0) {
-    reduced_peaks$mz <- reduced_peaks$ObservedMZ
-    reduced_mz_points <- mz_points_to_regions(reduced_peaks, mz_point_regions[[1]]@metadata$point_multiplier)
+    reduced_peaks$frequency <- reduced_peaks$ObservedCenter.frequency
+    reduced_points <- mz_points_to_frequency_regions(reduced_peaks, frequency_point_regions[[1]]@metadata$point_multiplier)
 
     #tiled_points@elementMetadata <- NULL
-    tiled_regions@elementMetadata$peak_count <- IRanges::countOverlaps(tiled_regions, reduced_mz_points)
+    S4Vectors::mcols(tiled_regions) <- data.frame(peak_count = IRanges::countOverlaps(tiled_regions, reduced_points))
 
 
 
     sub_tiles <- IRanges::reduce(tiled_regions[S4Vectors::mcols(tiled_regions)$peak_count > 0])
     S4Vectors::mcols(sub_tiles) <- list(region = seq(1, length(sub_tiles)))
 
-    reduced_mz_points <- IRanges::mergeByOverlaps(reduced_mz_points, sub_tiles)
+    reduced_points <- IRanges::mergeByOverlaps(reduced_points, sub_tiles)
 
-    sub_mz_point <- as.list(S4Vectors::split(reduced_mz_points, reduced_mz_points$region))
-    names(sub_mz_point) <- NULL
-    sub_mz_region <- IRanges::IRangesList()
+    sub_point <- as.list(S4Vectors::split(reduced_points, reduced_points$region))
+    names(sub_point) <- NULL
+    sub_region <- IRanges::IRangesList()
 
-    for (iregion in seq_len(length(sub_mz_point))) {
-      all_points <- unique(unlist(sub_mz_point[[iregion]]$points))
+    for (iregion in seq_len(length(sub_point))) {
+      all_points <- unique(unlist(sub_point[[iregion]]$points))
       tmp_range <- IRanges::IRanges(start = min(all_points), end = max(all_points))
-      S4Vectors::mcols(tmp_range) <- I(list(as.numeric(sub_mz_point[[iregion]]$scan)))
-      sub_mz_region[[iregion]] <- tmp_range
+      S4Vectors::mcols(tmp_range) <- I(list(as.numeric(sub_point[[iregion]]$scan)))
+      sub_region[[iregion]] <- tmp_range
     }
   } else {
-    sub_mz_region <- IRanges::IRangesList()
-    sub_mz_point <- NULL
+    sub_region <- IRanges::IRangesList()
+    sub_point <- NULL
   }
-  return(list(region = sub_mz_region, peaks = sub_mz_point))
+  return(list(region = sub_region, peaks = sub_point))
 }
 
 
-split_regions <- function(signal_regions, mz_point_regions, tiled_regions, peak_method = "lm_weighted", min_points = 4) {
+split_regions <- function(signal_regions, frequency_point_regions, tiled_regions, peak_method = "lm_weighted", min_points = 4) {
   split_data <- internal_map$map_function(seq(1, length(signal_regions)), function(in_region){
-    split_region_by_peaks(IRanges::subsetByOverlaps(mz_point_regions, signal_regions[in_region]),
+    split_region_by_peaks(IRanges::subsetByOverlaps(frequency_point_regions, signal_regions[in_region]),
                           IRanges::subsetByOverlaps(tiled_regions, signal_regions[in_region]),
                           peak_method = peak_method, min_points = min_points)
   })
