@@ -108,6 +108,7 @@ linear_prediction = function(data, fit_model){
 #' Given a multi-scan data.frame of m/z, generate frequency values for the data.
 #'
 #' @param mz_scan_df a data.frame with at least `mz` and `scan` columns
+#' @param subtract_max should the values be subtracted from a max value
 #' @param ... other parameters for `convert_mz_frequency`
 #'
 #' @seealso convert_mz_frequency
@@ -123,21 +124,59 @@ mz_scans_to_frequency = function(mz_scan_df, ...){
     out_scan
   })
   mz_frequency_df = do.call(rbind, mz_frequency)
-  mz_frequency_df$frequency = max(mz_frequency_df$frequency, na.rm = TRUE) -
-    mz_frequency_df$frequency
+  if (subtract_max) {
+    mz_frequency_df$frequency = max(mz_frequency_df$frequency, na.rm = TRUE) -
+      mz_frequency_df$frequency
+  }
   mz_frequency_df
 }
 
-simple_interpolation = function(x, y, new_x){
-  diff_x = x[2] - x[1]
-  diff_y = y[2] - y[1]
+#' convert mz to frequency using linear fit
+#'
+#' Given a query, and either two values of M/Z and two values of frequency or
+#' a previously generated model, return a data.frame with the predicted value,
+#' and the slope and the intercept so the model can be re-used later for
+#' other points when needed.
+#'
+#' @param mz_query the M/Z value to fit
+#' @param mz_values two M/Z values
+#' @param frequency_values two frequency values
+#' @param model a model to use instead of actual values
+#'
+#' @return data.frame with predicted_value, intercept, and slope
+#'
+#' @export
+mz_frequency_interpolation = function(mz_query, mz_values = NULL, frequency_values = NULL, model = NULL){
+  if (is.null(model) && is.null(mz_values) && is.null(frequency_values)) {
+    stop("Please provide either a model or mz_values + frequency_values ...")
+  }
 
-  slope = diff_y / diff_x
-  intercept = y[1] - (slope * x[1])
+  if ((!is.null(mz_values) && is.null(frequency_values)) || (is.null(mz_values) && !is.null(frequency_values))) {
+    stop("Both mz_values and frequency_values must be provided ...")
+  }
 
-  pred_y = intercept + (slope * new_x)
-  pred_y
+  if (!is.null(model) && is.null(mz_values) && is.null(frequency_values)) {
+    slope = model$slope
+    intercept = model$intercept
+  } else {
+    if ((length(mz_values) != 2) || (length(frequency_values) != 2)) {
+      stop("mz_values and frequency_values MUST contain two entries ...")
+    }
+    diff_mz = mz_values[2] - mz_values[1]
+    diff_frequency = frequency_values[2] - frequency_values[1]
+    slope = diff_frequency / diff_mz
+    intercept = frequency_values[1] - (slope * mz_values[1])
+  }
+
+  pred_frequency = intercept + (slope * mz_query)
+
+  model_prediction = data.frame(predicted_value = -1 * pred_frequency,
+                                intercept = intercept,
+                                slope = slope)
+  model_prediction
 }
+
+
 
 frequency_models_scans = function(scan_values){
   split_scans = split(scan_values, scan_values$scan)
