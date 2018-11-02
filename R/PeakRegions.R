@@ -135,7 +135,7 @@ PeakRegions <- R6::R6Class("PeakRegions",
 
     initialize = function(raw_ms = NULL,
                           point_multiplier = 200000,
-                          frequency_multiplier = 1000,
+                          frequency_multiplier = 500,
                           scan_perc = 0.1, max_subsets = 100){
       #browser(expr = TRUE)
       self$point_multiplier <- point_multiplier
@@ -459,7 +459,7 @@ get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points 
       #out_peak <- get_fitted_peak_info(peak_data, w = weights)
       #out_peak <- get_peak_info(range_data[peak_loc, ], peak_method = peak_method, min_points = min_points)
       out_peak$points <- I(list(IRanges::start(in_range)[peak_loc]))
-      out_peak$scan <- range_data$scan[1]
+      out_peak$scan <- range_data[peak_loc[1], "scan"]
       out_peak
     })
   } else {
@@ -489,43 +489,95 @@ get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points 
 #' @return list
 split_region_by_peaks <- function(frequency_point_regions, tiled_regions, peak_method = "lm_weighted", min_points = 4){
   frequency_point_regions@elementMetadata$log_int <- log(frequency_point_regions@elementMetadata$intensity + 1e-8)
-  frequency_point_regions <- split(frequency_point_regions, frequency_point_regions@elementMetadata$scan)
 
-  reduced_peaks <- purrr::map_df(names(frequency_point_regions), function(in_scan){
-    get_reduced_peaks(frequency_point_regions[[in_scan]], peak_method = peak_method, min_points = min_points, which = c("mz", "frequency"))
+  scan_runs = rle(frequency_point_regions@elementMetadata$scan)
+  if (min(scan_runs$lengths) < min_points + 2) {
+    frequency_point_splitscan <- split(frequency_point_regions, frequency_point_regions@elementMetadata$scan)
+    reduced_peaks <- purrr::map_df(names(frequency_point_splitscan), function(in_scan){
+      get_reduced_peaks(frequency_point_splitscan[[in_scan]], peak_method = peak_method, min_points = min_points, which = "mz")
+      })
+  } else {
+    reduced_peaks = get_reduced_peaks(frequency_point_regions, peak_method = peak_method,
+                                      min_points = min_points, which = "mz")
+  }
 
-  })
-
-  reduced_peaks <- reduced_peaks[!is.na(reduced_peaks$ObservedCenter.frequency), ]
+  reduced_peaks <- reduced_peaks[!is.na(reduced_peaks$ObservedCenter.mz), ]
 
   if (nrow(reduced_peaks) > 0) {
-    reduced_peaks$frequency <- reduced_peaks$ObservedCenter.frequency
-    reduced_points <- mz_points_to_frequency_regions(reduced_peaks, frequency_point_regions[[1]]@metadata$point_multiplier)
+    reduced_peaks = convert_found_peaks(as.data.frame(S4Vectors::mcols(frequency_point_regions)), reduced_peaks)
+    reduced_points <- mz_points_to_frequency_regions(reduced_peaks, frequency_point_regions@metadata$point_multiplier)
 
-    #tiled_points@elementMetadata <- NULL
-    S4Vectors::mcols(tiled_regions) <- data.frame(peak_count = IRanges::countOverlaps(tiled_regions, reduced_points))
+    initial_regions = split_reduced_points(reduced_points, tiled_regions, n_zero = 2)$region
 
+    secondary_regions = purrr::map(seq(1, length(initial_regions)),
+                                   function(region_index){
+      sub_points = IRanges::subsetByOverlaps(reduced_points, initial_regions[[region_index]])
+      sub_consensus_points = convert_peaks_with_consensus_model(sub_points)
 
+      split_reduced_points(sub_consensus_points, tiled_regions, n_zero = 1)
+    })
+    all_regions = purrr::map(secondary_regions, "region")
+    all_regions = purrr::map(all_regions, as.list)
+    all_regions = unlist(all_regions, recursive = FALSE, use.names = FALSE)
 
-    sub_tiles <- IRanges::reduce(tiled_regions[S4Vectors::mcols(tiled_regions)$peak_count > 0])
-    S4Vectors::mcols(sub_tiles) <- list(region = seq(1, length(sub_tiles)))
-
-    reduced_points <- IRanges::mergeByOverlaps(reduced_points, sub_tiles)
-
-    sub_point <- as.list(S4Vectors::split(reduced_points, reduced_points$region))
-    names(sub_point) <- NULL
-    sub_region <- IRanges::IRangesList()
-
-    for (iregion in seq_len(length(sub_point))) {
-      all_points <- unique(unlist(sub_point[[iregion]]$points))
-      tmp_range <- IRanges::IRanges(start = min(all_points), end = max(all_points))
-      S4Vectors::mcols(tmp_range) <- I(list(as.numeric(sub_point[[iregion]]$scan)))
-      sub_region[[iregion]] <- tmp_range
-    }
+    all_peaks = purrr::map(secondary_regions, "peaks")
+    all_peaks = purrr::map(all_peaks, as.list)
+    all_peaks = unlist(all_peaks, recursive = FALSE, use.names = FALSE)
+    peak_regions = list(region = all_regions, peaks = all_peaks)
   } else {
     sub_region <- IRanges::IRangesList()
     sub_point <- NULL
+    peak_regions = list(region = sub_region, peaks = sub_point)
   }
+  peak_regions
+}
+
+convert_peaks_with_consensus_model = function(reduced_points){
+  point_data = as.data.frame(S4Vectors::mcols(reduced_points))
+  all_models = point_data[, c("intercept", "slope")]
+  use_model = data.frame(intercept = median(all_models$intercept),
+                         slope = median(all_models$slope))
+  new_frequency = purrr::map_df(.x = point_data$ObservedCenter.mz,
+                                .f = ~ mz_frequency_interpolation(.x, model = use_model))
+  new_frequency$frequency = new_frequency$predicted_frequency
+  new_frequency$predicted_frequency = NULL
+  point_data[, c("frequency", "intercept", "slope")] = new_frequency[, c("frequency", "intercept", "slope")]
+
+  new_points = mz_points_to_frequency_regions(point_data, reduced_points@metadata$point_multiplier)
+  new_points
+}
+
+split_reduced_points = function(reduced_points, tiled_regions, n_zero = 2){
+  overlap_counts <- data.frame(peak_count = IRanges::countOverlaps(tiled_regions, reduced_points))
+  rle_counts = rle(overlap_counts$peak_count)
+  rle_df = data.frame(lengths = rle_counts$lengths, values = rle_counts$values,
+                      row = seq(1, length(rle_counts$lengths)))
+  rle_index = vector("list", nrow(rle_df))
+  start_index = 1
+  for (irow in seq(1, nrow(rle_df))) {
+    rle_index[[irow]] = seq(from = start_index, length.out = rle_df[irow, "lengths"])
+    start_index = max(rle_index[[irow]]) + 1
+  }
+
+  mask_values = dplyr::filter(rle_df, values == 0, lengths >= n_zero)
+  exclude_indices = unlist(rle_index[mask_values$row])
+
+  sub_tiles <- IRanges::reduce(tiled_regions[-exclude_indices])
+  S4Vectors::mcols(sub_tiles) <- list(region = seq(1, length(sub_tiles)))
+
+  reduced_points <- IRanges::mergeByOverlaps(reduced_points, sub_tiles)
+
+  sub_point <- as.list(S4Vectors::split(reduced_points, reduced_points$region))
+  names(sub_point) <- NULL
+  sub_region <- IRanges::IRangesList()
+
+  for (iregion in seq_len(length(sub_point))) {
+    all_points <- unique(unlist(sub_point[[iregion]]$points))
+    tmp_range <- IRanges::IRanges(start = min(all_points), end = max(all_points))
+    S4Vectors::mcols(tmp_range) <- I(list(as.numeric(sub_point[[iregion]]$scan)))
+    sub_region[[iregion]] <- tmp_range
+  }
+
   return(list(region = sub_region, peaks = sub_point))
 }
 

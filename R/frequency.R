@@ -195,3 +195,28 @@ frequency_models_scans = function(scan_values){
   all_scan_models$frequency = max(all_scan_models$frequency, na.rm = TRUE) - all_scan_models$frequency
   all_scan_models
 }
+
+
+convert_found_peaks = function(frequency_model, found_peaks){
+
+  frequency_model = frequency_model[!is.na(frequency_model$frequency), ]
+  split_model = split(frequency_model, frequency_model$scan)
+  split_peaks = split(found_peaks, found_peaks$scan)
+
+  split_model = split_model[names(split_peaks)]
+
+  out_frequency = purrr::map2_df(.x = split_model, .y = split_peaks, function(.x, .y){
+    peak_mz = .y$ObservedCenter.mz
+    purrr::map_df(peak_mz, function(in_mz){
+      start_point = max(which(.x$mean_mz <= in_mz))
+      end_point = min(which(.x$mean_mz >= in_mz))
+      mz_frequency_interpolation(in_mz, .x[c(start_point, end_point), "mean_mz"],
+                                 .x[c(start_point, end_point), "mean_frequency"])
+    })
+
+  })
+
+  out_frequency$frequency = out_frequency$predicted_frequency
+  out_frequency$predicted_frequency = NULL
+  cbind(found_peaks, out_frequency)
+}
