@@ -33,7 +33,7 @@
 #' @seealso mz_scans_to_frequency
 #'
 #' @return data.frame
-convert_mz_frequency = function(mz_data, valid_range = c(0.49, 0.51), keep_all = FALSE){
+convert_mz_frequency = function(mz_data, valid_range = c(0.49, 0.51), keep_all = TRUE){
   original_vars = names(mz_data)
   stopifnot("mz" %in% names(mz_data))
   frequency_data = mz_data
@@ -41,7 +41,10 @@ convert_mz_frequency = function(mz_data, valid_range = c(0.49, 0.51), keep_all =
                                  mean_offset = NA,
                                  mean_frequency = NA,
                                  mean_freq_diff = NA,
-                                 convertable = FALSE)
+                                 convertable = FALSE,
+                                 frequency = NA,
+                                 intercept = NA,
+                                 slope = NA)
 
   tmp_data = cbind(frequency_data$mz, dplyr::lag(frequency_data$mz))
   frequency_data$mean_mz = rowMeans(tmp_data)
@@ -66,9 +69,11 @@ convert_mz_frequency = function(mz_data, valid_range = c(0.49, 0.51), keep_all =
 
   for (ipoint in seq(start_point, end_point - 2)) {
     #print(c(ipoint, prev_point, next_point))
-    frequency_data$frequency[ipoint] = simple_interpolation(frequency_data$mean_mz[c(prev_point, next_point)],
-                                                            frequency_data$mean_frequency[c(prev_point, next_point)], frequency_data$mz[ipoint])
-
+    frequency_model = mz_frequency_interpolation(frequency_data$mz[ipoint],
+                                                 frequency_data$mean_mz[c(prev_point, next_point)],
+                                                 frequency_data$mean_frequency[c(prev_point, next_point)])
+    frequency_data[ipoint, c("frequency", "intercept", "slope")] = frequency_model[1,
+                                                                                   c("predicted_frequency", "intercept", "slope")]
     if ((ipoint + 1) >= next_point) {
       prev_point = next_point
       next_point = min(which_convertable[which_convertable > next_point])
@@ -76,10 +81,11 @@ convert_mz_frequency = function(mz_data, valid_range = c(0.49, 0.51), keep_all =
   }
 
   if (!keep_all) {
-    keep_vars = c(original_vars, "frequency")
+    keep_vars = c(original_vars, c("frequency", "intercept", "slope"))
     frequency_data = frequency_data[, keep_vars]
   }
 
+  rownames(frequency_data) = NULL
   frequency_data
 }
 
@@ -124,10 +130,8 @@ mz_scans_to_frequency = function(mz_scan_df, ...){
     out_scan
   })
   mz_frequency_df = do.call(rbind, mz_frequency)
-  if (subtract_max) {
-    mz_frequency_df$frequency = max(mz_frequency_df$frequency, na.rm = TRUE) -
-      mz_frequency_df$frequency
-  }
+
+  rownames(mz_frequency_df) = NULL
   mz_frequency_df
 }
 
@@ -170,7 +174,7 @@ mz_frequency_interpolation = function(mz_query, mz_values = NULL, frequency_valu
 
   pred_frequency = intercept + (slope * mz_query)
 
-  model_prediction = data.frame(predicted_value = -1 * pred_frequency,
+  model_prediction = data.frame(predicted_frequency = -1 * pred_frequency,
                                 intercept = intercept,
                                 slope = slope)
   model_prediction
