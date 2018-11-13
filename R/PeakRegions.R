@@ -324,7 +324,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       p_regions[[".__enclos_env__"]] <- NULL
       p_regions$clone <- NULL
       p_regions$frequency_point_regions <- NULL
-      p_regions$mz_model <- NULL
+      #p_regions$mz_model <- NULL
       p_regions$sliding_regions <- NULL
       p_regions$tiled_regions <- NULL
       p_regions$scan_peaks <- NULL
@@ -1050,7 +1050,7 @@ mz_sd_model <- function(in_data){
     fit_data <- fit_data[!fit_data$ScanCorrelated, ]
   }
 
-  lm_fit <- lm(Log10ObservedMZSD ~ CorrectedLog10Height + CorrectedLog10HeightSD + Offset + NPoint, data = fit_data)
+  lm_fit <- lm(Log10ObservedMZSD ~ ObservedMZ + CorrectedLog10Height + CorrectedLog10HeightSD + NPoint, data = fit_data)
   sd_pred <- abs(predict(lm_fit, newdata = in_data))
   sd_pred
 }
