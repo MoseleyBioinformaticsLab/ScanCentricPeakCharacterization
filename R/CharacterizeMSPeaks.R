@@ -67,7 +67,7 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
      if (!is.null(self$raw_scan_filter)) {
        self$zip_ms$raw_ms <- self$raw_scan_filter(self$zip_ms$raw_ms)
      }
-     self$zip_ms$raw_ms$remove_bad_resolution_scans()
+     #self$zip_ms$raw_ms$remove_bad_resolution_scans()
    },
 
    peak_finder = NULL,
