@@ -10,7 +10,7 @@
 #' @importFrom IRanges IRanges
 #' @importFrom S4Vectors mcols
 #' @export
-mz_points_to_frequency_regions <- function(mz_data, point_multiplier = 1000){
+mz_points_to_frequency_regions <- function(mz_data, point_multiplier = 500){
   if (("frequency" %in% names(mz_data))) {
     frequency_data = mz_data
   } else {
