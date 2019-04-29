@@ -440,11 +440,11 @@ create_na_peak <- function(peak_method = "lm_weighted"){
              stringsAsFactors = FALSE)
 }
 
-get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points = min_points,
+get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points = 4,
                               which = c("mz", "frequency")){
-  range_data <- in_range@elementMetadata
+  range_point_data <- in_range@elementMetadata
 
-  possible_peaks <- pracma::findpeaks(range_data$log_int, nups = round(min_points / 2))
+  possible_peaks <- pracma::findpeaks(range_point_data$log_int, nups = round(min_points / 2))
 
   if (!is.null(possible_peaks)) {
     n_peak <- nrow(possible_peaks)
@@ -452,7 +452,7 @@ get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points 
       #print(in_peak)
       "!DEBUG Peak `in_peak`"
       peak_loc <- seq(possible_peaks[in_peak, 3], possible_peaks[in_peak, 4])
-      peak_data <- range_data[peak_loc, ]
+      peak_data <- range_point_data[peak_loc, ]
       weights <- peak_data$intensity / max(peak_data$intensity)
       out_peak = purrr::map_dfc(which, function(in_which){
         tmp_peak = get_fitted_peak_info(peak_data, use_loc = in_which, w = weights)
@@ -462,7 +462,7 @@ get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points 
       #out_peak <- get_fitted_peak_info(peak_data, w = weights)
       #out_peak <- get_peak_info(range_data[peak_loc, ], peak_method = peak_method, min_points = min_points)
       out_peak$points <- I(list(IRanges::start(in_range)[peak_loc]))
-      out_peak$scan <- range_data[peak_loc[1], "scan"]
+      out_peak$scan <- range_point_data[peak_loc[1], "scan"]
       out_peak
     })
   } else {
@@ -472,7 +472,7 @@ get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points 
       tmp_peak
     })
     peaks$points <- NA
-    peaks$scan <- range_data$scan[1]
+    peaks$scan <- range_point_data$scan[1]
   }
   peaks
 }
