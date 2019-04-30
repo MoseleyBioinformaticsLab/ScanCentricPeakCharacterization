@@ -4,27 +4,41 @@
 #' width 1, using the `point_multiplier` argument to convert from the floating
 #' point double to an `integer`.
 #'
-#' @param data a `data.frame` with either `m/z` or `frequency`
-#' @param frequency_multiplier a value used to convert to integers.
+#' @param data a `data.frame` containing `mz`
+#' @param point_multiplier a value used to convert to integers.
 #'
 #' @importFrom IRanges IRanges
 #' @importFrom S4Vectors mcols
 #' @export
 mz_points_to_frequency_regions <- function(mz_data, point_multiplier = 500){
-  if (("frequency" %in% names(mz_data))) {
-    frequency_data = mz_data
-  } else {
-    frequency_list = mz_scans_to_frequency(mz_data)
-  }
+  frequency_list = mz_scans_to_frequency(mz_data)
 
   frequency_data = frequency_list$frequency
-  frequency_regions <- IRanges(start = round(frequency_data[, "frequency"] * point_multiplier), width = 1)
+
+  frequency_regions = frequency_points_to_frequency_regions(frequency_data, point_multiplier = point_multiplier)
+  frequency_regions@metadata <- list(point_multiplier = point_multiplier,
+                                     mz_2_frequency = frequency_list$coefficients)
+  frequency_regions
+}
+
+#' frequency points to frequency_regions
+#'
+#' Given a set of frequency points in a data.frame, create IRanges based point "regions"
+#' of width 1, useing the `point_multiplier` to convert from a floating point double
+#' to an `integer`
+#'
+#' @param frequency_data a `data.frame`
+#' @param frequency_variable which column is the `frequency` stored in
+#' @param point_multiplier value used to convert to integers
+#'
+#' @export
+frequency_points_to_frequency_regions = function(frequency_data, frequency_variable = "frequency", point_multiplier = 500){
+  frequency_regions <- IRanges::IRanges(start = round(frequency_data[, frequency_variable] * point_multiplier), width = 1)
   if (is.null(frequency_data$point)) {
     frequency_data$point <- seq(1, nrow(frequency_data))
   }
   S4Vectors::mcols(frequency_regions) <- frequency_data
-  frequency_regions@metadata <- list(point_multiplier = point_multiplier,
-                                     mz_2_frequency = frequency_list$coefficients)
+  frequency_regions@metadata = list(point_multiplier = point_multiplier)
   frequency_regions
 }
 
@@ -498,42 +512,21 @@ split_region_by_peaks <- function(frequency_point_regions, tiled_regions, peak_m
   if (min(scan_runs$lengths) < min_points + 2) {
     frequency_point_splitscan <- split(frequency_point_regions, frequency_point_regions@elementMetadata$scan)
     reduced_peaks <- purrr::map_df(names(frequency_point_splitscan), function(in_scan){
-      get_reduced_peaks(frequency_point_splitscan[[in_scan]], peak_method = peak_method, min_points = min_points, which = "mz")
+      get_reduced_peaks(frequency_point_splitscan[[in_scan]], peak_method = peak_method, min_points = min_points)
       })
   } else {
     reduced_peaks = get_reduced_peaks(frequency_point_regions, peak_method = peak_method,
-                                      min_points = min_points, which = "mz")
+                                      min_points = min_points)
   }
 
-  reduced_peaks <- reduced_peaks[!is.na(reduced_peaks$ObservedCenter.mz), ]
+  reduced_peaks <- reduced_peaks[!is.na(reduced_peaks$ObservedCenter.frequency), ]
 
   if (nrow(reduced_peaks) > 0) {
-    reduced_peaks = convert_found_peaks(as.data.frame(S4Vectors::mcols(frequency_point_regions)), reduced_peaks)
-    reduced_points <- mz_points_to_frequency_regions(reduced_peaks, frequency_point_regions@metadata$point_multiplier)
+    #reduced_peaks = convert_found_peaks(as.data.frame(S4Vectors::mcols(frequency_point_regions)), reduced_peaks)
+    reduced_points <- frequency_points_to_frequency_regions(reduced_peaks, "ObservedCenter.frequency", frequency_point_regions@metadata$point_multiplier)
 
-    initial_regions = split_reduced_points(reduced_points, tiled_regions, n_zero = 2)$region
+    secondary_regions = split_reduced_points(reduced_points, tiled_regions, n_zero = 1)
 
-    secondary_regions = purrr::map(seq(1, length(initial_regions)),
-                                   function(region_index){
-      sub_points = IRanges::subsetByOverlaps(reduced_points, initial_regions[[region_index]])
-      if (length(sub_points) > 0) {
-        sub_consensus_points = convert_peaks_with_consensus_model(sub_points)
-
-        out_region = split_reduced_points(sub_consensus_points, tiled_regions, n_zero = 1)
-      } else {
-        out_region = list(region = IRanges::IRangesList(), peaks = NULL)
-      }
-      out_region
-    })
-    # all_regions = purrr::map(secondary_regions, "region")
-    # all_regions = purrr::map(all_regions, as.list)
-    # all_regions = unlist(all_regions, recursive = FALSE, use.names = FALSE)
-    # all_regions = IRanges::IRangesList(all_regions)
-    #
-    # all_peaks = purrr::map(secondary_regions, "peaks")
-    # all_peaks = purrr::map(all_peaks, as.list)
-    # all_peaks = unlist(all_peaks, recursive = FALSE, use.names = FALSE)
-    # peak_regions = list(region = all_regions, peaks = all_peaks)
   } else {
     sub_region <- IRanges::IRangesList()
     sub_point <- NULL
@@ -598,14 +591,12 @@ split_regions <- function(signal_regions, frequency_point_regions, tiled_regions
                           IRanges::subsetByOverlaps(tiled_regions, signal_regions[in_region]),
                           peak_method = peak_method, min_points = min_points)
   })
-  peak_regions = do.call(c, purrr::map(split_data, function(x){
-    do.call(c, purrr::map(x, function(y){unlist(y$region)}))
-  }))
-  #peak_regions <- do.call(c, purrr::map(split_data, function(x){unlist(x$region)}))
-  peak_peaks <- do.call(c, purrr::map(split_data, function(x){
-    do.call(c, purrr::map(x, function(y){unlist(y$peaks)}))
-  }))
-  return(list(regions = peak_regions, peaks = peak_peaks))
+
+  tmp_regions = do.call(c, purrr::map(split_data, ~ unlist(.x$region)))
+
+  tmp_peaks = do.call(c, purrr::map(split_data, ~ unlist(.x$peaks)))
+
+  return(list(regions = tmp_regions, peaks = tmp_peaks))
 }
 
 two_pass_normalization <- function(peak_regions, intensity_measure = c("RawHeight", "Height"), summary_function = median, normalize_peaks = "both"){
@@ -1117,7 +1108,8 @@ bootstrap_samples <- function(n_indices, n_bootstrap = 100, n_sample = NULL, min
 rename_peak_data = function(data_frame){
   name_convert = c("ObservedCenter.mz" = "ObservedMZ",
                    "Height.mz" = "Height",
-                   "Area.mz" = "Area"
+                   "Area.mz" = "Area",
+                   "ObservedCenter.frequency" = "ObservedFrequency"
   )
   data_names = names(data_frame)
   for (iname in names(name_convert)) {
