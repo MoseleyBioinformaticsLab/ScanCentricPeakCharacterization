@@ -509,15 +509,15 @@ split_region_by_peaks <- function(frequency_point_regions, tiled_regions, peak_m
   frequency_point_regions@elementMetadata$log_int <- log(frequency_point_regions@elementMetadata$intensity + 1e-8)
 
   scan_runs = rle(frequency_point_regions@elementMetadata$scan)
-  if (min(scan_runs$lengths) < min_points + 2) {
+  #if (min(scan_runs$lengths) < min_points + 2) {
     frequency_point_splitscan <- split(frequency_point_regions, frequency_point_regions@elementMetadata$scan)
     reduced_peaks <- purrr::map_df(names(frequency_point_splitscan), function(in_scan){
       get_reduced_peaks(frequency_point_splitscan[[in_scan]], peak_method = peak_method, min_points = min_points)
-      })
-  } else {
-    reduced_peaks = get_reduced_peaks(frequency_point_regions, peak_method = peak_method,
-                                      min_points = min_points)
-  }
+    })
+  # } else {
+  #   reduced_peaks = get_reduced_peaks(frequency_point_regions, peak_method = peak_method,
+  #                                     min_points = min_points)
+  # }
 
   reduced_peaks <- reduced_peaks[!is.na(reduced_peaks$ObservedCenter.frequency), ]
 
