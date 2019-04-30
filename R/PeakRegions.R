@@ -14,16 +14,17 @@ mz_points_to_frequency_regions <- function(mz_data, point_multiplier = 500){
   if (("frequency" %in% names(mz_data))) {
     frequency_data = mz_data
   } else {
-    frequency_data = mz_scans_to_frequency(mz_data)
+    frequency_list = mz_scans_to_frequency(mz_data)
   }
 
-  frequency_data = frequency_data[!is.na(frequency_data$frequency), ]
+  frequency_data = frequency_list$frequency
   frequency_regions <- IRanges(start = round(frequency_data[, "frequency"] * point_multiplier), width = 1)
   if (is.null(frequency_data$point)) {
     frequency_data$point <- seq(1, nrow(frequency_data))
   }
   S4Vectors::mcols(frequency_regions) <- frequency_data
-  frequency_regions@metadata <- list(point_multiplier = point_multiplier)
+  frequency_regions@metadata <- list(point_multiplier = point_multiplier,
+                                     mz_2_frequency = frequency_list$coefficients)
   frequency_regions
 }
 
@@ -51,7 +52,7 @@ mz_points_to_frequency_regions <- function(mz_data, point_multiplier = 500){
 #' @return IRanges
 create_frequency_regions <- function(point_spacing = 0.5, frequency_range = NULL,
                               n_point = 10, delta_point = 1,
-                              point_multiplier = 1000){
+                              point_multiplier = 500){
   if (is.null(frequency_range)) {
     stop("A valid range of frequencies must be supplied!")
   }
