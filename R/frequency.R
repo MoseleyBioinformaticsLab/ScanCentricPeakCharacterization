@@ -199,21 +199,22 @@ frequency_models_scans = function(scan_values){
 
 convert_found_peaks = function(frequency_model, found_peaks){
 
+  found_peaks$peak = seq_len(nrow(found_peaks))
   frequency_model = frequency_model[!is.na(frequency_model$frequency), ]
   split_model = split(frequency_model, frequency_model$scan)
   split_peaks = split(found_peaks, found_peaks$scan)
 
   split_model = split_model[names(split_peaks)]
 
-  out_frequency = purrr::map2_df(.x = split_model, .y = split_peaks, function(.x, .y){
-    peak_mz = .y$ObservedCenter.mz
-    purrr::map_df(peak_mz, function(in_mz){
-      start_point = max(which(.x$mean_mz <= in_mz))
-      end_point = min(which(.x$mean_mz >= in_mz))
-      mz_frequency_interpolation(in_mz, .x[c(start_point, end_point), "mean_mz"],
-                                 .x[c(start_point, end_point), "mean_frequency"])
-    })
+  out_frequency = purrr::map2_df(split_model, split_peaks, function(in_model, in_peaks){
+    tmp_res = purrr::map_df(seq_len(nrow(in_peaks)), function(in_speak){
+      start_point = max(which(in_model$mean_mz <= in_peaks[in_speak, "ObservedCenter.mz"]))
+      end_point = min(which(in_model$mean_mz >= in_peaks[in_speak, "ObservedCenter.mz"]))
+      mz_frequency_interpolation(in_peaks$ObservedCenter.mz[in_speak], in_model$mean_mz[c(start_point, end_point)],
+                                 in_model$mean_frequency[c(start_point, end_point)])
 
+    })
+    cbind(in_peaks, tmp_res)
   })
 
   out_frequency$frequency = out_frequency$predicted_frequency
