@@ -850,7 +850,9 @@ characterize_peaks <- function(peak_region){
   peak_data <- internal_map$map_function(seq_len(length(peak_ranges)),
                                          function(in_region){
                                            print(in_region)
-    characterize_mz_points(IRanges::subsetByOverlaps(frequency_point_regions, peak_ranges[in_region]), picked_peaks[[in_region]], peak_scans = use_scans)
+    tmp_peaks = picked_peaks[[in_region]]
+    tmp_points = IRanges::IRanges(start = unique(unlist(tmp_peaks$points)), width = 1)
+    characterize_mz_points(IRanges::subsetByOverlaps(frequency_point_regions, tmp_points), picked_peaks[[in_region]], peak_scans = use_scans)
   })
 
   individual_peak_heights <- log10(purrr::map_dbl(peak_data, function(x){x$peak_info$Height}))
