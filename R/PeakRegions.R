@@ -818,11 +818,18 @@ get_merged_peak_info <- function(point_data, peak_method = "lm_weighted", min_po
 
   point_data <- point_data[point_data$intensity > 0, ]
   point_data$log_int <- log(point_data$intensity + 1e-8)
-  peak_info <- get_peak_info(point_data, peak_method = peak_method, min_points = min_points)
-  peak_info$ObservedMZMean <- mean(point_data[, "mz"])
-  peak_info$ObservedMZMedian <- median(point_data[, "mz"])
+  weights <- point_data$intensity / max(point_data$intensity)
+  mz_peak_info <- get_fitted_peak_info(point_data, use_loc = "mz", w = weights)
+  freq_peak_info <- get_fitted_peak_info(point_data, use_loc = "frequency", w = weights)
+  mz_peak_info$ObservedMZ <- mz_peak_info$ObservedCenter
+  mz_peak_info$ObservedCenter <- NULL
+  mz_peak_info$ObservedMZMean <- mean(point_data[, "mz"])
+  mz_peak_info$ObservedMZMedian <- median(point_data[, "mz"])
+  mz_peak_info$ObservedFrequency <- freq_peak_info$ObservedCenter
+  mz_peak_info$ObservedFrequencyMean <- mean(point_data[, "frequency"])
+  mz_peak_info$ObservedFrequencyMedian <- median(point_data[, "frequency"])
 
-  peak_info
+  mz_peak_info
 
 }
 
@@ -977,7 +984,8 @@ characterize_mz_points <- function(in_points, scan_peaks, peak_scans = NULL){
     point_by_scan <- split(point_data, point_data$scan)
     peak_info$NPoint <- median(purrr::map_int(point_by_scan, nrow))
 
-    scan_heights <- data.frame(Scan = scan_peaks$scan, LogHeight = log10(scan_peaks$Height), ObservedMZ = scan_peaks$ObservedMZ)
+    scan_heights <- data.frame(Scan = scan_peaks$scan, LogHeight = log10(scan_peaks$Height), ObservedMZ = scan_peaks$ObservedMZ,
+                               ObservedFrequency = scan_peaks$ObservedFrequency)
   }
 
 
