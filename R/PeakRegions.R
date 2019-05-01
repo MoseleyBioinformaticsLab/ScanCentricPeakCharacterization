@@ -856,7 +856,7 @@ characterize_peaks <- function(peak_region){
 
   peak_data <- internal_map$map_function(seq_len(length(peak_ranges)),
                                          function(in_region){
-                                           print(in_region)
+                                           #print(in_region)
     tmp_peaks = picked_peaks[[in_region]]
     tmp_points = IRanges::IRanges(start = unique(unlist(tmp_peaks$points)), width = 1)
     characterize_mz_points(IRanges::subsetByOverlaps(frequency_point_regions, tmp_points), picked_peaks[[in_region]], peak_scans = use_scans)
@@ -899,7 +899,7 @@ characterize_peaks <- function(peak_region){
       peak_info$PeakID <- peak_index[in_peak]
       rownames(peak_info) <- NULL
 
-      mz_scans <- original_scan_heights <- corrected_scan_heights <- template_scan_data
+      frequency_scans <- mz_scans <- original_scan_heights <- corrected_scan_heights <- template_scan_data
       original_scan_heights[1, as.character(scan_data$Scan)] <- scan_data$LogHeight
       rownames(original_scan_heights) <- peak_index[in_peak]
       corrected_scan_heights[1, as.character(corrected_scan_data$Scan)] <- corrected_scan_data$LogHeight
@@ -908,9 +908,12 @@ characterize_peaks <- function(peak_region){
       mz_scans[1, as.character(scan_data$Scan)] <- scan_data$ObservedMZ
       rownames(mz_scans) <- peak_index[in_peak]
 
+      frequency_scans[1, as.character(scan_data$Scan)] <- scan_data$ObservedFrequency
+
       list(peak = peak_info, original_scan = original_scan_heights,
            corrected_scan = corrected_scan_heights,
-           mz_scan = mz_scans)
+           mz_scan = mz_scans,
+           frequency_scan = frequency_scans)
                                       })
 
   peak_info <- purrr::map_df(corrected_peak_info, "peak")
@@ -920,11 +923,13 @@ characterize_peaks <- function(peak_region){
   original_height <- do.call(rbind, purrr::map(corrected_peak_info, "original_scan"))
   corrected_height <- do.call(rbind, purrr::map(corrected_peak_info, "corrected_scan"))
   mz_scan <- do.call(rbind, purrr::map(corrected_peak_info, "mz_scan"))
+  frequency_scan <- do.call(rbind, purrr::map(corrected_peak_info, "frequency_scan"))
 
   peak_region$peak_data <- peak_info
   peak_region$scan_level_arrays <- list(Log10Height = original_height,
                                         CorrectedLog10Height = corrected_height,
                                         ObservedMZ = mz_scan,
+                                        ObservedFrequency = frequency_scan,
                                         Scan = colnames(original_height),
                                         PeakID = rownames(original_height))
 
@@ -964,8 +969,8 @@ characterize_mz_points <- function(in_points, scan_peaks, peak_scans = NULL){
     in_points <- in_points[in_points@elementMetadata$scan %in% peak_scans]
 
     peak_info <- get_merged_peak_info(as.data.frame(S4Vectors::mcols(in_points)))
-    peak_info$ObservedMZ = peak_info$ObservedCenter
-    peak_info$ObservedCenter = NULL
+    #peak_info$ObservedMZ = peak_info$ObservedCenter
+    #peak_info$ObservedCenter = NULL
 
     peak_info$ObservedMZSD <- sd(scan_peaks$ObservedMZ)
     peak_info$Log10ObservedMZSD <- sd(log10(scan_peaks$ObservedMZ))
