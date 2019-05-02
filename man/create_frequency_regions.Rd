@@ -5,18 +5,18 @@
 \title{create frequency regions}
 \usage{
 create_frequency_regions(point_spacing = 0.5, frequency_range = NULL,
-  region_size = 10, delta = 1, point_multiplier = 1000)
+  n_point = 10, delta_point = 1, point_multiplier = 500)
 }
 \arguments{
 \item{point_spacing}{how far away are subsequent points.}
 
 \item{frequency_range}{the range of frequency to use}
 
-\item{region_size}{how \emph{big} is each of the regions}
+\item{n_point}{how many points you want to cover}
 
-\item{delta}{the \emph{step} size between the beginning of each subsequent region}
+\item{delta_point}{the \emph{step} size between the beginning of each subsequent region}
 
-\item{point_multiplier}{multiplier to convert from M/Z to integer space}
+\item{point_multiplier}{multiplier to convert from frequency to integer space}
 }
 \value{
 IRanges

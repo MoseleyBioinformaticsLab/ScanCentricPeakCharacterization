@@ -14,7 +14,7 @@ Imports: cowplot, dplyr, ggplot2, readxl, xcms, debugme, assertthat,
 Remotes: rmflight/waitcopy
 License: MIT
 LazyData: true
-RoxygenNote: 6.1.0
+RoxygenNote: 6.1.1
 Suggests: knitr, rmarkdown, testthat, furrr
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)

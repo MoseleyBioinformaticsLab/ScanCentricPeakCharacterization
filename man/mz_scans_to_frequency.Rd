@@ -12,7 +12,7 @@ mz_scans_to_frequency(mz_scan_df, ...)
 \item{...}{other parameters for \code{convert_mz_frequency}}
 }
 \value{
-data.frame
+list
 }
 \description{
 Given a multi-scan data.frame of m/z, generate frequency values for the data.

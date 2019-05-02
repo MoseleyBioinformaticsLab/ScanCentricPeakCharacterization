@@ -4,12 +4,12 @@
 \alias{mz_points_to_frequency_regions}
 \title{mz points to frequency regions}
 \usage{
-mz_points_to_frequency_regions(mz_data, point_multiplier = 1000)
+mz_points_to_frequency_regions(mz_data, point_multiplier = 500)
 }
 \arguments{
-\item{data}{a \code{data.frame} with either \code{m/z} or \code{frequency}}
+\item{point_multiplier}{a value used to convert to integers.}
 
-\item{frequency_multiplier}{a value used to convert to integers.}
+\item{data}{a \code{data.frame} containing \code{mz}}
 }
 \description{
 Given M/Z point data in a data.frame, create IRanges based point "regions" of
