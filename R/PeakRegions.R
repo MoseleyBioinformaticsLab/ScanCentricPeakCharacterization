@@ -17,7 +17,8 @@ mz_points_to_frequency_regions <- function(mz_data, point_multiplier = 500){
 
   frequency_regions = frequency_points_to_frequency_regions(frequency_data, point_multiplier = point_multiplier)
   frequency_regions@metadata <- list(point_multiplier = point_multiplier,
-                                     mz_2_frequency = frequency_list$coefficients)
+                                     mz_2_frequency = frequency_list$coefficients,
+                                     all_coefficients = frequency_list$all_coefficients)
   frequency_regions
 }
 
@@ -369,16 +370,21 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       mz_point_data <- split(mz_point_data, mz_point_data$scan)
       mz_point_data <- mz_point_data[names(mz_point_data) %in% as.character(self$peak_regions$normalization_factors$scan)]
 
+      tmp_ms_info = purrr::map_df(mz_point_data, function(in_scan){
+        data.frame(scan = in_scan[1, "scan"],
+                   tic = sum(in_scan[, "intensity"]),
+                   raw_tic = sum(in_scan[, "RawIntensity"]))
+      })
+
+      ms_info = dplyr::left_join(tmp_ms_info, self$peak_regions$frequency_point_regions@metadata$all_coefficients, by = "scan")
+
       list(run_time_info = list(
               run_time = as.numeric(difftime(self$stop_time, self$start_time, units = "s")),
               n_peak = length(self$peak_regions$peak_regions),
               n_scans = length(self$peak_regions$normalization_factors$scan)
               ),
-           ms_info = purrr::map_df(mz_point_data, function(in_scan){
-             data.frame(scan = in_scan[1, "scan"],
-                        tic = sum(in_scan[, "intensity"]),
-                        raw_tic = sum(in_scan[, "RawIntensity"]))
-           }))
+           ms_info = ms_info,
+           mz_2_frequency = self$peak_regions$frequency_point_regions@metadata$mz_2_frequency)
     },
 
     initialize = function(raw_ms = NULL, sliding_region_size = 10, sliding_region_delta = 1, tiled_region_size = 1, tiled_region_delta = 1,
