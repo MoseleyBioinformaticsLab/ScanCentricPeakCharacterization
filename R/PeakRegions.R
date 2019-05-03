@@ -289,6 +289,29 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       invisible(self)
     },
 
+    remove_high_frequency_sd = function() {
+      peak_region = self$peak_regions
+
+      sd_cutoff = max(boxplot.stats(peak_region$peak_data$ObservedFrequencySD)$stats)
+
+      keep_peaks = peak_region$peak_data$ObservedFrequencySD <= sd_cutoff
+      n_peak = length(keep_peaks)
+
+      peak_region$peak_data = peak_region$peak_data[keep_peaks, ]
+
+      peak_region$scan_level_arrays = purrr::map(peak_region$scan_level_arrays, function(in_var){
+        if (is.matrix(in_var)) {
+          return(in_var[keep_peaks, ])
+        } else if (length(in_var) == n_peak) {
+          return(in_var[keep_peaks])
+        } else {
+          return(in_var)
+        }
+      })
+      self$peak_regions = peak_region
+      invisible(self)
+    },
+
     add_data = function(raw_ms) {
       if (inherits(raw_ms, "RawMS")) {
         self$peak_regions$add_data(raw_ms$extract_raw_data())
@@ -310,6 +333,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       self$remove_double_peaks_in_scans()
       self$normalize_data()
       self$find_peaks_in_regions()
+      self$remove_high_frequency_sd()
       if (nrow(self$peak_regions$peak_data) == 0) {
         stop("No peaks meeting criteria!")
       }
@@ -979,6 +1003,7 @@ characterize_mz_points <- function(in_points, scan_peaks, peak_scans = NULL){
     #peak_info$ObservedCenter = NULL
 
     peak_info$ObservedMZSD <- sd(scan_peaks$ObservedMZ)
+    peak_info$ObservedFrequencySD <- sd(scan_peaks$ObservedFrequency)
     peak_info$Log10ObservedMZSD <- sd(log10(scan_peaks$ObservedMZ))
     peak_info$Log10Height <- log10(peak_info$Height)
     peak_info$HeightSD <- sd(scan_peaks$Height)
