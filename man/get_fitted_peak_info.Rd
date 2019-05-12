@@ -4,10 +4,12 @@
 \alias{get_fitted_peak_info}
 \title{parabolic fitted peak}
 \usage{
-get_fitted_peak_info(possible_peak, w = NULL)
+get_fitted_peak_info(possible_peak, use_loc = "mz", w = NULL)
 }
 \arguments{
 \item{possible_peak}{data.frame of mz, intensity and log intensity}
+
+\item{use_loc}{which field to use for locations, default is "mz"}
 
 \item{w}{the weights to use for the points}
 }
