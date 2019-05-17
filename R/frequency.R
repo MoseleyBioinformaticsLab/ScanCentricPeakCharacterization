@@ -92,7 +92,8 @@ predict_frequency_sr = function(x, coefficients){
   sr_x = 1 / (x ^ 0.5)
   X = matrix(c(rep(1, length(x)), sr_x), nrow = length(x), ncol = 2, byrow = FALSE)
   coef_matrix = matrix(coefficients, nrow = 2, ncol = 1, byrow = TRUE)
-  X %*% coef_matrix
+  out_frequency = X %*% coef_matrix
+  out_frequency[, 1]
 }
 
 fit_mz_s2 = function(x, y){
@@ -108,7 +109,8 @@ predict_mz_s2 = function(x, coefficients){
   s_x = 1 / (x^2)
   X = matrix(c(rep(1, length(x)), s_x), nrow = length(x), ncol = 2, byrow = FALSE)
   coef_matrix = matrix(coefficients, nrow = 2, ncol = 1, byrow = TRUE)
-  X %*% coef_matrix
+  out_mz = X %*% coef_matrix
+  out_mz[, 1]
 }
 
 
