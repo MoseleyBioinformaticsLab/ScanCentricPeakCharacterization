@@ -101,12 +101,12 @@ fit_mz_s2 = function(x, y){
 
   s_fit = stats::lm.fit(X, y)
   names(s_fit$coefficients) = NULL
-  s_fit
+  s_fit$coefficients
 }
 
 predict_mz_s2 = function(x, coefficients){
   s_x = 1 / (x^2)
-  X = matrix(c(rep(1, length(x)), s_x), nrow = 2, ncol = 1, byrow = FALSE)
+  X = matrix(c(rep(1, length(x)), s_x), nrow = length(x), ncol = 2, byrow = FALSE)
   coef_matrix = matrix(coefficients, nrow = 2, ncol = 1, byrow = TRUE)
   X %*% coef_matrix
 }
