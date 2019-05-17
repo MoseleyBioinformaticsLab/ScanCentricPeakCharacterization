@@ -3,12 +3,14 @@ load("testing_frequency.RData")
 library(furrr)
 library(ggplot2)
 set_internal_map(furrr::future_map)
-plan(multiprocess)
+plan(multiprocess(workers = 5))
 pr = PeakRegions$new(raw_mz)
 prf = PeakRegionFinder$new(pr)
 prf$add_regions()
 self = prf
 self$reduce_sliding_regions()
+
+
 use_regions = self$peak_regions$peak_regions[1:1000]
 
 get_reduced_peaks_safely <- function(in_range, peak_method = "lm_weighted", min_points = 4,
