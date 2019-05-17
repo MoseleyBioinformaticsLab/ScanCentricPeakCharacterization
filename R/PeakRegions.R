@@ -326,6 +326,31 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
            ScanLevel = self$peak_regions$scan_level_arrays)
     },
 
+    add_offset = function(){
+      peak_data = self$peak_regions$peak_data
+      frequency_points = S4Vectors::mcols(self$peak_regions$frequency_point_regions)
+      frequency_points$lead_diff = frequency_points$frequency - dplyr::lead(frequency_points$frequency)
+      good_points = (frequency_points$lead_diff >= 0.49) & (frequency_points$lead_diff <= 0.51) & (!is.na(frequency_points$lead_diff))
+      med_frequency_difference = median(frequency_points$lead_diff[good_points], na.rm = TRUE)
+
+      # What to do here?
+      # Take the frequency value for the peak, add the difference above, and then convert both to
+      # M/Z and take that difference, and report it as the *Offset* value
+      #
+      frequency_2 = peak_data$ObservedFrequency + med_frequency_difference
+      mz_model = fit_mz_s2(frequency_points$frequency[good_points], frequency_points$mz[good_points])
+      mz_1 = predict_mz_s2(peak_data$ObservedFrequency, mz_model)
+      mz_2 = predict_mz_s2(frequency_2, mz_model)
+      peak_data$Offset = mz_1 - mz_2
+      self$peak_regions$peak_data = peak_data
+      invisible(self)
+    },
+
+    sort_ascending_mz = function(){
+      self$peak_regions$peak_data = self$peak_regions$peak_data[order(self$peak_regions$peak_data$ObservedMZ), ]
+      invisible(self)
+    },
+
     characterize_peaks = function(){
       self$add_regions()
       self$reduce_sliding_regions()
@@ -334,6 +359,8 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       self$normalize_data()
       self$find_peaks_in_regions()
       self$remove_high_frequency_sd()
+      self$add_offset()
+      self$sort_ascending_mz()
       if (nrow(self$peak_regions$peak_data) == 0) {
         stop("No peaks meeting criteria!")
       }
