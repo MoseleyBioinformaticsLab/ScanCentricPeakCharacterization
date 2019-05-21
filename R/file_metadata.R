@@ -27,9 +27,14 @@ get_raw_ms_metadata <- function(in_file){
 get_mzml_metadata <- function(mzml_file){
   xml_doc <- xmlTreeParse(mzml_file, useInternalNodes = TRUE)
   ns <- xmlNamespaceDefinitions(xmlRoot(xml_doc), recursive = TRUE, simplify = TRUE)
-  names(ns)[1] <- "d1"
+  missing_name = which(names(ns) %in% "")
+  names(ns)[missing_name] <- "d1"
 
-  mz_metanodes <- getNodeSet(xml_doc, "/d1:indexedmzML/d1:mzML", ns)
+  mz_metanodes <- getNodeSet(xml_doc, "/d1:mzML", ns)
+
+  if (length(mz_metanodes) == 0) {
+    mz_metanodes <- getNodeSet(xml_doc, "/d1:indexedmzML/d1:mzML", ns)
+  }
 
   mz_meta <- list()
   tmp_attr <- unclass(xmlAttrs(mz_metanodes[[1]]))
