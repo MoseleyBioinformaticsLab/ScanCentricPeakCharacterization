@@ -60,7 +60,7 @@ mz_points_to_frequency_regions <- function(mz_data, point_multiplier = 400){
 #' @param point_multiplier value used to convert to integers
 #'
 #' @export
-frequency_points_to_frequency_regions = function(frequency_data, frequency_variable = "frequency", point_multiplier = 500){
+frequency_points_to_frequency_regions = function(frequency_data, frequency_variable = "frequency", point_multiplier = 400){
   frequency_regions <- IRanges::IRanges(start = round(frequency_data[, frequency_variable] * point_multiplier), width = 1)
   if (is.null(frequency_data$point)) {
     frequency_data$point <- seq(1, nrow(frequency_data))
@@ -169,6 +169,7 @@ PeakRegions <- R6::R6Class("PeakRegions",
         }
         self$frequency_point_regions = mz_points_to_frequency_regions(raw_mz_data,
                                                                       self$frequency_multiplier)
+        self$frequency_multiplier = self$frequency_point_regions@metadata$point_multiplier
         self$frequency_range = range(S4Vectors::mcols(self$frequency_point_regions)$frequency)
         self$set_min_scan()
 
@@ -178,7 +179,7 @@ PeakRegions <- R6::R6Class("PeakRegions",
 
     initialize = function(raw_ms = NULL,
                           point_multiplier = 200000,
-                          frequency_multiplier = 500,
+                          frequency_multiplier = 400,
                           scan_perc = 0.1, max_subsets = 100){
       #browser(expr = TRUE)
       self$point_multiplier <- point_multiplier
@@ -466,7 +467,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     },
 
     initialize = function(raw_ms = NULL, sliding_region_size = 10, sliding_region_delta = 1, tiled_region_size = 1, tiled_region_delta = 1,
-                          region_percentage = 0.99, point_multiplier = 1000, peak_method = "lm_weighted", min_points = 4, progress = FALSE){
+                          region_percentage = 0.99, point_multiplier = 400, peak_method = "lm_weighted", min_points = 4, progress = FALSE){
       if (inherits(raw_ms, "RawMS")) {
         self$peak_regions <- PeakRegions$new(raw_ms = raw_ms$extract_raw_data(), point_multiplier)
       } else if (inherits(raw_ms, "PeakRegions")) {
