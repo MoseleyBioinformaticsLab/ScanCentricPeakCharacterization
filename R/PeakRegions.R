@@ -10,8 +10,35 @@
 #' @importFrom IRanges IRanges
 #' @importFrom S4Vectors mcols
 #' @export
-mz_points_to_frequency_regions <- function(mz_data, point_multiplier = 500){
+mz_points_to_frequency_regions <- function(mz_data, point_multiplier = 400){
   frequency_list = mz_scans_to_frequency(mz_data)
+
+  # this is a check to make sure we will be able to convert
+  # to multiply and still get integers out
+  range_freq = range(frequency_list$frequency$frequency)
+
+  if (any(is.na(range_freq))) {
+    stop("NA entries in conversion from M/Z to frequency! Stopping!")
+  }
+
+  init_conversion = suppressWarnings(as.integer(range_freq * point_multiplier))
+  na_conversion = any(is.na(init_conversion))
+  reduce_value = 1
+  if (na_conversion) {
+    reduce_value = reduce_value - 0.1
+    while (na_conversion && (reduce_value >= 0.3)) {
+      new_multiplier = (point_multiplier * reduce_value)
+      new_conversion = suppressWarnings(as.integer(range_freq * new_multiplier))
+      na_conversion = any(is.na(new_conversion))
+    }
+
+    if (!na_conversion && (reduce_value >= 0.3)) {
+      message("Frequency point multiplier modified to avoid NA values ...")
+      point_multiplier = new_multiplier
+    } else {
+      stop("No good point multiplier found, stopping.")
+    }
+  }
 
   frequency_data = frequency_list$frequency
 
