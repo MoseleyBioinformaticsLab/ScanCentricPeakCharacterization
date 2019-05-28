@@ -731,7 +731,7 @@ intensity_scan_correlation <- function(scan_peak){
   cor(scan_peak$Height, scan_peak$scan, method = "spearman", use = "complete.obs")
 }
 
-single_pass_normalization <- function(scan_peaks, intensity_measure = c("RawHeight", "Height"), summary_function = median, use_peaks = NULL){
+single_pass_normalization <- function(scan_peaks, intensity_measure = c("RawHeight", "Height"), summary_function = median, use_peaks = NULL, min_ratio = 0.7){
   n_scan_per_peak <- purrr::map_int(scan_peaks, function(x){
     if (sum(duplicated(x$scan)) == 0) {
       return(length(x$scan))
@@ -770,7 +770,7 @@ single_pass_normalization <- function(scan_peaks, intensity_measure = c("RawHeig
   intensity_ratio <- purrr::map_dfr(seq_len(nrow(peak_intensity)), function(x){
     peak_intensity[x, ] / max(peak_intensity[x, ], na.rm = TRUE)
   })
-  peak_intensity[intensity_ratio < 0.7] <- NA
+  peak_intensity[intensity_ratio < min_ratio] <- NA
 
   intensity_scans <- purrr::map_int(seq_len(ncol(peak_intensity)), function(x){
     sum(!is.na(peak_intensity[, x]))
