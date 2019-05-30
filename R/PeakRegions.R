@@ -215,6 +215,8 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     min_points = NULL,
     sample_id = NULL,
 
+    zero_normalization = NULL,
+
     progress = NULL,
 
     add_regions = function(){
@@ -295,8 +297,14 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
         message("Normalizing scans ...")
       }
 
-      self$peak_regions <- two_pass_normalization(self$peak_regions, summary_function = median,
-                                                  normalize_peaks = which_data)
+      if (!self$zero_normalization) {
+        self$peak_regions <- two_pass_normalization(self$peak_regions, summary_function = median,
+                                                    normalize_peaks = which_data)
+      } else {
+        self$peak_regions = zero_normalization(self$peak_regions, summary_function = median,
+                                               normalize_peaks = which_data)
+      }
+
     },
 
     find_peaks_in_regions = function(which_data = "raw"){
@@ -467,7 +475,8 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     },
 
     initialize = function(raw_ms = NULL, sliding_region_size = 10, sliding_region_delta = 1, tiled_region_size = 1, tiled_region_delta = 1,
-                          region_percentage = 0.99, point_multiplier = 400, peak_method = "lm_weighted", min_points = 4, progress = FALSE){
+                          region_percentage = 0.99, point_multiplier = 400, peak_method = "lm_weighted", min_points = 4,
+                          zero_normalization = FALSE, progress = FALSE){
       if (inherits(raw_ms, "RawMS")) {
         self$peak_regions <- PeakRegions$new(raw_ms = raw_ms$extract_raw_data(), point_multiplier)
       } else if (inherits(raw_ms, "PeakRegions")) {
@@ -484,6 +493,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
       self$peak_method = peak_method
       self$min_points = min_points
+      self$zero_normalization = zero_normalization
       self$progress = progress
 
       invisible(self)
@@ -729,6 +739,34 @@ intensity_scan_correlation <- function(scan_peak){
     return(NA)
   }
   cor(scan_peak$Height, scan_peak$scan, method = "spearman", use = "complete.obs")
+}
+
+zero_normalization = function(peak_regions, intensity_measure = c("RawHeight", "Height"), summary_function = median, normalize_peaks = "both"){
+  scan_peaks <- peak_regions$scan_peaks
+
+  all_scans = unique(unlist(purrr::map(scan_peaks, ~ .x$scan)))
+  normalization_factors <- data.frame(scan = sort(all_scans), normalization = 0)
+
+  normed_peaks <- internal_map$map_function(scan_peaks, normalize_scan_peaks, normalization_factors)
+
+  normed_scan_cor <- purrr::map_dbl(normed_peaks, intensity_scan_correlation)
+  normed_scan_cor[is.na(normed_scan_cor)] <- 0
+  low_cor <- abs(normed_scan_cor) <= 0.5
+
+  normed_raw <- normalize_raw_points(peak_regions$frequency_point_regions, normalization_factors)
+
+  peak_regions$scan_peaks <- normed_peaks
+  peak_regions$frequency_point_regions <- normed_raw
+  peak_regions$is_normalized <- "both"
+  peak_regions$normalization_factors <- normalization_factors
+
+  normed_scan_cor <- data.frame(ScanCorrelation = normed_scan_cor,
+                                HighCor = !low_cor)
+  n_scans <- purrr::map_int(scan_peaks, calculate_number_of_scans)
+  normed_scan_cor$HighScan <- n_scans >= quantile(n_scans, 0.9)
+  normed_scan_cor$Ignore <- normed_scan_cor$HighCor & normed_scan_cor$HighScan
+  peak_regions$scan_correlation <- normed_scan_cor
+  peak_regions
 }
 
 single_pass_normalization <- function(scan_peaks, intensity_measure = c("RawHeight", "Height"), summary_function = median, use_peaks = NULL, min_ratio = 0.7){
