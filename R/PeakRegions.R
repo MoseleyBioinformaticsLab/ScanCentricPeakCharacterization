@@ -883,7 +883,7 @@ normalize_scan_peaks <- function(in_peak, normalization_factors){
   }
   in_peak$index <- seq(1, nrow(in_peak))
   height_scan <- as.data.frame(in_peak[, c("index", "RawHeight", "scan")])
-  height_scan <- dplyr::right_join(height_scan, normalization_factors, by = "scan")
+  height_scan <- dplyr::left_join(height_scan, normalization_factors, by = "scan")
   height_scan <- height_scan[!is.na(height_scan$index), ]
   height_scan <- height_scan[order(height_scan$index), ]
 
