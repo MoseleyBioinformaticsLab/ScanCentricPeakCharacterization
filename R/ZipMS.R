@@ -226,7 +226,7 @@ ZipMS <- R6::R6Class("ZipMS",
             tmp_env$peak_finder
           })
         }
-        if (inherits(peak_finder, "PeakFinder")) {
+        if (inherits(peak_finder, "PeakRegionFinder")) {
           self$peak_finder <- peak_finder
           rm(peak_finder)
           message("Peak Finder Binary File Loaded!")
