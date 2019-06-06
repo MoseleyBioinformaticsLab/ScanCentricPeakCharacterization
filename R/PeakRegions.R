@@ -45,7 +45,8 @@ mz_points_to_frequency_regions <- function(mz_data, point_multiplier = 400){
   frequency_regions = frequency_points_to_frequency_regions(frequency_data, point_multiplier = point_multiplier)
   frequency_regions@metadata <- list(point_multiplier = point_multiplier,
                                      mz_2_frequency = frequency_list$coefficients,
-                                     all_coefficients = frequency_list$all_coefficients)
+                                     all_coefficients = frequency_list$all_coefficients,
+                                     difference_range = frequency_list$difference_range)
   frequency_regions
 }
 
@@ -365,19 +366,19 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     add_offset = function(){
       peak_data = self$peak_regions$peak_data
       frequency_points = S4Vectors::mcols(self$peak_regions$frequency_point_regions)
-      frequency_points$lead_diff = frequency_points$frequency - dplyr::lead(frequency_points$frequency)
-      good_points = (frequency_points$lead_diff >= 0.49) & (frequency_points$lead_diff <= 0.51) & (!is.na(frequency_points$lead_diff))
-      med_frequency_difference = median(frequency_points$lead_diff[good_points], na.rm = TRUE)
+      med_frequency_difference = self$peak_regions$frequency_point_regions@metadata$difference_range$most_common
 
       # What to do here?
       # Take the frequency value for the peak, add the difference above, and then convert both to
       # M/Z and take that difference, and report it as the *Offset* value
       #
+      good_points = frequency_points$convertable
+      good_points[is.na(good_points)] = FALSE
       frequency_2 = peak_data$ObservedFrequency + med_frequency_difference
       mz_model = fit_mz_s2(frequency_points$frequency[good_points], frequency_points$mz[good_points])
       mz_1 = predict_mz_s2(peak_data$ObservedFrequency, mz_model)
       mz_2 = predict_mz_s2(frequency_2, mz_model)
-      peak_data$Offset = mz_1 - mz_2
+      peak_data$Offset = (mz_1 - mz_2) * self$offset_multiplier
       self$peak_regions$peak_data = peak_data
       invisible(self)
     },
@@ -467,15 +468,18 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
       list(run_time_info = list(
               run_time = as.numeric(difftime(self$stop_time, self$start_time, units = "s")),
-              n_peak = length(self$peak_regions$peak_regions),
+              n_peak_regions = length(self$peak_regions$peak_regions),
               n_scans = length(self$peak_regions$normalization_factors$scan)
               ),
            ms_info = ms_info,
-           mz_2_frequency = self$peak_regions$frequency_point_regions@metadata$mz_2_frequency)
+           mz_2_frequency = self$peak_regions$frequency_point_regions@metadata$mz_2_frequency,
+           resolution = calculate_resolution_information(self$peak_regions$frequency_point_regions),
+           peaks = list(n_peaks = nrow(self$peak_regions$peak_data),
+                        mz_range = range(self$peak_regions$peak_data, na.rm = TRUE)))
     },
 
     initialize = function(raw_ms = NULL, sliding_region_size = 10, sliding_region_delta = 1, tiled_region_size = 1, tiled_region_delta = 1,
-                          region_percentage = 0.99, point_multiplier = 400, peak_method = "lm_weighted", min_points = 4,
+                          region_percentage = 0.99, offset_multiplier = 1, point_multiplier = 400, peak_method = "lm_weighted", min_points = 4,
                           zero_normalization = FALSE, progress = FALSE){
       if (inherits(raw_ms, "RawMS")) {
         self$peak_regions <- PeakRegions$new(raw_ms = raw_ms$extract_raw_data(), point_multiplier)
@@ -495,6 +499,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       self$min_points = min_points
       self$zero_normalization = zero_normalization
       self$progress = progress
+      self$offset_multiplier = offset_multiplier
 
       invisible(self)
     }

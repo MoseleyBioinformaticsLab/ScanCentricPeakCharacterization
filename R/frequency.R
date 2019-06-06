@@ -25,7 +25,6 @@
 #' frequency value using the two averaged points to the left and right in M/Z.
 #'
 #' @param mz_data a data.frame with `mz`
-#' @param valid_range points with a frequency difference in this range can be used for modeling
 #' @param keep_all keep **all** the variables generated, or just the original + **frequency**?
 #'
 #' @export
@@ -33,7 +32,7 @@
 #' @seealso mz_scans_to_frequency
 #'
 #' @return list
-convert_mz_frequency = function(mz_data, valid_range = c(0.49, 0.51), keep_all = TRUE){
+convert_mz_frequency = function(mz_data, keep_all = TRUE){
   original_vars = names(mz_data)
   stopifnot("mz" %in% names(mz_data))
   frequency_data = mz_data
@@ -47,9 +46,10 @@ convert_mz_frequency = function(mz_data, valid_range = c(0.49, 0.51), keep_all =
   frequency_data$mean_mz = rowMeans(tmp_data)
   frequency_data$mean_offset = tmp_data[, 1] - tmp_data[, 2]
   frequency_data$mean_frequency = frequency_data$mean_mz / frequency_data$mean_offset
+  valid_range = discover_frequency_offset(frequency_data$mean_frequency)
   frequency_data$mean_freq_diff = dplyr::lag(frequency_data$mean_frequency) - frequency_data$mean_frequency
 
-  is_convertable = dplyr::between(frequency_data$mean_freq_diff, valid_range[1], valid_range[2])
+  is_convertable = dplyr::between(frequency_data$mean_freq_diff, valid_range$range[1], valid_range$range[2])
   is_convertable[is.na(is_convertable)] = FALSE
 
   frequency_data[is_convertable, "convertable"] = TRUE
@@ -156,7 +156,10 @@ mz_scans_to_frequency = function(mz_scan_df, ...){
   mz_frequency_df$frequency = predict_frequency_sr(mz_frequency_df$mz, model_coefficients)
 
   rownames(mz_frequency_df) = NULL
-  list(frequency = mz_frequency_df, all_coefficients = frequency_coefficients, coefficients = model_coefficients)
+  valid_range = discover_frequency_offset(mz_frequency_df$frequency)
+  mz_frequency_df$frequency_diff = dplyr::lag(mz_frequency_df$frequency) - mz_frequency_df$frequency
+  mz_frequency_df$convertable = dplyr::between(mz_frequency_df$frequency_diff, valid_range$range[1], valid_range$range[2])
+  list(frequency = mz_frequency_df, all_coefficients = frequency_coefficients, coefficients = model_coefficients, difference_range = valid_range)
 }
 
 #' convert mz to frequency using linear fit
@@ -244,4 +247,45 @@ convert_found_peaks = function(frequency_model, found_peaks){
   out_frequency$frequency = out_frequency$predicted_frequency
   out_frequency$predicted_frequency = NULL
   cbind(found_peaks, out_frequency)
+}
+
+calculate_resolution_information = function(frequency_point_regions, use_mz = 400){
+  frequency_points = S4Vectors::mcols(frequency_point_regions)
+  valid_range = frequency_point_regions@metadata$difference_range
+  med_frequency_difference = valid_range$most_common
+
+  use_freq = predict_frequency_sr(use_mz, frequency_point_regions@metadata$mz_2_frequency)
+  one_point_diff = use_freq + med_frequency_difference
+
+  convertable = frequency_points$convertable
+  convertable[is.na(convertable)] = FALSE
+  mz_model = fit_mz_s2(frequency_points$frequency[convertable], frequency_points$mz[convertable])
+  one_point_mz = predict_mz_s2(one_point_diff, mz_model)
+
+  frequency_over_mz = med_frequency_difference / abs(one_point_mz - use_mz)
+
+  list(frequency = list(point_point_differences = valid_range,
+                        difference_mz = frequency_over_mz),
+
+       mz = list(value = use_mz,
+                 ppm = abs(one_point_mz - use_mz) / use_mz * 1e6,
+                 difference = abs(one_point_mz - use_mz))
+       )
+}
+
+discover_frequency_offset = function(frequency_values, cutoff_range = 0.02){
+  frequency_diffs = abs(frequency_values - dplyr::lead(frequency_values))
+
+  round_diffs = round(frequency_diffs, digits = 4)
+  round_diffs = round_diffs[!is.na(round_diffs)]
+  rle_diffs = rle(sort(round_diffs))
+
+  common_value = rle_diffs$values[which.max(rle_diffs$lengths)]
+
+  cutoff_value = cutoff_range * common_value
+  range_value = c(common_value - cutoff_value, common_value + cutoff_value)
+
+  useful_points = frequency_diffs[dplyr::between(frequency_diffs, range_value[1], range_value[2])]
+  list(most_common = median(useful_points, na.rm = TRUE),
+       range = range_value)
 }
