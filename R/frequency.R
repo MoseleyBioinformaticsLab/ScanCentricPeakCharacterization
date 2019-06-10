@@ -265,7 +265,8 @@ calculate_resolution_information = function(frequency_point_regions, use_mz = 40
   frequency_over_mz = med_frequency_difference / abs(one_point_mz - use_mz)
 
   list(frequency = list(point_point_differences = valid_range,
-                        difference_mz = frequency_over_mz),
+                        difference_mz = frequency_over_mz,
+                        conversion = frequency_point_regions@metadata$mz_2_frequency),
 
        mz = list(value = use_mz,
                  ppm = abs(one_point_mz - use_mz) / use_mz * 1e6,
