@@ -4,7 +4,7 @@
 \alias{mz_points_to_frequency_regions}
 \title{mz points to frequency regions}
 \usage{
-mz_points_to_frequency_regions(mz_data, point_multiplier = 500)
+mz_points_to_frequency_regions(mz_data, point_multiplier = 400)
 }
 \arguments{
 \item{point_multiplier}{a value used to convert to integers.}

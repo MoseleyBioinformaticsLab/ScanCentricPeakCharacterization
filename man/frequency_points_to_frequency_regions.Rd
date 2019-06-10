@@ -5,7 +5,7 @@
 \title{frequency points to frequency_regions}
 \usage{
 frequency_points_to_frequency_regions(frequency_data,
-  frequency_variable = "frequency", point_multiplier = 500)
+  frequency_variable = "frequency", point_multiplier = 400)
 }
 \arguments{
 \item{frequency_data}{a \code{data.frame}}

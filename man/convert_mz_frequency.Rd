@@ -4,13 +4,10 @@
 \alias{convert_mz_frequency}
 \title{Convert M/Z to Frequency}
 \usage{
-convert_mz_frequency(mz_data, valid_range = c(0.49, 0.51),
-  keep_all = TRUE)
+convert_mz_frequency(mz_data, keep_all = TRUE)
 }
 \arguments{
 \item{mz_data}{a data.frame with \code{mz}}
-
-\item{valid_range}{points with a frequency difference in this range can be used for modeling}
 
 \item{keep_all}{keep \strong{all} the variables generated, or just the original + \strong{frequency}?}
 }
