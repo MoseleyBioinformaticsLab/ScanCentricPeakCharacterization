@@ -5,13 +5,15 @@
 #' point double to an `integer`.
 #'
 #' @param data a `data.frame` containing `mz`
+#' @param frequency_fit_description the description for frequency ~ mz
+#' @param mz_fit_description the description for mz ~ frequency
 #' @param point_multiplier a value used to convert to integers.
 #'
 #' @importFrom IRanges IRanges
 #' @importFrom S4Vectors mcols
 #' @export
-mz_points_to_frequency_regions <- function(mz_data, point_multiplier = 400){
-  frequency_list = mz_scans_to_frequency(mz_data)
+mz_points_to_frequency_regions <- function(mz_data, frequency_fit_description = c(0, -1/2, -1/3), mz_fit_description = c(0, -1, -2, -3), point_multiplier = 400){
+  frequency_list = mz_scans_to_frequency(mz_data, frequency_fit_description, mz_fit_description)
 
   # this is a check to make sure we will be able to convert
   # to multiply and still get integers out
@@ -43,10 +45,9 @@ mz_points_to_frequency_regions <- function(mz_data, point_multiplier = 400){
   frequency_data = frequency_list$frequency
 
   frequency_regions = frequency_points_to_frequency_regions(frequency_data, point_multiplier = point_multiplier)
-  frequency_regions@metadata <- list(point_multiplier = point_multiplier,
-                                     mz_2_frequency = frequency_list$coefficients,
-                                     all_coefficients = frequency_list$all_coefficients,
-                                     difference_range = frequency_list$difference_range)
+  frequency_list$frequency = NULL
+  frequency_list$point_multiplier = point_multiplier
+  frequency_regions@metadata = frequency_list
   frequency_regions
 }
 
@@ -168,8 +169,10 @@ PeakRegions <- R6::R6Class("PeakRegions",
         } else if (inherits(raw_ms, "data.frame")) {
           raw_mz_data = raw_ms
         }
-        self$frequency_point_regions = mz_points_to_frequency_regions(raw_mz_data,
-                                                                      self$frequency_multiplier)
+        self$frequency_point_regions = mz_points_to_frequency_regions(mz_data = raw_mz_data,
+                                                                      frequency_fit_description = self$frequency_fit_description,
+                                                                      mz_fit_description = self$mz_fit_description,
+                                                                      point_multiplier = self$frequency_multiplier)
         self$frequency_multiplier = self$frequency_point_regions@metadata$point_multiplier
         self$frequency_range = range(S4Vectors::mcols(self$frequency_point_regions)$frequency)
         self$set_min_scan()

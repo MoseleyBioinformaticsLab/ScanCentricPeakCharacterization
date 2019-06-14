@@ -140,13 +140,15 @@ predict_exponentials = function(x, coeff, description){
 #' Given a multi-scan data.frame of m/z, generate frequency values for the data.
 #'
 #' @param mz_scan_df a data.frame with at least `mz` and `scan` columns
+#' @param frequency_fit_description the exponentials to use in fitting the frequency ~ mz model
+#' @param mz_fit_description the exponentials to use in fitting the mz ~ frequency model
 #' @param ... other parameters for `convert_mz_frequency`
 #'
 #' @seealso convert_mz_frequency
 #'
 #' @export
 #' @return list
-mz_scans_to_frequency = function(mz_scan_df, ...){
+mz_scans_to_frequency = function(mz_scan_df, frequency_fit_description, mz_fit_description, ...){
   split_mz = split(mz_scan_df, mz_scan_df$scan)
 
   mz_frequency = internal_map$map_function(split_mz, function(in_scan){
@@ -155,40 +157,55 @@ mz_scans_to_frequency = function(mz_scan_df, ...){
     out_scan
   })
 
-  frequency_coefficients = internal_map$map_function(mz_frequency, function(in_freq){
+  frequency_fits = internal_map$map_function(mz_frequency, function(in_freq){
     use_peaks = in_freq$convertable
-    tmp_fit = fit_frequency_sr(in_freq$mean_mz[use_peaks], in_freq$mean_frequency[use_peaks])$coefficients
-    data.frame(intercept = tmp_fit[1], slope = tmp_fit[2], scan = in_freq[1, "scan"])
+    tmp_fit = fit_exponentials(in_freq$mean_mz[use_peaks], in_freq$mean_frequency[use_peaks], frequency_fit_description)
+    tmp_fit$scan = in_freq[1, "scan"]
+    tmp_fit
   })
 
-  mz_coefficients = internal_map$map_function(mz_frequency, function(in_freq){
+  mz_fits = internal_map$map_function(mz_frequency, function(in_freq){
     use_peaks = in_freq$convertable
-    tmp_fit = fit_mz_s2(in_freq$mean_frequency[use_peaks], in_freq$mean_mz[use_peaks])
-    data.frame(intercept = tmp_fit[1], slope = tmp_fit[2], scan = in_freq[1, "scan"])
+    tmp_fit = fit_exponentials(in_freq$mean_frequency[use_peaks], in_freq$mean_mz[use_peaks], mz_fit_description)
+    tmp_fit$scan = in_freq[1, "scan"]
+    tmp_fit
   })
 
-  frequency_coefficients = do.call(rbind, frequency_coefficients)
-  mz_coefficients = do.call(rbind, mz_coefficients)
+  frequency_coefficients = purrr::map_df(frequency_fits, function(.x){
+    tmp_df = as.data.frame(matrix(.x$coefficients, nrow = 1))
+    tmp_df$scan = .x$scan
+    tmp_df
+  })
 
-  bad_coefficients = boxplot.stats(frequency_coefficients$intercept)$out
+  mz_coefficients = purrr::map_df(mz_fits, function(.x){
+    tmp_df = as.data.frame(matrix(.x$coefficients, nrow = 1))
+    tmp_df$scan = .x$scan
+    tmp_df
+  })
 
-  frequency_coefficients = dplyr::filter(frequency_coefficients, !(intercept %in% bad_coefficients))
+  first_slope = min(which(frequency_fit_description != 0))
+  bad_coefficients = boxplot.stats(frequency_coefficients[[first_slope]])$out
+
+  frequency_coefficients = frequency_coefficients[!frequency_coefficients[[first_slope]] %in% bad_coefficients, ]
   mz_coefficients = dplyr::filter(mz_coefficients, scan %in% frequency_coefficients$scan)
 
-  freq_model_coefficients = c(median(frequency_coefficients$intercept), median(frequency_coefficients$slope))
-  mz_model_coefficients = c(median(mz_coefficients$intercept), median(mz_coefficients$slope))
+  freq_model_coefficients = purrr::map_dbl(paste0("V", seq(1, length(frequency_fit_description))), ~ median(frequency_coefficients[[.x]]))
+  mz_model_coefficients = purrr::map_dbl(paste0("V", seq(1, length(mz_fit_description))), ~ median(mz_coefficients[[.x]]))
 
   mz_frequency_df = do.call(rbind, mz_frequency)
 
   mz_frequency_df = mz_frequency_df[mz_frequency_df$scan %in% frequency_coefficients$scan, ]
 
-  mz_frequency_df$frequency = predict_frequency_sr(mz_frequency_df$mz, freq_model_coefficients)
+  mz_frequency_df$frequency = predict_exponentials(mz_frequency_df$mz, freq_model_coefficients, frequency_fit_description)
 
   rownames(mz_frequency_df) = NULL
   valid_range = discover_frequency_offset(mz_frequency_df$frequency)
   mz_frequency_df$frequency_diff = dplyr::lag(mz_frequency_df$frequency) - mz_frequency_df$frequency
   mz_frequency_df$convertable = dplyr::between(mz_frequency_df$frequency_diff, valid_range$range[1], valid_range$range[2])
-  list(frequency = mz_frequency_df, all_coefficients = frequency_coefficients, coefficients = model_coefficients, difference_range = valid_range)
+  mz_frequency_df[is.na(mz_frequency_df$convertable), "convertable"] = FALSE
+  list(frequency = mz_frequency_df, frequency_coefficients_all = frequency_coefficients, frequency_coefficients = freq_model_coefficients,
+       mz_coefficients_all = mz_coefficients, mz_coefficients = mz_model_coefficients,
+       frequency_fit_description = frequency_fit_description, mz_fit_description = mz_fit_description, difference_range = valid_range)
 }
 
 #' convert mz to frequency using linear fit
