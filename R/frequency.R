@@ -141,19 +141,28 @@ mz_scans_to_frequency = function(mz_scan_df, ...){
     data.frame(intercept = tmp_fit[1], slope = tmp_fit[2], scan = in_freq[1, "scan"])
   })
 
+  mz_coefficients = internal_map$map_function(mz_frequency, function(in_freq){
+    use_peaks = in_freq$convertable
+    tmp_fit = fit_mz_s2(in_freq$mean_frequency[use_peaks], in_freq$mean_mz[use_peaks])
+    data.frame(intercept = tmp_fit[1], slope = tmp_fit[2], scan = in_freq[1, "scan"])
+  })
+
   frequency_coefficients = do.call(rbind, frequency_coefficients)
+  mz_coefficients = do.call(rbind, mz_coefficients)
 
   bad_coefficients = boxplot.stats(frequency_coefficients$intercept)$out
 
   frequency_coefficients = dplyr::filter(frequency_coefficients, !(intercept %in% bad_coefficients))
+  mz_coefficients = dplyr::filter(mz_coefficients, scan %in% frequency_coefficients$scan)
 
-  model_coefficients = c(median(frequency_coefficients$intercept), median(frequency_coefficients$slope))
+  freq_model_coefficients = c(median(frequency_coefficients$intercept), median(frequency_coefficients$slope))
+  mz_model_coefficients = c(median(mz_coefficients$intercept), median(mz_coefficients$slope))
 
   mz_frequency_df = do.call(rbind, mz_frequency)
 
   mz_frequency_df = mz_frequency_df[mz_frequency_df$scan %in% frequency_coefficients$scan, ]
 
-  mz_frequency_df$frequency = predict_frequency_sr(mz_frequency_df$mz, model_coefficients)
+  mz_frequency_df$frequency = predict_frequency_sr(mz_frequency_df$mz, freq_model_coefficients)
 
   rownames(mz_frequency_df) = NULL
   valid_range = discover_frequency_offset(mz_frequency_df$frequency)
