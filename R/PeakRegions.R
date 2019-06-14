@@ -218,6 +218,9 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
     zero_normalization = NULL,
 
+    frequency_fit_description = NULL,
+    mz_fit_description = NULL,
+
     progress = NULL,
 
     add_regions = function(){
@@ -480,7 +483,8 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
     initialize = function(raw_ms = NULL, sliding_region_size = 10, sliding_region_delta = 1, tiled_region_size = 1, tiled_region_delta = 1,
                           region_percentage = 0.99, offset_multiplier = 1, point_multiplier = 400, peak_method = "lm_weighted", min_points = 4,
-                          zero_normalization = FALSE, progress = FALSE){
+                          zero_normalization = FALSE, frequency_fit_description = c(0, -1/2, -1/3),
+                          mz_fit_description = c(0, -1, -2, -3), progress = FALSE){
       if (inherits(raw_ms, "RawMS")) {
         self$peak_regions <- PeakRegions$new(raw_ms = raw_ms$extract_raw_data(), point_multiplier)
       } else if (inherits(raw_ms, "PeakRegions")) {
@@ -500,6 +504,8 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       self$zero_normalization = zero_normalization
       self$progress = progress
       self$offset_multiplier = offset_multiplier
+      self$frequency_fit_description = frequency_fit_description
+      self$mz_fit_description = mz_fit_description
 
       invisible(self)
     }

@@ -113,6 +113,26 @@ predict_mz_s2 = function(x, coefficients){
   out_mz[, 1]
 }
 
+fit_exponentials = function(x, y, description){
+  transform = purrr::map(description, ~ x^.x)
+  X = do.call(cbind, transform)
+
+  fit = stats::lm.fit(X, y)
+
+  names(fit$coefficients) = NULL
+  list(coefficients = fit$coefficients, description = description)
+}
+
+predict_exponentials = function(x, coeff, description){
+  transform = purrr::map(description, ~ x^.x)
+  X = do.call(cbind, transform)
+  coef_matrix = matrix(coeff, nrow = length(coeff), ncol = 1, byrow = TRUE)
+
+  pred = X %*% coef_matrix
+  pred[, 1]
+}
+
+
 
 
 #' convert mz to frequency across scans
