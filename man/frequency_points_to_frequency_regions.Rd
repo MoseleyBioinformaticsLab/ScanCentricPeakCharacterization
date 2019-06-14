@@ -5,17 +5,17 @@
 \title{frequency points to frequency_regions}
 \usage{
 frequency_points_to_frequency_regions(frequency_data,
-  frequency_variable = "frequency", point_multiplier = 400)
+  frequency_variable = "frequency", multiplier = 400)
 }
 \arguments{
 \item{frequency_data}{a \code{data.frame}}
 
 \item{frequency_variable}{which column is the \code{frequency} stored in}
 
-\item{point_multiplier}{value used to convert to integers}
+\item{multiplier}{value used to convert to integers}
 }
 \description{
 Given a set of frequency points in a data.frame, create IRanges based point "regions"
-of width 1, useing the \code{point_multiplier} to convert from a floating point double
+of width 1, useing the \code{multiplier} to convert from a floating point double
 to an \code{integer}
 }

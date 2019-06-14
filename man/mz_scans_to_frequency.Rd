@@ -4,10 +4,15 @@
 \alias{mz_scans_to_frequency}
 \title{convert mz to frequency across scans}
 \usage{
-mz_scans_to_frequency(mz_scan_df, ...)
+mz_scans_to_frequency(mz_scan_df, frequency_fit_description,
+  mz_fit_description, ...)
 }
 \arguments{
 \item{mz_scan_df}{a data.frame with at least \code{mz} and \code{scan} columns}
+
+\item{frequency_fit_description}{the exponentials to use in fitting the frequency ~ mz model}
+
+\item{mz_fit_description}{the exponentials to use in fitting the mz ~ frequency model}
 
 \item{...}{other parameters for \code{convert_mz_frequency}}
 }

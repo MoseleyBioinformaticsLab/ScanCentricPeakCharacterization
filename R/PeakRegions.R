@@ -1,18 +1,19 @@
 #' mz points to frequency regions
 #'
 #' Given M/Z point data in a data.frame, create IRanges based point "regions" of
-#' width 1, using the `point_multiplier` argument to convert from the floating
+#' width 1, using the `frequency_multiplier` argument to convert from the floating
 #' point double to an `integer`.
 #'
 #' @param data a `data.frame` containing `mz`
 #' @param frequency_fit_description the description for frequency ~ mz
 #' @param mz_fit_description the description for mz ~ frequency
-#' @param point_multiplier a value used to convert to integers.
+#' @param frequency_multiplier a value used to convert to integers.
 #'
 #' @importFrom IRanges IRanges
 #' @importFrom S4Vectors mcols
 #' @export
-mz_points_to_frequency_regions <- function(mz_data, frequency_fit_description = c(0, -1/2, -1/3), mz_fit_description = c(0, -1, -2, -3), point_multiplier = 400){
+mz_points_to_frequency_regions <- function(mz_data, frequency_fit_description = c(0, -1/2, -1/3),
+                                           mz_fit_description = c(0, -1, -2, -3), frequency_multiplier = 400){
   frequency_list = mz_scans_to_frequency(mz_data, frequency_fit_description, mz_fit_description)
 
   # this is a check to make sure we will be able to convert
@@ -23,20 +24,20 @@ mz_points_to_frequency_regions <- function(mz_data, frequency_fit_description = 
     stop("NA entries in conversion from M/Z to frequency! Stopping!")
   }
 
-  init_conversion = suppressWarnings(as.integer(range_freq * point_multiplier))
+  init_conversion = suppressWarnings(as.integer(range_freq * frequency_multiplier))
   na_conversion = any(is.na(init_conversion))
   reduce_value = 1
   if (na_conversion) {
     reduce_value = reduce_value - 0.1
     while (na_conversion && (reduce_value >= 0.3)) {
-      new_multiplier = (point_multiplier * reduce_value)
+      new_multiplier = (frequency_multiplier * reduce_value)
       new_conversion = suppressWarnings(as.integer(range_freq * new_multiplier))
       na_conversion = any(is.na(new_conversion))
     }
 
     if (!na_conversion && (reduce_value >= 0.3)) {
       message("Frequency point multiplier modified to avoid NA values ...")
-      point_multiplier = new_multiplier
+      frequency_multiplier = new_multiplier
     } else {
       stop("No good point multiplier found, stopping.")
     }
@@ -44,9 +45,9 @@ mz_points_to_frequency_regions <- function(mz_data, frequency_fit_description = 
 
   frequency_data = frequency_list$frequency
 
-  frequency_regions = frequency_points_to_frequency_regions(frequency_data, point_multiplier = point_multiplier)
+  frequency_regions = frequency_points_to_frequency_regions(frequency_data, multiplier = frequency_multiplier)
   frequency_list$frequency = NULL
-  frequency_list$point_multiplier = point_multiplier
+  frequency_list$frequency_multiplier = frequency_multiplier
   frequency_regions@metadata = frequency_list
   frequency_regions
 }
@@ -54,21 +55,21 @@ mz_points_to_frequency_regions <- function(mz_data, frequency_fit_description = 
 #' frequency points to frequency_regions
 #'
 #' Given a set of frequency points in a data.frame, create IRanges based point "regions"
-#' of width 1, useing the `point_multiplier` to convert from a floating point double
+#' of width 1, useing the `multiplier` to convert from a floating point double
 #' to an `integer`
 #'
 #' @param frequency_data a `data.frame`
 #' @param frequency_variable which column is the `frequency` stored in
-#' @param point_multiplier value used to convert to integers
+#' @param multiplier value used to convert to integers
 #'
 #' @export
-frequency_points_to_frequency_regions = function(frequency_data, frequency_variable = "frequency", point_multiplier = 400){
-  frequency_regions <- IRanges::IRanges(start = round(frequency_data[, frequency_variable] * point_multiplier), width = 1)
+frequency_points_to_frequency_regions = function(frequency_data, frequency_variable = "frequency", multiplier = 400){
+  frequency_regions <- IRanges::IRanges(start = round(frequency_data[, frequency_variable] * multiplier), width = 1)
   if (is.null(frequency_data$point)) {
     frequency_data$point <- seq(1, nrow(frequency_data))
   }
   S4Vectors::mcols(frequency_regions) <- frequency_data
-  frequency_regions@metadata = list(point_multiplier = point_multiplier)
+  frequency_regions@metadata = list(multiplier = multiplier)
   frequency_regions
 }
 
@@ -83,7 +84,7 @@ frequency_points_to_frequency_regions = function(frequency_data, frequency_varia
 #' @param frequency_range the range of frequency to use
 #' @param n_point how many points you want to cover
 #' @param delta_point the *step* size between the beginning of each subsequent region
-#' @param point_multiplier multiplier to convert from frequency to integer space
+#' @param multiplier multiplier to convert from frequency to integer space
 #'
 #' @details For Fourier-transform mass spec, points are equally spaced in
 #'   frequency space, which will lead to unequal spacing in M/Z space. Therefore,
@@ -96,7 +97,7 @@ frequency_points_to_frequency_regions = function(frequency_data, frequency_varia
 #' @return IRanges
 create_frequency_regions <- function(point_spacing = 0.5, frequency_range = NULL,
                               n_point = 10, delta_point = 1,
-                              point_multiplier = 500){
+                              multiplier = 500){
   if (is.null(frequency_range)) {
     stop("A valid range of frequencies must be supplied!")
   }
@@ -105,13 +106,13 @@ create_frequency_regions <- function(point_spacing = 0.5, frequency_range = NULL
   step_size = point_spacing * delta_point
   use_frequencies = round(frequency_range)
 
-  frequency_start = round(seq(use_frequencies[1], use_frequencies[2] - region_size, by = step_size) * point_multiplier)
-  frequency_end = round(seq(use_frequencies[1] + region_size, use_frequencies[2], by = step_size) * point_multiplier)
+  frequency_start = round(seq(use_frequencies[1], use_frequencies[2] - region_size, by = step_size) * multiplier)
+  frequency_end = round(seq(use_frequencies[1] + region_size, use_frequencies[2], by = step_size) * multiplier)
 
   regions <- IRanges::IRanges(start = frequency_start, end = frequency_end)
 
   #S4Vectors::mcols(regions) <- list(mz_start = mz_start, mz_end = mz_end)
-  regions@metadata <- list(point_multiplier = point_multiplier,
+  regions@metadata <- list(multiplier = multiplier,
                            point_spacing = point_spacing,
                            n_point = n_point,
                            delta_point = delta_point)
@@ -123,12 +124,13 @@ create_frequency_regions <- function(point_spacing = 0.5, frequency_range = NULL
 PeakRegions <- R6::R6Class("PeakRegions",
   public = list(
     frequency_point_regions = NULL,
+    frequency_fit_description = NULL,
+    mz_fit_description = NULL,
 
     peak_regions = NULL,
     sliding_regions = NULL,
     tiled_regions = NULL,
 
-    point_multiplier = NULL,
     frequency_multiplier = NULL,
     scan_peaks = NULL,
     peak_data = NULL,
@@ -172,8 +174,8 @@ PeakRegions <- R6::R6Class("PeakRegions",
         self$frequency_point_regions = mz_points_to_frequency_regions(mz_data = raw_mz_data,
                                                                       frequency_fit_description = self$frequency_fit_description,
                                                                       mz_fit_description = self$mz_fit_description,
-                                                                      point_multiplier = self$frequency_multiplier)
-        self$frequency_multiplier = self$frequency_point_regions@metadata$point_multiplier
+                                                                      frequency_multiplier = self$frequency_multiplier)
+        self$frequency_multiplier = self$frequency_point_regions@metadata$frequency_multiplier
         self$frequency_range = range(S4Vectors::mcols(self$frequency_point_regions)$frequency)
         self$set_min_scan()
 
@@ -182,12 +184,14 @@ PeakRegions <- R6::R6Class("PeakRegions",
     },
 
     initialize = function(raw_ms = NULL,
-                          point_multiplier = 200000,
+                          frequency_fit_description = c(0, -1/2, -1/3),
+                          mz_fit_description = c(0, -1, -2, -3),
                           frequency_multiplier = 400,
                           scan_perc = 0.1, max_subsets = 100){
       #browser(expr = TRUE)
-      self$point_multiplier <- point_multiplier
       self$frequency_multiplier <- frequency_multiplier
+      self$frequency_fit_description = frequency_fit_description
+      self$mz_fit_description = mz_fit_description
       self$scan_perc <- scan_perc
       self$max_subsets <- max_subsets
 
@@ -221,9 +225,6 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
     zero_normalization = NULL,
 
-    frequency_fit_description = NULL,
-    mz_fit_description = NULL,
-
     progress = NULL,
 
     add_regions = function(){
@@ -233,12 +234,12 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       sliding_regions <- function(self){
         create_frequency_regions(frequency_range = self$peak_regions$frequency_range, n_point = self$sliding_region_size,
                                            delta_point = self$sliding_region_delta,
-                                           point_multiplier = self$peak_regions$frequency_multiplier)
+                                           multiplier = self$peak_regions$frequency_multiplier)
       }
       tiled_regions <- function(self){
         create_frequency_regions(frequency_range = self$peak_regions$frequency_range, n_point = self$tiled_region_size,
                           delta_point = self$tiled_region_delta,
-                          point_multiplier = self$peak_regions$frequency_multiplier)
+                          multiplier = self$peak_regions$frequency_multiplier)
       }
       run_regions <- list(sliding = sliding_regions,
                           tiled = tiled_regions)
@@ -371,19 +372,11 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
     add_offset = function(){
       peak_data = self$peak_regions$peak_data
-      frequency_points = S4Vectors::mcols(self$peak_regions$frequency_point_regions)
-      med_frequency_difference = self$peak_regions$frequency_point_regions@metadata$difference_range$most_common
-
-      # What to do here?
-      # Take the frequency value for the peak, add the difference above, and then convert both to
-      # M/Z and take that difference, and report it as the *Offset* value
-      #
-      good_points = frequency_points$convertable
-      good_points[is.na(good_points)] = FALSE
-      frequency_2 = peak_data$ObservedFrequency + med_frequency_difference
-      mz_model = fit_mz_s2(frequency_points$frequency[good_points], frequency_points$mz[good_points])
-      mz_1 = predict_mz_s2(peak_data$ObservedFrequency, mz_model)
-      mz_2 = predict_mz_s2(frequency_2, mz_model)
+      frequency_offset = self$peak_regions$frequency_point_regions@metadata$difference_range$most_common
+      mz_coefficients = self$peak_regions$frequency_point_regions@metadata$mz_coefficients
+      mz_description = self$peak_regions$frequency_point_regions@metadata$mz_fit_description
+      mz_1 = predict_exponentials(peak_data$ObservedFrequency, mz_coefficients, mz_description)
+      mz_2 = predict_exponentials(peak_data$ObservedFrequency + frequency_offset, mz_coefficients, mz_description)
       peak_data$Offset = (mz_1 - mz_2) * self$offset_multiplier
       self$peak_regions$peak_data = peak_data
       invisible(self)
@@ -485,15 +478,17 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     },
 
     initialize = function(raw_ms = NULL, sliding_region_size = 10, sliding_region_delta = 1, tiled_region_size = 1, tiled_region_delta = 1,
-                          region_percentage = 0.99, offset_multiplier = 1, point_multiplier = 400, peak_method = "lm_weighted", min_points = 4,
+                          region_percentage = 0.99, offset_multiplier = 1, frequency_multiplier = 400, peak_method = "lm_weighted", min_points = 4,
                           zero_normalization = FALSE, frequency_fit_description = c(0, -1/2, -1/3),
                           mz_fit_description = c(0, -1, -2, -3), progress = FALSE){
       if (inherits(raw_ms, "RawMS")) {
-        self$peak_regions <- PeakRegions$new(raw_ms = raw_ms$extract_raw_data(), point_multiplier)
+        self$peak_regions <- PeakRegions$new(raw_ms = raw_ms$extract_raw_data(), frequency_fit_description = frequency_fit_description,
+                                             mz_fit_description = mz_fit_description, frequency_multiplier = frequency_multiplier)
       } else if (inherits(raw_ms, "PeakRegions")) {
         self$peak_regions <- raw_ms
       } else {
-        self$peak_regions <- PeakRegions$new(raw_ms = NULL, point_multiplier = point_multiplier)
+        self$peak_regions <- PeakRegions$new(raw_ms = NULL, frequency_fit_description = frequency_fit_description,
+                                             mz_fit_description = mz_fit_description, frequency_multiplier = frequency_multiplier)
       }
 
       self$sliding_region_size <- sliding_region_size
@@ -507,8 +502,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       self$zero_normalization = zero_normalization
       self$progress = progress
       self$offset_multiplier = offset_multiplier
-      self$frequency_fit_description = frequency_fit_description
-      self$mz_fit_description = mz_fit_description
+
 
       invisible(self)
     }
@@ -632,7 +626,7 @@ split_region_by_peaks <- function(frequency_point_regions, tiled_regions, peak_m
 
   if (nrow(reduced_peaks) > 0) {
     #reduced_peaks = convert_found_peaks(as.data.frame(S4Vectors::mcols(frequency_point_regions)), reduced_peaks)
-    reduced_points <- frequency_points_to_frequency_regions(reduced_peaks, "ObservedCenter.frequency", frequency_point_regions@metadata$point_multiplier)
+    reduced_points <- frequency_points_to_frequency_regions(reduced_peaks, "ObservedCenter.frequency", frequency_point_regions@metadata$frequency_multiplier)
 
     secondary_regions = split_reduced_points(reduced_points, tiled_regions, n_zero = 1)
 
@@ -655,7 +649,7 @@ convert_peaks_with_consensus_model = function(reduced_points){
   new_frequency$predicted_frequency = NULL
   point_data[, c("frequency", "intercept", "slope")] = new_frequency[, c("frequency", "intercept", "slope")]
 
-  new_points = mz_points_to_frequency_regions(point_data, reduced_points@metadata$point_multiplier)
+  new_points = mz_points_to_frequency_regions(point_data, reduced_points@metadata$frequency_multiplier)
   new_points
 }
 

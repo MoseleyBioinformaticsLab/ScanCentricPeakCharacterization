@@ -5,7 +5,7 @@
 \title{create frequency regions}
 \usage{
 create_frequency_regions(point_spacing = 0.5, frequency_range = NULL,
-  n_point = 10, delta_point = 1, point_multiplier = 500)
+  n_point = 10, delta_point = 1, multiplier = 500)
 }
 \arguments{
 \item{point_spacing}{how far away are subsequent points.}
@@ -16,7 +16,7 @@ create_frequency_regions(point_spacing = 0.5, frequency_range = NULL,
 
 \item{delta_point}{the \emph{step} size between the beginning of each subsequent region}
 
-\item{point_multiplier}{multiplier to convert from frequency to integer space}
+\item{multiplier}{multiplier to convert from frequency to integer space}
 }
 \value{
 IRanges
