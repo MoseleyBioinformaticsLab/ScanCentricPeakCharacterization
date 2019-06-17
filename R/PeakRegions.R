@@ -463,16 +463,13 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
                    raw_tic = sum(in_scan[, "RawIntensity"]))
       })
 
-      ms_info = dplyr::left_join(tmp_ms_info, self$peak_regions$frequency_point_regions@metadata$frequency_coefficients_all, by = "scan")
-
       list(run_time_info = list(
               run_time = as.numeric(difftime(self$stop_time, self$start_time, units = "s")),
               n_peak_regions = length(self$peak_regions$peak_regions),
               n_scans = length(self$peak_regions$normalization_factors$scan)
               ),
-           ms_info = ms_info,
-           mz_2_frequency = self$peak_regions$frequency_point_regions@metadata$mz_2_frequency,
-           resolution = calculate_resolution_information(self$peak_regions$frequency_point_regions),
+           ms_info = tmp_ms_info,
+           frequency_mz = self$peak_regions$frequency_point_regions@metadata,
            peaks = list(n_peaks = nrow(self$peak_regions$peak_data),
                         mz_range = range(self$peak_regions$peak_data, na.rm = TRUE)))
     },
