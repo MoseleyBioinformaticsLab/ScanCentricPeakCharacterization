@@ -463,7 +463,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
                    raw_tic = sum(in_scan[, "RawIntensity"]))
       })
 
-      ms_info = dplyr::left_join(tmp_ms_info, self$peak_regions$frequency_point_regions@metadata$all_coefficients, by = "scan")
+      ms_info = dplyr::left_join(tmp_ms_info, self$peak_regions$frequency_point_regions@metadata$frequency_coefficients_all, by = "scan")
 
       list(run_time_info = list(
               run_time = as.numeric(difftime(self$stop_time, self$start_time, units = "s")),
