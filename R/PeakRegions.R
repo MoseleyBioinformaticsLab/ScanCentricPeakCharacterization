@@ -810,7 +810,13 @@ single_pass_normalization <- function(scan_peaks, intensity_measure = c("RawHeig
     log(tmp_data[, use_measure])
   })
 
+  all_na = purrr::map_lgl(seq_len(nrow(peak_intensity)), ~ sum(is.na(peak_intensity[.x, ])) == ncol(peak_intensity))
+
+  all_scans = all_scans[!all_na, , drop = FALSE]
+  peak_intensity = peak_intensity[!all_na, , drop = FALSE]
+
   intensity_ratio <- purrr::map_dfr(seq_len(nrow(peak_intensity)), function(x){
+    #message(x)
     peak_intensity[x, ] / max(peak_intensity[x, ], na.rm = TRUE)
   })
   peak_intensity[intensity_ratio < min_ratio] <- NA
@@ -819,7 +825,7 @@ single_pass_normalization <- function(scan_peaks, intensity_measure = c("RawHeig
     sum(!is.na(peak_intensity[, x]))
   })
 
-  peak_intensity <- peak_intensity[, intensity_scans >= scan_cutoff]
+  peak_intensity <- peak_intensity[, intensity_scans >= scan_cutoff, drop = FALSE]
 
   notna_scans <- rowSums(!is.na(as.matrix(peak_intensity)))
   keep_scans <- notna_scans >= 25
@@ -888,14 +894,16 @@ normalize_scan_peaks <- function(in_peak, normalization_factors){
   }
   in_peak$index <- seq(1, nrow(in_peak))
   height_scan <- as.data.frame(in_peak[, c("index", "RawHeight", "scan")])
-  height_scan <- dplyr::left_join(height_scan, normalization_factors, by = "scan")
-  height_scan <- height_scan[!is.na(height_scan$index), ]
-  height_scan <- height_scan[order(height_scan$index), ]
-
-  in_peak <- in_peak[height_scan$index, ]
-
-  stopifnot(in_peak@elementMetadata$index == height_scan$index)
-  in_peak$Height <- exp(log(height_scan$RawHeight) - height_scan$normalization)
+  height_scan <- dplyr::right_join(height_scan, normalization_factors, by = "scan")
+  height_scan <- height_scan[!is.na(height_scan$RawHeight), ]
+  if (nrow(height_scan) > 0) {
+    height_scan <- height_scan[order(height_scan$index), ]
+    in_peak <- in_peak[height_scan$index, ]
+    stopifnot(in_peak@elementMetadata$index == height_scan$index)
+    in_peak$Height <- exp(log(height_scan$RawHeight) - height_scan$normalization)
+  } else {
+    in_peak = NULL
+  }
   in_peak
 }
 
