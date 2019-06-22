@@ -706,24 +706,29 @@ two_pass_normalization <- function(peak_regions, intensity_measure = c("RawHeigh
 
   normed_peaks <- internal_map$map_function(scan_peaks, normalize_scan_peaks, normalization_factors)
 
-  normed_scan_cor <- purrr::map_dbl(normed_peaks, intensity_scan_correlation)
+  keep_after_round1 = which(purrr::map_lgl(normed_peaks, ~!is.null(.x)))
+
+  normed_scan_cor <- purrr::map_dbl(normed_peaks[keep_after_round1], intensity_scan_correlation)
   normed_scan_cor[is.na(normed_scan_cor)] <- 0
   low_cor <- abs(normed_scan_cor) <= 0.5
 
-  normalization_factors <- single_pass_normalization(scan_peaks, intensity_measure = intensity_measure, summary_function = summary_function, use_peaks = low_cor)
+  normalization_factors <- single_pass_normalization(scan_peaks[keep_after_round1], intensity_measure = intensity_measure, summary_function = summary_function, use_peaks = low_cor)
 
-  normed_peaks <- internal_map$map_function(scan_peaks, normalize_scan_peaks, normalization_factors)
-
+  normed_peaks2 <- internal_map$map_function(scan_peaks[keep_after_round1], normalize_scan_peaks, normalization_factors)
+  logical_round2 = purrr::map_lgl(normed_peaks2, ~!is.null(.x))
+  keep_after_round2 = keep_after_round1[logical_round2]
   normed_raw <- normalize_raw_points(peak_regions$frequency_point_regions, normalization_factors)
 
-  peak_regions$scan_peaks <- normed_peaks
+  peak_regions$scan_peaks <- normed_peaks2
   peak_regions$frequency_point_regions <- normed_raw
   peak_regions$is_normalized <- "both"
   peak_regions$normalization_factors <- normalization_factors
+  peak_regions$peak_index = peak_regions$peak_index[keep_after_round2]
+  peak_regions$peak_regions = peak_regions$peak_regions[keep_after_round2]
 
-  normed_scan_cor <- data.frame(ScanCorrelation = normed_scan_cor,
-                                HighCor = !low_cor)
-  n_scans <- purrr::map_int(scan_peaks, calculate_number_of_scans)
+  normed_scan_cor <- data.frame(ScanCorrelation = normed_scan_cor[logical_round2],
+                                HighCor = !low_cor[logical_round2])
+  n_scans <- purrr::map_int(normed_peaks2, calculate_number_of_scans)
   normed_scan_cor$HighScan <- n_scans >= quantile(n_scans, 0.9)
   normed_scan_cor$Ignore <- normed_scan_cor$HighCor & normed_scan_cor$HighScan
   peak_regions$scan_correlation <- normed_scan_cor
