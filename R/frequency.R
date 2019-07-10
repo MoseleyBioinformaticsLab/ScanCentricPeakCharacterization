@@ -321,7 +321,8 @@ calculate_resolution_information = function(frequency_point_regions, use_mz = 40
 }
 
 discover_frequency_offset = function(frequency_values, cutoff_range = 0.02){
-  frequency_diffs = abs(frequency_values - dplyr::lead(frequency_values))
+  frequency_diffs = dplyr::lag(frequency_values) - frequency_values
+  frequency_diffs = frequency_diffs[!is.na(frequency_diffs)]
 
   round_diffs = round(frequency_diffs, digits = 4)
   round_diffs = round_diffs[!is.na(round_diffs)]
@@ -330,7 +331,12 @@ discover_frequency_offset = function(frequency_values, cutoff_range = 0.02){
   common_value = rle_diffs$values[which.max(rle_diffs$lengths)]
 
   cutoff_value = cutoff_range * common_value
-  range_value = c(common_value - cutoff_value, common_value + cutoff_value)
+  if (common_value <= 0) {
+    range_value = c(common_value + cutoff_value, common_value - cutoff_value)
+  } else {
+    range_value = c(common_value - cutoff_value, common_value + cutoff_value)
+  }
+
 
   useful_points = frequency_diffs[dplyr::between(frequency_diffs, range_value[1], range_value[2])]
   list(most_common = median(useful_points, na.rm = TRUE),
