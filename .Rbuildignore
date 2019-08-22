@@ -1,3 +1,5 @@
+^other_testing$
+^other_reports$
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^\.httr-oauth$
