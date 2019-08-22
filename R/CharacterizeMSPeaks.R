@@ -11,6 +11,7 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
      if (self$progress) {
        message("Loading raw data ...")
      }
+     log_message("Loading raw data ...")
      self$zip_ms <- ZipMS$new(self$in_file, self$metadata_file, self$out_file, temp_loc = self$temp_loc)
    },
    found_peaks = NULL,
@@ -48,6 +49,7 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
      if (self$progress) {
        message("Writing zip file ...")
      }
+     log_message("Writing zip file ...")
      if (!is.null(self$out_file)) {
        self$zip_ms$write_zip(out_file = self$out_file)
      } else {
@@ -64,6 +66,7 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
      if (self$progress) {
        message("Filtering and removing bad scans ...")
      }
+     log_message("Filtering and removing bad scans ...")
      if (!is.null(self$raw_scan_filter)) {
        self$zip_ms$raw_ms <- self$raw_scan_filter(self$zip_ms$raw_ms)
      }

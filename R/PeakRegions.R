@@ -231,6 +231,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       if (self$progress) {
         message("Adding sliding and tiled regions ...")
       }
+      log_message("Addling sliding and tiled regions ...")
       sliding_regions <- function(self){
         create_frequency_regions(frequency_range = self$peak_regions$frequency_range, n_point = self$sliding_region_size,
                                            delta_point = self$sliding_region_delta,
@@ -258,13 +259,16 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       if (self$progress) {
         message("Finding initial signal regions ...")
       }
+      log_message("Finding initial signal regions ...")
       self$peak_regions$peak_regions <- find_signal_regions(self$peak_regions$sliding_regions, self$peak_regions$frequency_point_regions, self$region_percentage)
+      log_memory()
     },
 
     split_peak_regions = function(use_regions = NULL){
       if (self$progress) {
         message("Splitting signal regions by peaks ...")
       }
+      log_message("Splitting signal regions by peaks ...")
       if (is.null(use_regions)) {
         use_regions <- seq_len(length(self$peak_regions$peak_regions))
       }
@@ -304,6 +308,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       if (self$progress) {
         message("Normalizing scans ...")
       }
+      log_message("Normalizing scans ...")
 
       if (!self$zero_normalization) {
         self$peak_regions <- two_pass_normalization(self$peak_regions, summary_function = median,
@@ -319,6 +324,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       if (self$progress) {
         message("Finding peaks in regions ...")
       }
+      log_message("Finding peaks in regions ...")
       self$peak_regions <- characterize_peaks(self$peak_regions)
     },
 
@@ -606,6 +612,7 @@ get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points 
 #' @export
 #' @return list
 split_region_by_peaks <- function(frequency_point_regions, tiled_regions, peak_method = "lm_weighted", min_points = 4){
+  log_memory()
   frequency_point_regions@elementMetadata$log_int <- log(frequency_point_regions@elementMetadata$intensity + 1e-8)
 
   scan_runs = rle(frequency_point_regions@elementMetadata$scan)
@@ -686,6 +693,8 @@ split_reduced_points = function(reduced_points, tiled_regions, n_zero = 2){
 
 
 split_regions <- function(signal_regions, frequency_point_regions, tiled_regions, peak_method = "lm_weighted", min_points = 4) {
+  # I'm really curious if we could reduce the memory footprint by splitting this into a list first, and then doing the
+  # multiprocessing on it. If so, that would be a good thing to do.
   split_data <- internal_map$map_function(seq(1, length(signal_regions)), function(in_region){
     split_region_by_peaks(IRanges::subsetByOverlaps(frequency_point_regions, signal_regions[in_region]),
                           IRanges::subsetByOverlaps(tiled_regions, signal_regions[in_region]),
@@ -732,6 +741,7 @@ two_pass_normalization <- function(peak_regions, intensity_measure = c("RawHeigh
   normed_scan_cor$HighScan <- n_scans >= quantile(n_scans, 0.9)
   normed_scan_cor$Ignore <- normed_scan_cor$HighCor & normed_scan_cor$HighScan
   peak_regions$scan_correlation <- normed_scan_cor
+  log_memory()
   peak_regions
 
 }
@@ -994,7 +1004,7 @@ characterize_peaks <- function(peak_region){
 
 
   stopifnot(length(peak_ranges) == length(picked_peaks))
-
+  log_memory()
   peak_data <- internal_map$map_function(seq_len(length(peak_ranges)),
                                          function(in_region){
                                            #print(in_region)
@@ -1002,6 +1012,7 @@ characterize_peaks <- function(peak_region){
     tmp_points = IRanges::IRanges(start = unique(unlist(tmp_peaks$points)), width = 1)
     characterize_mz_points(IRanges::subsetByOverlaps(frequency_point_regions, tmp_points), picked_peaks[[in_region]], peak_scans = use_scans)
   })
+  log_memory()
 
   individual_peak_heights <- log10(purrr::map_dbl(peak_data, function(x){x$peak_info$Height}))
   scan_peak_heights <- purrr::map(peak_data, function(x){x$scan_data$LogHeight})
@@ -1073,6 +1084,7 @@ characterize_peaks <- function(peak_region){
                                         ObservedFrequency = frequency_scan,
                                         Scan = colnames(original_height),
                                         PeakID = rownames(original_height))
+  log_memory()
 
   invisible(peak_region)
 }
