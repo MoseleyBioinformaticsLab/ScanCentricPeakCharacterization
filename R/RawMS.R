@@ -67,7 +67,7 @@ get_ms1_scans <- function(raw_data){
 #' @param raw_data an `xcmsRaw` object (ideally from `import_mzML`)
 #' @param color_ms should scans be colored by their *ms* level and type?
 #'
-#' @import ggplot2
+#' @importFrom ggplot2 ggplot geom_segment labs
 #' @importFrom forcats fct_relevel
 #' @return ggplot
 #' @export

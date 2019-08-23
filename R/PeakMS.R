@@ -363,7 +363,7 @@ noise_sorted_peaklist <- function(peaklist, intensity_measure = "Height", sd_mea
 #'
 #' stores the results of peak picking on multiple MS scans
 #'
-#' @import assertthat
+#' @importFrom assertthat assert_that
 #' @export
 "MultiScans"
 
@@ -774,7 +774,7 @@ MasterPeakList <- R6::R6Class("MasterPeakList",
 #' @param mpl the `MasterPeakList` object
 #'
 #' @export
-#' @import dplyr
+#' @importFrom dplyr mutate filter
 collapse_correspondent_peaks <- function(mpl){
   mpl$calculate_sd_model()
 

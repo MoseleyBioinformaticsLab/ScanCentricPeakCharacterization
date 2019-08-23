@@ -36,7 +36,7 @@ find_closest_peaks <- function(query_data, subject_data, q_name, s_name){
 #' @param closest_list input data.frame
 #'
 #' @export
-#' @import dplyr
+#' @importFrom dplyr summarise_ group_by_ select filter
 #' @return list
 refine_closest_list <- function(closest_list){
   # filters to those entries where there are multiple

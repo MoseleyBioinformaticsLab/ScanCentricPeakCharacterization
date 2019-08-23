@@ -22,22 +22,22 @@ get_raw_ms_metadata <- function(in_file){
 #'
 #' @param mzml_file the mzML file to get metadata from
 #'
-#' @import XML
+#' @importFrom XML xmlTreeParse xmlNamespaceDefinitions xmlRoot getNodeSet xmlAttrs xmlChildren xmlToList
 #' @export
 get_mzml_metadata <- function(mzml_file){
-  xml_doc <- xmlTreeParse(mzml_file, useInternalNodes = TRUE)
-  ns <- xmlNamespaceDefinitions(xmlRoot(xml_doc), recursive = TRUE, simplify = TRUE)
+  xml_doc <- XML::xmlTreeParse(mzml_file, useInternalNodes = TRUE)
+  ns <- XML::xmlNamespaceDefinitions(xmlRoot(xml_doc), recursive = TRUE, simplify = TRUE)
   missing_name = which(names(ns) %in% "")
   names(ns)[missing_name] <- "d1"
 
-  mz_metanodes <- getNodeSet(xml_doc, "/d1:mzML", ns)
+  mz_metanodes <- XML::getNodeSet(xml_doc, "/d1:mzML", ns)
 
   if (length(mz_metanodes) == 0) {
-    mz_metanodes <- getNodeSet(xml_doc, "/d1:indexedmzML/d1:mzML", ns)
+    mz_metanodes <- XML::getNodeSet(xml_doc, "/d1:indexedmzML/d1:mzML", ns)
   }
 
   mz_meta <- list()
-  tmp_attr <- unclass(xmlAttrs(mz_metanodes[[1]]))
+  tmp_attr <- unclass(XML::xmlAttrs(mz_metanodes[[1]]))
 
   attr(tmp_attr, "namespaces") <- NULL
   mz_meta[["mzML"]][[".attrs"]] <- tmp_attr
@@ -48,12 +48,12 @@ get_mzml_metadata <- function(mzml_file){
                          "instrumentConfigurationList",
                          "dataProcessingList")
 
-  other_nodes <- xmlChildren(mz_metanodes[[1]])
-  other_list <- lapply(other_nodes, xmlToList)
+  other_nodes <- XML::xmlChildren(mz_metanodes[[1]])
+  other_list <- lapply(other_nodes, XML::xmlToList)
 
   mz_meta <- c(mz_meta, other_list[other_nodes_2_get])
 
-  mz_meta[["run"]][[".attrs"]] <- xmlAttrs(mz_metanodes[[1]][["run"]])
+  mz_meta[["run"]][[".attrs"]] <- XML::xmlAttrs(mz_metanodes[[1]][["run"]])
 
   mz_meta <- .remove_attrs(mz_meta)
 
@@ -75,7 +75,7 @@ get_mzml_metadata <- function(mzml_file){
 #' @importFrom jsonlite toJSON
 #' @export
 meta_export_json <- function(meta_list){
-  toJSON(meta_list, pretty = TRUE, auto_unbox = TRUE)
+  jsonlite::toJSON(meta_list, pretty = TRUE, auto_unbox = TRUE)
 }
 
 #' transform to data frame

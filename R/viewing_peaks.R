@@ -5,7 +5,7 @@
 #' @param peak_list the tbl_df of peaks
 #' @param mean_int the mean intensities to also plot
 #'
-#' @import ggplot2
+#' @importFrom ggplot2 ggplot geom_line geom_point
 #'
 #' @export
 #' @return ggplot

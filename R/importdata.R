@@ -26,7 +26,7 @@ import_raw_ms <- function(raw_data, profstep = 0, includeMSn = TRUE){
 #' @param xcal_file the Xcalibur file to import
 #' @param sheet which sheet to read
 #'
-#' @import readxl
+#' @importFrom readxl read_excel
 #' @importFrom dplyr filter_
 #' @export
 #' @return tbl_df
