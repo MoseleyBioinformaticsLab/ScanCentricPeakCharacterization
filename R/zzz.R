@@ -20,11 +20,16 @@ assign("map_function", purrr::map, envir = internal_map)
 
 has_logger = new.env(hash = TRUE)
 assign("logger", FALSE, envir = has_logger)
+assign("memory", FALSE, envir = has_logger)
 
 .onLoad <- function(libname, pkgname) {
   tmp_packages = installed.packages()
   if ("logger" %in% rownames(tmp_packages)) {
     assign("logger", TRUE, envir = has_logger)
+    sys_info = Sys.info()
+    if (grepl("linux", sys_info["sysname"], ignore.case = TRUE)) {
+      assign("memory", TRUE, envir = has_logger)
+    }
     logger::log_appender(logger::appender_file(paste0("FTMS.peakCharacterization_run_", substring(make.names(Sys.time()), 2), ".log")), namespace = "FTMS.peakCharacterization")
   }
   debugme::debugme()
