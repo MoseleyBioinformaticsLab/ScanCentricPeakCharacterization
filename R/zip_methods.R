@@ -188,3 +188,28 @@ initialize_metadata_from_mzml <- function(zip_dir, mzml_file){
   zip_meta_file <- file.path(zip_dir, "metadata.json")
   cat(zip_meta_json, file = zip_meta_file)
 }
+
+#' recalculate offsets
+#'
+#' Given a previously generated zip file of characterized peaks, now we've realized
+#' that the offsets on each peak should be somehow different. This function takes
+#' a zip file, adjusts the offsets, and writes the file back out.
+#'
+#' @param in_zip the zip file to work with
+#' @param offset the offset to use
+#' @param out_file the file to write too (optional)
+#'
+#' @export
+#' @return NULL
+recalculate_offsets = function(in_zip, offset = 2, out_file = in_zip){
+  zip_data = zip_ms(in_zip)
+  zip_data$load_peak_finder()
+  zip_data$peak_finder$offset_multiplier = offset
+  zip_data$peak_finder$add_offset()
+  zip_data$json_summary = zip_data$peak_finder$summarize()
+  zip_data$save_peak_finder()
+  zip_data$save_json()
+  zip_data$write_zip(out_file = out_file)
+  zip_data$cleanup()
+  out_file
+}
