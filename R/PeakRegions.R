@@ -1090,7 +1090,7 @@ characterize_peaks <- function(peak_region){
 }
 
 characterize_mz_points <- function(in_points, scan_peaks, peak_scans = NULL){
-
+  log_memory()
   if (is.null(peak_scans)) {
     peak_scans <- unique(in_points@elementMetadata$scan)
   }
