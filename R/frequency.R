@@ -198,6 +198,8 @@ mz_scans_to_frequency = function(mz_scan_df, frequency_fit_description, mz_fit_d
 
   mz_frequency_df$frequency = predict_exponentials(mz_frequency_df$mz, freq_model_coefficients, frequency_fit_description)
 
+  check_mz_frequency_order(mz_frequency_df)
+
   rownames(mz_frequency_df) = NULL
   valid_range = discover_frequency_offset(mz_frequency_df$frequency)
   mz_frequency_df$frequency_diff = dplyr::lag(mz_frequency_df$frequency) - mz_frequency_df$frequency
@@ -207,6 +209,16 @@ mz_scans_to_frequency = function(mz_scan_df, frequency_fit_description, mz_fit_d
        mz_coefficients_all = mz_coefficients, mz_coefficients = mz_model_coefficients,
        frequency_fit_description = frequency_fit_description, mz_fit_description = mz_fit_description, difference_range = valid_range)
 }
+
+check_mz_frequency_order = function(mz_frequency_data){
+  mz_order = order(mz_frequency_data$mz)
+  freq_order = order(mz_frequency_data$frequency, decreasing = TRUE)
+  order_same = identical(mz_order, freq_order)
+  if (!order_same) {
+    stop("M/Z and frequency point ordering are not the same, something is very wrong!")
+  }
+}
+
 
 #' convert mz to frequency using linear fit
 #'
