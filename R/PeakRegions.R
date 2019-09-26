@@ -604,23 +604,24 @@ get_reduced_peaks <- function(in_range, peak_method = "lm_weighted", min_points 
 #' find the peaks, and return the region, and the set of points that make
 #' up each point from each scan.
 #'
-#' @param frequency_point_regions the frequency point regions to use
-#' @param tiled_regions the tiled regions
+#' @param region_list a list with points and tiles IRanges objects
 #' @param peak_method the method for getting the peaks
 #' @param min_points how many points are needed for a peak
 #'
 #' @export
 #' @return list
-split_region_by_peaks <- function(frequency_point_regions, tiled_regions, peak_method = "lm_weighted", min_points = 4){
+split_region_by_peaks <- function(region_list, peak_method = "lm_weighted", min_points = 4){
   log_memory()
+  frequency_point_regions = region_list$points
+  tiled_regions = region_list$tiles
   frequency_point_regions@elementMetadata$log_int <- log(frequency_point_regions@elementMetadata$intensity + 1e-8)
 
   scan_runs = rle(frequency_point_regions@elementMetadata$scan)
   #if (min(scan_runs$lengths) < min_points + 2) {
-    frequency_point_splitscan <- split(frequency_point_regions, frequency_point_regions@elementMetadata$scan)
-    reduced_peaks <- purrr::map_df(names(frequency_point_splitscan), function(in_scan){
-      get_reduced_peaks(frequency_point_splitscan[[in_scan]], peak_method = peak_method, min_points = min_points)
-    })
+  frequency_point_splitscan <- split(frequency_point_regions, frequency_point_regions@elementMetadata$scan)
+  reduced_peaks <- purrr::map_df(names(frequency_point_splitscan), function(in_scan){
+    get_reduced_peaks(frequency_point_splitscan[[in_scan]], peak_method = peak_method, min_points = min_points)
+  })
   # } else {
   #   reduced_peaks = get_reduced_peaks(frequency_point_regions, peak_method = peak_method,
   #                                     min_points = min_points)
@@ -634,13 +635,26 @@ split_region_by_peaks <- function(frequency_point_regions, tiled_regions, peak_m
 
     secondary_regions = split_reduced_points(reduced_points, tiled_regions, n_zero = 1)
 
+    n_region = length(secondary_regions$region)
+
+    out_regions = purrr::map(seq_len(n_region), function(in_region){
+      f_points = IRanges::IRanges(start = secondary_regions$peaks[[in_region]]$points[[1]],
+                                  width = 1)
+      f_data = IRanges::subsetByOverlaps(frequency_point_regions, f_points)
+      t_data = IRanges::subsetByOverlaps(tiled_regions, secondary_regions$region[[in_region]])
+
+      list(points = f_data, tiles = t_data, region = secondary_regions$region[[in_region]],
+           peaks = secondary_regions$peaks[[in_region]])
+    })
+
   } else {
-    sub_region <- IRanges::IRangesList()
-    sub_point <- NULL
-    secondary_regions = list(region = sub_region, peaks = sub_point)
+    out_regions = vector("list", length = 1)
+    out_regions[[1]] = list(points = NULL, tiles = NULL,
+                            region = NULL, peaks = NULL)
   }
-  secondary_regions
+  out_regions
 }
+
 
 convert_peaks_with_consensus_model = function(reduced_points){
   point_data = as.data.frame(S4Vectors::mcols(reduced_points))
@@ -692,20 +706,36 @@ split_reduced_points = function(reduced_points, tiled_regions, n_zero = 2){
 }
 
 
-split_regions <- function(signal_regions, frequency_point_regions, tiled_regions, peak_method = "lm_weighted", min_points = 4) {
+
+split_regions <- function(signal_regions, frequency_point_regions, tiled_regions, min_scan, peak_method = "lm_weighted", min_points = 4) {
   # I'm really curious if we could reduce the memory footprint by splitting this into a list first, and then doing the
   # multiprocessing on it. If so, that would be a good thing to do.
-  split_data <- internal_map$map_function(seq(1, length(signal_regions)), function(in_region){
-    split_region_by_peaks(IRanges::subsetByOverlaps(frequency_point_regions, signal_regions[in_region]),
-                          IRanges::subsetByOverlaps(tiled_regions, signal_regions[in_region]),
-                          peak_method = peak_method, min_points = min_points)
+  signal_list = as.list(split(signal_regions, rep(1, length(signal_regions))))
+  min_scan2 = floor(min_scan / 2)
+  point_regions_list = purrr::map(signal_list, function(in_region){
+    points = IRanges::subsetByOverlaps(frequency_point_regions, in_region)
+
+    nonzero = as.data.frame(points@elementMetadata) %>%
+      dplyr::filter(intensity > 0) %>%
+      dplyr::pull(scan) %>% unique(.) %>% length(.)
+
+    if (nonzero >= min_scan2) {
+      tiles = IRanges::subsetByOverlaps(pr_finder$peak_regions$tiled_regions, in_region)
+      return(list(points = points, tiles = tiles, region = in_region))
+    } else {
+      return(NULL)
+    }
   })
 
-  tmp_regions = do.call(c, purrr::map(split_data, ~ unlist(.x$region)))
+  point_regions_list = point_regions_list[sample(length(point_regions_list))]
+  split_data = internal_map$map_function(point_regions_list, split_region_by_peaks,
+                                          peak_method = peak_method, min_points = min_points)
 
-  tmp_peaks = do.call(c, purrr::map(split_data, ~ unlist(.x$peaks)))
+  null_regions = purrr::map_lgl(split_data, ~ is.null(.x[[1]]$points))
+  split_data = split_data[!null_regions]
 
-  return(list(regions = tmp_regions, peaks = tmp_peaks))
+  out_data = unlist(split_data, recursive = FALSE, use.names = FALSE)
+  return(out_data)
 }
 
 two_pass_normalization <- function(peak_regions, intensity_measure = c("RawHeight", "Height"), summary_function = median, normalize_peaks = "both"){
