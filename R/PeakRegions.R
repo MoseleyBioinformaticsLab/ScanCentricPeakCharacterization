@@ -274,7 +274,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       if (is.null(use_regions)) {
         use_regions <- seq_len(length(self$peak_regions$peak_regions))
       }
-      peak_data <- split_regions(self$peak_regions$peak_regions[use_regions], self$peak_regions$frequency_point_regions, self$peak_regions$tiled_regions, peak_method = self$peak_method, min_points = self$min_points)
+      peak_data <- split_regions(self$peak_regions$peak_regions[use_regions], self$peak_regions$frequency_point_regions, self$peak_regions$tiled_regions, self$peak_regions$min_scan, peak_method = self$peak_method, min_points = self$min_points)
 
       self$peak_regions$peak_region_list = peak_data
 
@@ -716,7 +716,7 @@ split_reduced_points = function(reduced_points, tiled_regions, n_zero = 2){
 split_regions <- function(signal_regions, frequency_point_regions, tiled_regions, min_scan, peak_method = "lm_weighted", min_points = 4) {
   # I'm really curious if we could reduce the memory footprint by splitting this into a list first, and then doing the
   # multiprocessing on it. If so, that would be a good thing to do.
-  signal_list = as.list(split(signal_regions, rep(1, length(signal_regions))))
+  signal_list = as.list(split(signal_regions, seq(1, length(signal_regions))))
   min_scan2 = floor(min_scan / 2)
   point_regions_list = purrr::map(signal_list, function(in_region){
     points = IRanges::subsetByOverlaps(frequency_point_regions, in_region)
@@ -733,7 +733,14 @@ split_regions <- function(signal_regions, frequency_point_regions, tiled_regions
     }
   })
 
+  not_null = purrr::map_lgl(point_regions_list, ~ !is.null(.x))
+  point_regions_list = point_regions_list[not_null]
   point_regions_list = point_regions_list[sample(length(point_regions_list))]
+
+  # split_data = purrr::imap(point_regions_list, function(.x, .y){
+  #   message(.y)
+  #   split_region_by_peaks(.x, peak_method = peak_method, min_points = min_points)
+  # })
   split_data = internal_map$map_function(point_regions_list, split_region_by_peaks,
                                           peak_method = peak_method, min_points = min_points)
 
