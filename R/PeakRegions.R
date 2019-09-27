@@ -435,6 +435,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
       p_regions <- as.list(self$peak_regions)
       p_finder$peak_regions <- NULL
+      p_finder$peak_region_list <- NULL
 
       p_regions[[".__enclos_env__"]] <- NULL
       p_regions$clone <- NULL
@@ -477,7 +478,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
       list(run_time_info = list(
               run_time = as.numeric(difftime(self$stop_time, self$start_time, units = "s")),
-              n_peak_regions = length(self$peak_regions$peak_regions),
+              n_peak_regions = length(self$peak_regions$peak_region_list),
               n_scans = length(self$peak_regions$normalization_factors$scan)
               ),
            ms_info = tmp_ms_info,
@@ -726,7 +727,7 @@ split_regions <- function(signal_regions, frequency_point_regions, tiled_regions
       dplyr::pull(scan) %>% unique(.) %>% length(.)
 
     if (nonzero >= min_scan2) {
-      tiles = IRanges::subsetByOverlaps(pr_finder$peak_regions$tiled_regions, in_region)
+      tiles = IRanges::subsetByOverlaps(tiled_regions, in_region)
       return(list(points = points, tiles = tiles, region = in_region))
     } else {
       return(NULL)
