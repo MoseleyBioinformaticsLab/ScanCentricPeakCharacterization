@@ -752,7 +752,7 @@ split_regions <- function(signal_regions, frequency_point_regions, tiled_regions
 }
 
 two_pass_normalization <- function(peak_regions, intensity_measure = c("RawHeight", "Height"), summary_function = median, normalize_peaks = "both"){
-  scan_peaks <- peak_regions$scan_peaks
+  scan_peaks <- purrr::map(peak_regions$peak_region_list, "peaks")
 
   normalization_factors <- single_pass_normalization(scan_peaks, intensity_measure = intensity_measure, summary_function = summary_function)
 
@@ -769,14 +769,19 @@ two_pass_normalization <- function(peak_regions, intensity_measure = c("RawHeigh
   normed_peaks2 <- internal_map$map_function(scan_peaks[keep_after_round1], normalize_scan_peaks, normalization_factors)
   logical_round2 = purrr::map_lgl(normed_peaks2, ~!is.null(.x))
   keep_after_round2 = keep_after_round1[logical_round2]
+
+  normed_list_regions = internal_map$map_function(peak_regions$peak_region_list[keep_after_round2], function(in_region){
+    in_region$points = normalize_raw_points(in_region$points, normalization_factors)
+    in_region$peaks = normalize_scan_peaks(in_region$peaks, normalization_factors)
+    in_region
+  })
   normed_raw <- normalize_raw_points(peak_regions$frequency_point_regions, normalization_factors)
 
-  peak_regions$scan_peaks <- normed_peaks2
   peak_regions$frequency_point_regions <- normed_raw
   peak_regions$is_normalized <- "both"
   peak_regions$normalization_factors <- normalization_factors
   peak_regions$peak_index = peak_regions$peak_index[keep_after_round2]
-  peak_regions$peak_regions = peak_regions$peak_regions[keep_after_round2]
+  peak_regions$peak_region_list = normed_list_regions
 
   normed_scan_cor <- data.frame(ScanCorrelation = normed_scan_cor[logical_round2],
                                 HighCor = !low_cor[logical_round2])
@@ -1038,23 +1043,25 @@ characterize_peaks <- function(peak_region){
 
   stopifnot(peak_region$is_normalized == "both")
 
-  peak_ranges <- peak_region$peak_regions
-  picked_peaks <- peak_region$scan_peaks
-  frequency_point_regions <- peak_region$frequency_point_regions
+  #peak_ranges <- peak_region$peak_regions
+  #picked_peaks <- peak_region$scan_peaks
+  #frequency_point_regions <- peak_region$frequency_point_regions
   use_scans <- peak_region$normalization_factors$scan
   peak_region$n_scan <- n_scan <- length(use_scans)
   peak_region$set_min_scan()
 
-
-  stopifnot(length(peak_ranges) == length(picked_peaks))
+  peak_region_list = peak_region$peak_region_list
+  peak_nscan = purrr::map_int(peak_region_list, ~ length(base::intersect(use_scans, .x$peaks$scan)))
+  keep_peaks = which(peak_nscan >= floor(peak_region$min_scan / 2))
+  use_region_list = peak_region_list[keep_peaks]
   log_memory()
-  peak_data <- internal_map$map_function(seq_len(length(peak_ranges)),
-                                         function(in_region){
-                                           #print(in_region)
-    tmp_peaks = picked_peaks[[in_region]]
-    tmp_points = IRanges::IRanges(start = unique(unlist(tmp_peaks$points)), width = 1)
-    characterize_mz_points(IRanges::subsetByOverlaps(frequency_point_regions, tmp_points), picked_peaks[[in_region]], peak_scans = use_scans)
-  })
+
+  # peak_data <- purrr::imap(use_region_list, function(.x, .y){
+  #   message(.y)
+  #   characterize_mz_points(.x, peak_scans = use_scans)
+  # })
+  peak_data <- internal_map$map_function(
+    use_region_list, characterize_mz_points, peak_scans = use_scans)
   log_memory()
 
   individual_peak_heights <- log10(purrr::map_dbl(peak_data, function(x){x$peak_info$Height}))
@@ -1064,13 +1071,15 @@ characterize_peaks <- function(peak_region){
 
   # update the minimum number of scans required, and then filter
   # all of the relevant bits
-  peak_region$keep_peaks <- keep_peaks <- individual_peak_nscan >= peak_region$min_scan
+  #### This needs to be updated to account for the fact that we filtered above too.
+  passing_data = which(individual_peak_nscan >= peak_region$min_scan)
+  peak_region$keep_peaks <- keep_peaks[passing_data]
 
-  peak_data <- peak_data[keep_peaks]
-  individual_peak_heights <- individual_peak_heights[keep_peaks]
-  scan_peak_heights <- scan_peak_heights[keep_peaks]
-  individual_peak_nscan <- individual_peak_nscan[keep_peaks]
-  peak_index <- peak_region$peak_index[keep_peaks]
+  peak_data <- peak_data[passing_data]
+  individual_peak_heights <- individual_peak_heights[passing_data]
+  scan_peak_heights <- scan_peak_heights[passing_data]
+  individual_peak_nscan <- individual_peak_nscan[passing_data]
+  peak_index <- peak_region$peak_index[passing_data]
 
   corrected_data <- correct_peak_sd_height(individual_peak_heights,
                                            scan_peak_heights,
@@ -1113,7 +1122,7 @@ characterize_peaks <- function(peak_region){
 
   peak_info <- purrr::map_df(corrected_peak_info, "peak")
   #peak_info <- add_offset(peak_info, peak_region$mz_model)
-  peak_info$ScanCorrelated <- peak_region$scan_correlation[keep_peaks, "Ignore"]
+  peak_info$ScanCorrelated <- peak_region$scan_correlation[peak_region$keep_peaks, "Ignore"]
 
   original_height <- do.call(rbind, purrr::map(corrected_peak_info, "original_scan"))
   corrected_height <- do.call(rbind, purrr::map(corrected_peak_info, "corrected_scan"))
@@ -1132,8 +1141,10 @@ characterize_peaks <- function(peak_region){
   invisible(peak_region)
 }
 
-characterize_mz_points <- function(in_points, scan_peaks, peak_scans = NULL){
+characterize_mz_points <- function(in_region, peak_scans = NULL){
   log_memory()
+  in_points = in_region$points
+  scan_peaks = in_region$peaks
   if (is.null(peak_scans)) {
     peak_scans <- unique(in_points@elementMetadata$scan)
   }
