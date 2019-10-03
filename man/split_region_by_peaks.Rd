@@ -4,13 +4,11 @@
 \alias{split_region_by_peaks}
 \title{split signal region}
 \usage{
-split_region_by_peaks(frequency_point_regions, tiled_regions,
-  peak_method = "lm_weighted", min_points = 4)
+split_region_by_peaks(region_list, peak_method = "lm_weighted",
+  min_points = 4)
 }
 \arguments{
-\item{frequency_point_regions}{the frequency point regions to use}
-
-\item{tiled_regions}{the tiled regions}
+\item{region_list}{a list with points and tiles IRanges objects}
 
 \item{peak_method}{the method for getting the peaks}
 
