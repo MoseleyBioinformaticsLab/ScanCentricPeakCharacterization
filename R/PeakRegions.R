@@ -435,7 +435,6 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
       p_regions <- as.list(self$peak_regions)
       p_finder$peak_regions <- NULL
-      p_finder$peak_region_list <- NULL
 
       p_regions[[".__enclos_env__"]] <- NULL
       p_regions$clone <- NULL
@@ -451,6 +450,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       p_regions$normalization_factors <- NULL
       p_regions$peak_index <- NULL
       p_regions$scan_correlation <- NULL
+      p_regions$peak_region_list <- NULL
 
       processing_info <- list(Package = package_used,
                               Version = pkg_description$Version,
@@ -645,7 +645,7 @@ split_region_by_peaks <- function(region_list, peak_method = "lm_weighted", min_
     n_region = length(secondary_regions$region)
 
     out_regions = purrr::map(seq_len(n_region), function(in_region){
-      f_points = IRanges::IRanges(start = secondary_regions$peaks[[in_region]]$points[[1]],
+      f_points = IRanges::IRanges(start = unlist(secondary_regions$peaks[[in_region]]$points),
                                   width = 1)
       f_data = IRanges::subsetByOverlaps(frequency_point_regions, f_points)
       t_data = IRanges::subsetByOverlaps(tiled_regions, secondary_regions$region[[in_region]])
