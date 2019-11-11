@@ -811,7 +811,7 @@ intensity_scan_correlation <- function(scan_peak){
 }
 
 zero_normalization = function(peak_regions, intensity_measure = c("RawHeight", "Height"), summary_function = median, normalize_peaks = "both"){
-  scan_peaks <- peak_regions$scan_peaks
+  scan_peaks <- purrr::map(peak_regions$peak_region_list, "peaks")
 
   all_scans = unique(unlist(purrr::map(scan_peaks, ~ .x$scan)))
   normalization_factors <- data.frame(scan = sort(all_scans), normalization = 0)
