@@ -818,13 +818,20 @@ zero_normalization = function(peak_regions, intensity_measure = c("RawHeight", "
 
   normed_peaks <- internal_map$map_function(scan_peaks, normalize_scan_peaks, normalization_factors)
 
+  normed_list_regions = internal_map$map_function(peak_regions$peak_region_list, function(in_region){
+    in_region$points = normalize_raw_points(in_region$points, normalization_factors)
+    in_region$peaks = normalize_scan_peaks(in_region$peaks, normalization_factors)
+    in_region
+  })
+
+
   normed_scan_cor <- purrr::map_dbl(normed_peaks, intensity_scan_correlation)
   normed_scan_cor[is.na(normed_scan_cor)] <- 0
   low_cor <- abs(normed_scan_cor) <= 0.5
 
   normed_raw <- normalize_raw_points(peak_regions$frequency_point_regions, normalization_factors)
 
-  peak_regions$scan_peaks <- normed_peaks
+  peak_regions$peak_region_list = normed_list_regions
   peak_regions$frequency_point_regions <- normed_raw
   peak_regions$is_normalized <- "both"
   peak_regions$normalization_factors <- normalization_factors
