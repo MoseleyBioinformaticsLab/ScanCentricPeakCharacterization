@@ -154,6 +154,7 @@ PeakRegions <- R6::R6Class("PeakRegions",
     peak_index = NULL,
 
     scan_indices = NULL,
+    instrument = NULL,
 
     set_min_scan = function(){
       if (!is.null(self$frequency_point_regions)) {
@@ -170,6 +171,7 @@ PeakRegions <- R6::R6Class("PeakRegions",
       if (!is.null(raw_ms)) {
         if (inherits(raw_ms, "RawMS")) {
           raw_mz_data = raw_ms$extract_raw_data()
+          self$instrument = raw_ms$get_instrument()
         } else if (inherits(raw_ms, "data.frame")) {
           raw_mz_data = raw_ms
         }
@@ -371,7 +373,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
     add_data = function(raw_ms) {
       if (inherits(raw_ms, "RawMS")) {
-        self$peak_regions$add_data(raw_ms$extract_raw_data())
+        self$peak_regions$add_data(raw_ms)
       }
       invisible(self)
     },
@@ -485,7 +487,14 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
            ms_info = tmp_ms_info,
            frequency_mz = self$peak_regions$frequency_point_regions@metadata,
            peaks = list(n_peaks = nrow(self$peak_regions$peak_data),
-                        mz_range = range(self$peak_regions$peak_data, na.rm = TRUE)))
+                        mz_range = range(self$peak_regions$peak_data$ObservedMZ, na.rm = TRUE)),
+           other_info = list(
+             n_scans = length(self$peak_regions$normalization_factors$scan),
+             n_peaks = nrow(self$peak_regions$peak_data),
+             intensity_range = range(self$peak_regions$peak_data$Height),
+             dynamic_range = max(self$peak_regions$peak_data$Height) / min(self$peak_regions$peak_data$Height),
+             instrument = self$peak_regions$instrument
+           ))
     },
 
     initialize = function(raw_ms = NULL, sliding_region_size = 10, sliding_region_delta = 1, tiled_region_size = 1, tiled_region_delta = 1,
