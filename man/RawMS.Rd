@@ -4,7 +4,7 @@
 \name{RawMS}
 \alias{RawMS}
 \title{Storing the raw mass spec data and operating on it}
-\format{An object of class \code{R6ClassGenerator} of length 24.}
+\format{An object of class \code{R6ClassGenerator} of length 25.}
 \usage{
 RawMS
 }

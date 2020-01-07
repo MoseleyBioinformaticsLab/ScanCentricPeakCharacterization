@@ -4,7 +4,7 @@
 \name{PeakPickingAnalysis}
 \alias{PeakPickingAnalysis}
 \title{peak picking analysis}
-\format{An object of class \code{R6ClassGenerator} of length 24.}
+\format{An object of class \code{R6ClassGenerator} of length 25.}
 \usage{
 PeakPickingAnalysis
 }

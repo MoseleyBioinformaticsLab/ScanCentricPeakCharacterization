@@ -4,12 +4,14 @@
 \alias{find_signal_regions}
 \title{find signal}
 \usage{
-find_signal_regions(regions, point_regions, data_cutoff = 0.99)
+find_signal_regions(regions, point_regions, multiplier = 1.5)
 }
 \arguments{
 \item{regions}{the regions we want to query}
 
 \item{point_regions}{the individual points}
+
+\item{multiplier}{how much above base quantiles to use (default = 1.5)}
 }
 \value{
 IRanges

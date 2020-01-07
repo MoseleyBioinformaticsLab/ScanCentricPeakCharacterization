@@ -4,7 +4,8 @@
 \alias{get_fitted_peak_info}
 \title{parabolic fitted peak}
 \usage{
-get_fitted_peak_info(possible_peak, use_loc = "mz", w = NULL)
+get_fitted_peak_info(possible_peak, use_loc = "mz", w = NULL,
+  addend = 1e-08)
 }
 \arguments{
 \item{possible_peak}{data.frame of mz, intensity and log intensity}
