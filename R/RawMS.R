@@ -208,6 +208,15 @@ RawMS <- R6::R6Class("RawMS",
        })
        raw_scan_data
      },
+     get_instrument = function(){
+       raw_metadata = self$raw_metadata
+       if (!is.null(raw_metadata$referenceableParamGroupList$referenceableParamGroup$cvParam.1)) {
+          tmp_instrument = raw_metadata$referenceableParamGroupList$referenceableParamGroup$cvParam.1
+          return(tmp_instrument$value)
+       } else {
+         return("NA")
+       }
+     },
 
      get_mz_models = function(){
        self$mz_model_list <- internal_map$map_function(self$scan_range, function(in_scan){
