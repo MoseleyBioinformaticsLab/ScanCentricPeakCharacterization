@@ -140,3 +140,25 @@ zip_files <- mclapply(run_files, function(ifile){
 ```{r runit, eval = FALSE, echo = FALSE}
 rmarkdown::render("readme.Rmd")
 ```
+
+## Frequency to MZ Resolution
+
+One of the more interesting results in this work is the ability to convert between frequency space and m/z space.
+The square root term in the regression of 
+
+$$frequency = intercept + x* \frac{1}{\sqrt{mz}} + y * \frac{1}{\sqrt[3]{mz}}$$
+
+provides information about the resolution of the instrument directly.
+The table below relates actual values to resolution directly from experimental samples we have analyzed.
+
+```{r frequency_resolution, results = 'asis'}
+fr_table = readr::read_delim(
+  'Experiment      | Frequency | Resolution
+  #----------------|-----------|------------
+   nsclc           | 2.98e7    | 4.0e5
+   lipid_platelets | 2.98e7    | 4.0e5
+   plk1_over       | 2.98e7    | 4.0e5
+   stclair_hekn    | 5.96e7    | 1.0e6 ',
+  delim = '|', trim_ws = TRUE, comment = '#')
+
+```

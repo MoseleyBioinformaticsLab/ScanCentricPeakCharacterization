@@ -211,11 +211,32 @@ mz_scans_to_frequency = function(mz_scan_df, frequency_fit_description, mz_fit_d
 }
 
 check_mz_frequency_order = function(mz_frequency_data){
-  mz_order = order(mz_frequency_data$mz)
-  freq_order = order(mz_frequency_data$frequency, decreasing = TRUE)
-  order_same = identical(mz_order, freq_order)
-  if (!order_same) {
-    stop("M/Z and frequency point ordering are not the same, something is very wrong!")
+  if ("scan" %in% names(mz_frequency_data)) {
+    split_scan = split(mz_frequency_data, mz_frequency_data$scan)
+
+    match_order = purrr::map_lgl(split_scan, function(.x){
+      mz_order = order(.x$mz)
+      freq_order = order(.x$frequency, decreasing = TRUE)
+      identical(mz_order, freq_order)
+    })
+
+    split_scan = split_scan[match_order]
+    out_data = purrr::map_df(split_scan, ~ .x)
+    scan_perc = length(unique(out_data$scan)) / length(unique(mz_frequency_data$scan))
+    if (scan_perc >= 0.9) {
+      return(out_data)
+    } else {
+      stop("M/Z and frequency point ordering are not the same over more than 90% of scans!")
+    }
+  } else {
+    mz_order = order(mz_frequency_data$mz)
+    freq_order = order(mz_frequency_data$frequency, decreasing = TRUE)
+    order_same = identical(mz_order, freq_order)
+    if (order_same) {
+      return(mz_frequency_data)
+    } else {
+      stop("M/Z and frequency point ordering are not the same, something is very wrong!")
+    }
   }
 }
 

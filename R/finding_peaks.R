@@ -877,13 +877,13 @@ peak_info <- function(possible_peak, min_points = 4, min_area = 0.1){
 #'
 #' @return data.frame
 #' @export
-get_fitted_peak_info <- function(possible_peak, use_loc = "mz", w = NULL){
+get_fitted_peak_info <- function(possible_peak, use_loc = "mz", w = NULL, addend = 1e-8){
   peak_model <- parabolic_fit(possible_peak[, use_loc], possible_peak[, "log_int"], w)
   peak_model$residuals <- transform_residuals(possible_peak[, "log_int"], peak_model$fitted.values)
   peak_ssr <- ssr(peak_model)
 
   peak_center_model <- model_peak_center_intensity(possible_peak[, use_loc], peak_model$coefficients)
-  peak_center_model["Height"] <- exp(peak_center_model["Height"])
+  peak_center_model["Height"] <- exp(peak_center_model["Height"]) - addend
   full_points <- seq(1, nrow(possible_peak))
   peak_area_model <- integration_based_area(possible_peak[, use_loc], possible_peak$intensity,
                                             full_points, full_points, peak_model$coefficients)
