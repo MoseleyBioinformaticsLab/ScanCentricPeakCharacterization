@@ -215,6 +215,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
     sliding_region_size = NULL,
     sliding_region_delta = NULL,
+    quantile_multiplier = NULL,
 
     tiled_region_size = NULL,
     tiled_region_delta = NULL,
@@ -262,7 +263,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
         message("Finding initial signal regions ...")
       }
       log_message("Finding initial signal regions ...")
-      self$peak_regions$peak_regions <- find_signal_regions(self$peak_regions$sliding_regions, self$peak_regions$frequency_point_regions, self$region_percentage)
+      self$peak_regions$peak_regions <- find_signal_regions(self$peak_regions$sliding_regions, self$peak_regions$frequency_point_regions, self$quantile_multiplier)
       log_memory()
     },
 
@@ -488,7 +489,8 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     },
 
     initialize = function(raw_ms = NULL, sliding_region_size = 10, sliding_region_delta = 1, tiled_region_size = 1, tiled_region_delta = 1,
-                          region_percentage = 0.99, offset_multiplier = 1, frequency_multiplier = 400, peak_method = "lm_weighted", min_points = 4,
+                          region_percentage = 0.99, offset_multiplier = 1, frequency_multiplier = 400,
+                          quantile_multiplier = 1.5, peak_method = "lm_weighted", min_points = 4,
                           zero_normalization = FALSE, frequency_fit_description = c(0, -1/2, -1/3),
                           mz_fit_description = c(0, -1, -2, -3), progress = FALSE){
       if (inherits(raw_ms, "RawMS")) {
@@ -506,6 +508,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       self$tiled_region_size <- tiled_region_size
       self$tiled_region_delta <- tiled_region_delta
       self$region_percentage <- region_percentage
+      self$quantile_multiplier = quantile_multiplier
 
       self$peak_method = peak_method
       self$min_points = min_points
@@ -544,18 +547,28 @@ count_overlaps <- function(regions, point_regions){
 #'
 #' @param regions the regions we want to query
 #' @param point_regions the individual points
+#' @param multiplier how much above base quantiles to use (default = 1.5)
 #'
 #' @export
 #' @return IRanges
-find_signal_regions <- function(regions, point_regions, data_cutoff = 0.99){
-  regions <- count_overlaps(regions, point_regions)
+find_signal_regions <- function(regions, point_regions, multiplier = 1.5){
+  regions = count_overlaps(regions, point_regions)
+  nz_counts = regions@elementMetadata$nonzero_counts
 
-  nz_counts <- regions@elementMetadata$nonzero_counts
+  chunk_indices = seq(1, length(nz_counts), by = 10000)
 
-  min_cutoff <- stats::quantile(nz_counts, data_cutoff)
+  chunk_perc = purrr::map_dbl(chunk_indices, function(in_index){
+    use_counts = nz_counts[seq(in_index, min(in_index + 9999, length(nz_counts)))]
+    if (max(use_counts) > 0) {
+      return(stats::quantile(use_counts, 0.99))
+    } else {
+      return(0)
+    }
+  })
 
-  regions <- regions[nz_counts > min_cutoff]
+  cutoff_value = ceiling(median(chunk_perc) * multiplier)
 
+  regions = regions[nz_counts > cutoff_value]
   IRanges::reduce(regions)
 }
 
