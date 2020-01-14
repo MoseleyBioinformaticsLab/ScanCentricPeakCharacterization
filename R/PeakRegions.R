@@ -159,7 +159,10 @@ PeakRegions <- R6::R6Class("PeakRegions",
     set_min_scan = function(){
       if (!is.null(self$frequency_point_regions)) {
         self$n_scan <- length(unique(self$frequency_point_regions@elementMetadata$scan))
-        self$min_scan <- round(self$scan_perc * self$n_scan)
+        self$min_scan <- min(c(round(self$scan_perc * self$n_scan), 25))
+        if (self$min_scan <= 3) {
+          self$min_scan <- 3
+        }
       } else {
         warning("No frequency points to pull scan data from!")
       }
@@ -490,6 +493,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
                         mz_range = range(self$peak_regions$peak_data$ObservedMZ, na.rm = TRUE)),
            other_info = list(
              n_scans = length(self$peak_regions$normalization_factors$scan),
+             min_scan = self$peak_regions$min_scan,
              n_peaks = nrow(self$peak_regions$peak_data),
              intensity_range = range(self$peak_regions$peak_data$Height),
              dynamic_range = max(self$peak_regions$peak_data$Height) / min(self$peak_regions$peak_data$Height),
