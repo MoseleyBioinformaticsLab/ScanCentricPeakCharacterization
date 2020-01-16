@@ -497,6 +497,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
              n_peaks = nrow(self$peak_regions$peak_data),
              intensity_range = range(self$peak_regions$peak_data$Height),
              dynamic_range = max(self$peak_regions$peak_data$Height) / min(self$peak_regions$peak_data$Height),
+             median_intensity = median(self$peak_regions$peak_data$Height),
              instrument = self$peak_regions$instrument
            ))
     },
