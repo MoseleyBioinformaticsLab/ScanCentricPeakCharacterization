@@ -813,7 +813,7 @@ two_pass_normalization <- function(peak_regions, intensity_measure = c("RawHeigh
 
   normed_scan_cor <- data.frame(ScanCorrelation = normed_scan_cor[logical_round2],
                                 HighCor = !low_cor[logical_round2])
-  n_scans <- purrr::map_int(normed_peaks2, calculate_number_of_scans)
+  n_scans <- purrr::map_int(normed_peaks2[logical_round2], calculate_number_of_scans)
   normed_scan_cor$HighScan <- n_scans >= quantile(n_scans, 0.9)
   normed_scan_cor$Ignore <- normed_scan_cor$HighCor & normed_scan_cor$HighScan
   peak_regions$scan_correlation <- normed_scan_cor
