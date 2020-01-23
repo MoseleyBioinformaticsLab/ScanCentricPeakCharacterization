@@ -1140,7 +1140,7 @@ characterize_peaks <- function(peak_region){
   peak_info <- purrr::map_df(corrected_peak_info, "peak")
   #peak_info <- add_offset(peak_info, peak_region$mz_model)
   peak_info$ScanCorrelation <- peak_region$scan_correlation[peak_region$keep_peaks, "ScanCorrelation"]
-  peak_info$HighScan = peak_info$NScan >= quantile(peak_info$NScan >= 0.9)
+  peak_info$HighScan = peak_info$NScan >= quantile(peak_info$NScan, 0.9)
 
   original_height <- do.call(rbind, purrr::map(corrected_peak_info, "original_scan"))
   corrected_height <- do.call(rbind, purrr::map(corrected_peak_info, "corrected_scan"))
