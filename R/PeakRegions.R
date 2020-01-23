@@ -351,26 +351,14 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       invisible(self)
     },
 
-    remove_high_frequency_sd = function() {
+    indicate_high_frequency_sd = function() {
       peak_region = self$peak_regions
 
       sd_cutoff = max(boxplot.stats(peak_region$peak_data$ObservedFrequencySD)$stats)
 
-      keep_peaks = peak_region$peak_data$ObservedFrequencySD <= sd_cutoff
-      n_peak = length(keep_peaks)
+      high_peaks = peak_region$peak_data$ObservedFrequencySD > sd_cutoff
 
-      peak_region$peak_data = peak_region$peak_data[keep_peaks, ]
-
-      peak_region$scan_level_arrays = purrr::map(peak_region$scan_level_arrays, function(in_var){
-        if (is.matrix(in_var)) {
-          return(in_var[keep_peaks, ])
-        } else if (length(in_var) == n_peak) {
-          return(in_var[keep_peaks])
-        } else {
-          return(in_var)
-        }
-      })
-      self$peak_regions = peak_region
+      self$peak_regions$peak_data$HighSD = high_peaks
       invisible(self)
     },
 
@@ -412,7 +400,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       self$remove_double_peaks_in_scans()
       self$normalize_data()
       self$find_peaks_in_regions()
-      self$remove_high_frequency_sd()
+      self$indicate_high_frequency_sd()
       self$add_offset()
       self$sort_ascending_mz()
       if (nrow(self$peak_regions$peak_data) == 0) {
@@ -811,11 +799,7 @@ two_pass_normalization <- function(peak_regions, intensity_measure = c("RawHeigh
   peak_regions$peak_index = peak_regions$peak_index[keep_after_round2]
   peak_regions$peak_region_list = normed_list_regions
 
-  normed_scan_cor <- data.frame(ScanCorrelation = normed_scan_cor[logical_round2],
-                                HighCor = !low_cor[logical_round2])
-  n_scans <- purrr::map_int(normed_peaks2[logical_round2], calculate_number_of_scans)
-  normed_scan_cor$HighScan <- n_scans >= quantile(n_scans, 0.9)
-  normed_scan_cor$Ignore <- normed_scan_cor$HighCor & normed_scan_cor$HighScan
+  normed_scan_cor <- data.frame(ScanCorrelation = normed_scan_cor[logical_round2])
   peak_regions$scan_correlation <- normed_scan_cor
   log_memory()
   peak_regions
@@ -866,8 +850,6 @@ zero_normalization = function(peak_regions, intensity_measure = c("RawHeight", "
   normed_scan_cor <- data.frame(ScanCorrelation = normed_scan_cor,
                                 HighCor = !low_cor)
   n_scans <- purrr::map_int(scan_peaks, calculate_number_of_scans)
-  normed_scan_cor$HighScan <- n_scans >= quantile(n_scans, 0.9)
-  normed_scan_cor$Ignore <- normed_scan_cor$HighCor & normed_scan_cor$HighScan
   peak_regions$scan_correlation <- normed_scan_cor
   peak_regions
 }
@@ -1157,7 +1139,8 @@ characterize_peaks <- function(peak_region){
 
   peak_info <- purrr::map_df(corrected_peak_info, "peak")
   #peak_info <- add_offset(peak_info, peak_region$mz_model)
-  peak_info$ScanCorrelated <- peak_region$scan_correlation[peak_region$keep_peaks, "Ignore"]
+  peak_info$ScanCorrelation <- peak_region$scan_correlation[peak_region$keep_peaks, "ScanCorrelation"]
+  peak_info$HighScan = peak_info$NScan >= quantile(peak_info$NScan >= 0.9)
 
   original_height <- do.call(rbind, purrr::map(corrected_peak_info, "original_scan"))
   corrected_height <- do.call(rbind, purrr::map(corrected_peak_info, "corrected_scan"))
