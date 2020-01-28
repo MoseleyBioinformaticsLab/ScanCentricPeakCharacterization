@@ -1202,7 +1202,7 @@ characterize_mz_points <- function(in_region, peak_scans = NULL){
     peak_info$ObservedFrequencySD <- sd(scan_peaks$ObservedFrequency)
     peak_info$Log10ObservedMZSD <- sd(log10(scan_peaks$ObservedMZ))
     if (peak_info$Height < 1) {
-      peak_info$Log10Height = 0
+      peak_info$Log10Height = NA
     } else {
       peak_info$Log10Height <- log10(peak_info$Height)
     }
