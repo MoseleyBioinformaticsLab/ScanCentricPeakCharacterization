@@ -1079,6 +1079,12 @@ characterize_peaks <- function(peak_region){
   # })
   peak_data <- internal_map$map_function(
     use_region_list, characterize_mz_points, peak_scans = use_scans)
+
+  peak_height = purrr::map_df(peak_data, ~ .x$peak_info[, c("Height", "Log10Height")])
+  bad_peaks = is.na(peak_height$Height) | is.na(peak_height$Log10Height)
+
+  peak_data = peak_data[!bad_peaks]
+
   log_memory()
 
   individual_peak_heights <- log10(purrr::map_dbl(peak_data, function(x){x$peak_info$Height}))
