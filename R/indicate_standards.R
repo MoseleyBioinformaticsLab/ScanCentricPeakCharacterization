@@ -36,7 +36,7 @@ indicate_standards_contaminents = function(zip_dir, file_pattern = ".zip",
   all_zip = dir(zip_dir, pattern = file_pattern, full.names = TRUE)
   all_files = paste0(basename(all_zip), collapse = "\n")
   message("Found these files:\n", all_files, "\n\n")
-  blank_files = grep(blank_pattern, basename(all_files), value = TRUE)
+  blank_files = grep(blank_pattern, basename(all_zip), value = TRUE)
   blank_files = paste0(blank_files, collapse = "\n")
   message("And the blanks are:\n", blank_files, "\n\n")
 
