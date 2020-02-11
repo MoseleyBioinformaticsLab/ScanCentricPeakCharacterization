@@ -84,7 +84,7 @@ indicate_standards_contaminents = function(zip_dir, file_pattern = ".zip",
     tmp_df = as.data.frame(.x)
     tmp_df$peak = paste0(.y, ".p", seq(1, nrow(tmp_df)))
     tmp_df$sample = .y
-    pivot_longer(tmp_df, starts_with(find_col), names_to = "scan", values_to = "frequency", values_drop_na = TRUE)
+    tidyr::pivot_longer(tmp_df, starts_with(find_col), names_to = "scan", values_to = "frequency", values_drop_na = TRUE)
   })
 
   sample_level_regions = IRanges::IRanges(start = round(sample_level_df$frequency * conversion_factor), width = 1)
