@@ -165,7 +165,7 @@ indicate_standards_contaminents = function(zip_dir, file_pattern = ".zip",
     prf = tmp_zip$peak_finder$peak_regions
 
     all_regions = do.call(c, purrr::map(prf$peak_region_list, "region"))
-    count_overlap = countOverlaps(all_regions, filter_regions)
+    count_overlap = IRanges::countOverlaps(all_regions, filter_regions)
     no_overlap = count_overlap == 0
 
     good_peaks = prf$peak_index[no_overlap]
