@@ -17,6 +17,7 @@
 #'  by filtering out it's assignments later.
 #'
 #' @return NULL nothing is returned, files are overwritten
+#' @export
 indicate_standards_contaminents = function(zip_dir, file_pattern = ".zip",
                                            blank_pattern = "^blank",
                                            save_dir = NULL,
