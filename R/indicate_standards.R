@@ -93,12 +93,12 @@ indicate_standards_contaminents = function(zip_dir, file_pattern = ".zip",
   tiled_regions = create_frequency_regions(frequency_range = range(sample_level_df$frequency), n_point = 1,
                                            delta_point = 1, multiplier = conversion_factor)
 
-  tiled_counts = countOverlaps(tiled_regions, sample_level_regions)
+  tiled_counts = IRanges::countOverlaps(tiled_regions, sample_level_regions)
 
-  reduced_regions = reduce(tiled_regions[tiled_counts > 0])
+  reduced_regions = IRanges::reduce(tiled_regions[tiled_counts > 0])
 
   na_df = data.frame(region = NA, sample = names(sample_level_data), value = 0, stringsAsFactors = FALSE)
-  na_wide = spread(na_df, sample, value)
+  na_wide = tidyr::spread(na_df, sample, value)
   if (progress) {
     message("Counting Scan Level Peak Overlaps")
     pb = knitrProgressBar::progress_estimated(length(reduced_regions))
@@ -109,7 +109,7 @@ indicate_standards_contaminents = function(zip_dir, file_pattern = ".zip",
   count_df = purrr::map_df(seq(1, length(reduced_regions)), function(in_region){
     tmp_region = reduced_regions[in_region]
 
-    subset_sample = subsetByOverlaps(sample_level_regions, tmp_region)
+    subset_sample = IRanges::subsetByOverlaps(sample_level_regions, tmp_region)
     tmp_df = na_wide
     tmp_df$region = in_region
 
