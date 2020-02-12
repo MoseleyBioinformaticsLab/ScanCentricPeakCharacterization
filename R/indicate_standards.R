@@ -36,9 +36,12 @@ indicate_standards_contaminents = function(zip_dir, file_pattern = ".zip",
   all_zip = dir(zip_dir, pattern = file_pattern, full.names = TRUE)
   all_files = paste0(basename(all_zip), collapse = "\n")
   message("Found these files:\n", all_files, "\n\n")
-  blank_files = grep(blank_pattern, basename(all_zip), value = TRUE)
-  blank_files = paste0(blank_files, collapse = "\n")
-  message("And the blanks are:\n", blank_files, "\n\n")
+
+  if (!is.null(blank_pattern)) {
+    blank_files = grep(blank_pattern, basename(all_zip), value = TRUE)
+    blank_files = paste0(blank_files, collapse = "\n")
+    message("And the blanks are:\n", blank_files, "\n\n")
+  }
 
   if (progress) {
     message("Reading in scan level data ...")
@@ -61,8 +64,12 @@ indicate_standards_contaminents = function(zip_dir, file_pattern = ".zip",
 
   names(all_scan_level) = basename(all_zip)
   #
-  is_blank = grepl(blank_pattern, names(all_scan_level))
-  #
+  if (!is.null(blank_pattern)) {
+    is_blank = grepl(blank_pattern, names(all_scan_level))
+
+  } else {
+    is_blank = rep(FALSE, length(all_scan_level))
+  }
   real_samples = !is_blank
   #
   other_names = data.frame(sample = "s", number = seq(1, length(all_scan_level)), type = "real", stringsAsFactors = FALSE)
@@ -127,22 +134,27 @@ indicate_standards_contaminents = function(zip_dir, file_pattern = ".zip",
     tmp_df
   })
 
-  is_blank = purrr::map(grep("blank", names(count_df)), function(blank_count){
-    tmp_ratio = count_df[[blank_count]]
-    (tmp_ratio >= 0.9) & (tmp_ratio <= 1.1)
-  })
+  if (!is.null(blank_pattern)) {
+    in_blank = purrr::map(grep("blank", names(count_df)), function(blank_count){
+      tmp_ratio = count_df[[blank_count]]
+      (tmp_ratio >= 0.9) & (tmp_ratio <= 1.1)
+    })
 
-  is_blank = do.call(cbind, is_blank)
+    in_blank = do.call(cbind, in_blank)
 
-  def_blank = rowSums(is_blank) == ncol(is_blank)
+    def_blank = rowSums(in_blank) == ncol(in_blank)
+  } else {
+    def_blank = rep(TRUE, nrow(count_df))
+  }
 
-  is_real = purrr::map(grep("real", names(count_df), value = TRUE), function(real_count){
+
+  in_real = purrr::map(grep("real", names(count_df), value = TRUE), function(real_count){
     tmp_ratio = count_df[[real_count]]
     (tmp_ratio >= 0.1) & (tmp_ratio <= 1.1)
   })
-  is_real = do.call(cbind, is_real)
+  in_real = do.call(cbind, in_real)
 
-  def_real = rowSums(is_real) >= (ncol(is_real) - 1)
+  def_real = rowSums(in_real) >= (ncol(in_real) - 1)
 
   filter_regions = reduced_regions[def_blank & def_real]
 
