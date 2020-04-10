@@ -618,3 +618,37 @@ calculate_density <- function(peak_data, use_range = NULL, window = 1, delta = 0
   })
   peak_density
 }
+
+#' determine sample run time
+#'
+#' @param zip the zip object you want to use
+#' @param units what units should the run time be in? (s, m, h)
+#'
+#' @export
+#' @return data.frame with sample, start and end time
+sample_run_time = function(zip, units = "m"){
+  if (inherits(zip, "character")) {
+    zip = zip_ms(zip)
+    cleanup = TRUE
+  }
+  if (is.null(zip$raw_ms)) {
+    zip$load_raw()
+    cleanup = FALSE
+  }
+
+  ms_data = get_ms_info(zip$raw_ms$raw_data, include_msn = TRUE, include_precursor = TRUE)
+  ms_data = ms_data[order(ms_data$time), ]
+  # assume that the last scan-scan time difference is how long the last scan should have taken as well
+  last_diff = ms_data$time[nrow(ms_data)] - ms_data$time[nrow(ms_data) - 1]
+  total_time = ms_data$time[nrow(ms_data)] + last_diff
+  start_time = lubridate::as_datetime(zip$raw_ms$raw_metadata$run$startTimeStamp)
+  end_time = start_time + total_time
+  total_time_out = switch(units,
+                          s = total_time,
+                          m = total_time / 60,
+                          h = total_time / 3600)
+  if (cleanup) {
+    zip$cleanup()
+  }
+  data.frame(sample = zip$id, start = start_time, run = total_time_out, end = end_time)
+}

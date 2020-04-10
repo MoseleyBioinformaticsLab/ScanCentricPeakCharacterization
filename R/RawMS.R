@@ -59,6 +59,7 @@ get_ms1_scans <- function(raw_data){
   list(scan_range = scan_range, rt_range = rt_range)
 }
 
+
 #' plot tic
 #'
 #' function to plot the total intensity chromatogram of the data, with information
