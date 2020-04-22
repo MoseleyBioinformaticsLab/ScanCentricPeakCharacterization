@@ -634,6 +634,8 @@ sample_run_time = function(zip, units = "m"){
   if (is.null(zip$raw_ms)) {
     zip$load_raw()
     cleanup = FALSE
+  } else {
+    cleanup = FALSE
   }
 
   ms_data = get_ms_info(zip$raw_ms$raw_data, include_msn = TRUE, include_precursor = TRUE)
@@ -651,4 +653,70 @@ sample_run_time = function(zip, units = "m"){
     zip$cleanup()
   }
   data.frame(sample = zip$id, start = start_time, run = total_time_out, end = end_time)
+}
+
+#' get frequencies for all data
+#'
+#' Given a zip object, gets frequency conversions for *all* of the scans, not just the MS1
+#' or filtered scans.
+#'
+#' @param zip the zip object
+#'
+#' @export
+#' @return data.frame
+every_scan_frequency = function(zip){
+  if (inherits(zip, "character")) {
+    zip = zip_ms(zip)
+    cleanup = TRUE
+  }
+
+  if (is.null(zip$raw_ms)) {
+    zip$load_raw()
+    cleanup = FALSE
+  } else {
+    cleanup = FALSE
+  }
+
+  scan_data = get_ms_info(zip$raw_ms$raw_data, include_msn = TRUE, include_precursor = TRUE)
+  scan_data = scan_data[order(scan_data$time), ]
+
+  mz_data = purrr::map(seq(1, nrow(scan_data)), function(scan_row){
+    if (!is.na(scan_data[scan_row, "scan"])) {
+      tmp = as.data.frame(xcms::getScan(zip$raw_ms$raw_data, scan_data[scan_row, "scan"]),
+                          strinsAsFactors = FALSE)
+    }  else {
+      tmp = as.data.frame(xcms::getMsnScan(zip$raw_ms$raw_data, scan_data[scan_row, "scan_msn"]),
+                          stringsAsFactors = FALSE)
+    }
+    tmp$scan = scan_data[scan_row, "acquisition"]
+    tmp
+  })
+
+  if (cleanup){
+    zip$cleanup()
+  }
+
+  ... = NULL
+  frequency_fit_description = c(0, -1/2, -1/3)
+  mz_fit_description = c(0, -1, -2, -3)
+  mz_frequency = purrr::map(mz_data, function(in_scan){
+    #message(scan_name)
+    out_scan = FTMS.peakCharacterization::convert_mz_frequency(in_scan, ...)
+    out_scan
+  })
+  frequency_fits = purrr::map(mz_frequency, function(in_freq){
+    use_peaks = in_freq$convertable
+    tmp_fit = FTMS.peakCharacterization:::fit_exponentials(in_freq$mean_mz[use_peaks], in_freq$mean_frequency[use_peaks], frequency_fit_description)
+    tmp_fit$scan = in_freq[1, "scan"]
+    tmp_fit
+  })
+  frequency_coefficients = purrr::map_df(frequency_fits, function(.x){
+      tmp_df = as.data.frame(matrix(.x$coefficients, nrow = 1))
+      names(tmp_df) = c("intercept", "sqrt", "cubert")
+      tmp_df$scan = .x$scan
+      tmp_df
+  })
+
+  coefficients = dplyr::left_join(scan_data, frequency_coefficients, by = c("acquisition" = "scan"))
+  list(mz_data = mz_frequency, coefficients = coefficients)
 }
