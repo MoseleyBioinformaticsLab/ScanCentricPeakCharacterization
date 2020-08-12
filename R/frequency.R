@@ -33,6 +33,7 @@
 #'
 #' @return list
 convert_mz_frequency = function(mz_data, keep_all = TRUE){
+  log_memory()
   original_vars = names(mz_data)
   stopifnot("mz" %in% names(mz_data))
   frequency_data = mz_data
