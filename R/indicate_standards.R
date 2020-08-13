@@ -1,3 +1,9 @@
+generate_contaminants = function(contaminants){
+  tmp_adduct = gsub("]", "", gsub("[", "", contaminants$precursor_adduct, fixed = TRUE), fixed = TRUE)
+  just_adduct = purrr::map_chr(strsplit(tmp_adduct, "+", fixed = TRUE), ~ .x[2])
+  contaminants$adduct = just_adduct
+}
+
 #' indicate standards
 #'
 #' Given a directory of characterized samples, attempts to determine which peaks
