@@ -101,47 +101,15 @@ plot_tic <- function(raw_data, color_ms = TRUE, log_transform = TRUE){
 
 #' get MS info
 #'
-#' @param raw_data the xcms raw data object
+#' @param raw_data the MSnbase raw data object
 #' @param include_msn should information from MSn scans be included?
 #' @param include_precursor should the precursor scans be included?
 #'
 #' @return data.frame with scan, time, acquisition, tic, ms_level and ms_type
 #' @export
 get_ms_info <- function(raw_data, include_msn = FALSE, include_precursor = FALSE){
-  ms_scan_info <- data.frame(scan = seq_along(raw_data@scantime),
-                             time = raw_data@scantime,
-                             acquisition = raw_data@acquisitionNum,
-                             tic = raw_data@tic,
-                             ms_level = 1,
-                             ms_type = "normal",
-                             stringsAsFactors = FALSE)
+  ms_scan_info = MSnbase::fData(raw_data)
 
-
-  msn_precursor_scans <- raw_data@msnPrecursorScan
-  if (!include_precursor && (length(msn_precursor_scans) != 0)) {
-    msn_precursor_scans <- unique(msn_precursor_scans)
-    msn_precursor_scans <- msn_precursor_scans[!is.na(msn_precursor_scans)]
-    ms_scan_info <- ms_scan_info[!(ms_scan_info$scan %in% msn_precursor_scans), ]
-  } else {
-    ms_scan_info$scan_index <- seq_len(nrow(ms_scan_info))
-    msn_precursor_scans <- unique(msn_precursor_scans)
-    msn_precursor_scans <- msn_precursor_scans[!is.na(msn_precursor_scans)]
-    ms_scan_info[(ms_scan_info$scan_index %in% msn_precursor_scans), "ms_type"] <- "precursor"
-    ms_scan_info$scan_index <- NULL
-  }
-
-  if (include_msn && (length(raw_data@msnLevel) > 0)) {
-    msn_info <- data.frame(scan = NA,
-                           time = raw_data@msnRt,
-                           acquisition = raw_data@msnAcquisitionNum,
-                           tic = raw_data@msnPrecursorIntensity,
-                           ms_level = raw_data@msnLevel,
-                           ms_type = "normal",
-                           scan_msn = seq_along(raw_data@msnRt),
-                           stringsAsFactors = FALSE)
-    ms_scan_info$scan_msn <- NA
-    ms_scan_info <- rbind(ms_scan_info, msn_info)
-  }
   ms_scan_info
 }
 
@@ -197,14 +165,12 @@ RawMS <- R6::R6Class("RawMS",
      },
      extract_raw_data = function(){
        scan_range <- self$scan_range
-       if (is.null(self$mz_range)) {
-         mz_range <- numeric()
-       } else {
-         mz_range <- self$mz_range
-       }
-       raw_scan_data <- purrr::map_df(scan_range, function(in_scan){
-         scan_data <- as.data.frame(xcms::getScan(self$raw_data, in_scan, mzrange = mz_range))
-         scan_data$scan <- in_scan
+       raw_scan_data <- purrr::map(scan_range, function(in_scan){
+         tmp_scan = self$raw_data[[in_scan]]
+         scan_data <- data.frame(mz = tmp_scan@mz, intensity = tmp_scan@intensity, scan = in_scan)
+         if (!is.null(self$mz_range)) {
+           scan_data = dplyr::filter(scan_data, dplyr::between(mz, self$mz_range[1], self$mz_range[2]))
+         }
          scan_data
        })
        raw_scan_data
