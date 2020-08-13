@@ -268,7 +268,7 @@ RawMS <- R6::R6Class("RawMS",
        # message("Using MS1 non-precursor scans!")
        self$ms_info <- get_ms_info(self$raw_data)
        self$scan_range <- self$ms_info$scan
-       self$rt_range <- range(self$ms_info$time)
+       self$rt_range <- range(self$ms_info$rtime)
 
      } else {
        self$set_scans(scan_range, rt_range)
