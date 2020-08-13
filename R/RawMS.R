@@ -108,7 +108,11 @@ plot_tic <- function(raw_data, color_ms = TRUE, log_transform = TRUE){
 #' @return data.frame with scan, time, acquisition, tic, ms_level and ms_type
 #' @export
 get_ms_info <- function(raw_data, include_msn = FALSE, include_precursor = FALSE){
-  ms_scan_info = MSnbase::fData(raw_data)
+  ms_scan_info = data.frame(rtime = MSnbase::rtime(raw_data),
+                            tic = MSnbase::tic(raw_data),
+                            scanIndex = MSnbase::scanIndex(raw_data))
+  ms_scan_info$scan = seq(1, nrow(ms_scan_info))
+  rownames(ms_scan_info) = NULL
 
   ms_scan_info
 }
