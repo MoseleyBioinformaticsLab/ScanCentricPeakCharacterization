@@ -18,7 +18,7 @@ mz_points_to_frequency_regions <- function(mz_data_list, frequency_fit_descripti
 
   # this is a check to make sure we will be able to convert
   # to multiply and still get integers out
-  range_freq = range(frequency_list$frequency$frequency)
+  range_freq = purrr::map(frequency_list$frequency, ~ range(.x$frequency)) %>% do.call(c, .) %>% range(.)
 
   if (any(is.na(range_freq))) {
     stop("NA entries in conversion from M/Z to frequency! Stopping!")
@@ -43,13 +43,9 @@ mz_points_to_frequency_regions <- function(mz_data_list, frequency_fit_descripti
     }
   }
 
-  frequency_data = frequency_list$frequency
-
-  frequency_regions = frequency_points_to_frequency_regions(frequency_data, multiplier = frequency_multiplier)
-  frequency_list$frequency = NULL
-  frequency_list$frequency_multiplier = frequency_multiplier
-  frequency_regions@metadata = frequency_list
-  frequency_regions
+  frequency_regions = purrr::map(frequency_list$frequency, frequency_points_to_frequency_regions, multiplier = frequency_multiplier)
+  return(list(frequency = frequency_regions,
+       metadata = frequency_list[seq(2, length(frequency_list))]))
 }
 
 #' frequency points to frequency_regions
@@ -158,7 +154,7 @@ PeakRegions <- R6::R6Class("PeakRegions",
 
     set_min_scan = function(){
       if (!is.null(self$frequency_point_regions)) {
-        self$n_scan <- length(unique(self$frequency_point_regions@elementMetadata$scan))
+        self$n_scan <- length(unique(self$frequency_point_regions$frequency))
         self$min_scan <- min(c(round(self$scan_perc * self$n_scan), 25))
         if (self$min_scan <= 3) {
           self$min_scan <- 3
@@ -175,7 +171,7 @@ PeakRegions <- R6::R6Class("PeakRegions",
         if (inherits(raw_ms, "RawMS")) {
           raw_mz_data = raw_ms$extract_raw_data()
           self$instrument = raw_ms$get_instrument()
-        } else if (inherits(raw_ms, "data.frame")) {
+        } else if (inherits(raw_ms, "list")) {
           raw_mz_data = raw_ms
         }
         self$frequency_point_regions = mz_points_to_frequency_regions(mz_data = raw_mz_data,
