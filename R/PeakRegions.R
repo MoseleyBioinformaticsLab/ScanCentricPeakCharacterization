@@ -4,7 +4,7 @@
 #' width 1, using the `frequency_multiplier` argument to convert from the floating
 #' point double to an `integer`.
 #'
-#' @param data a `data.frame` containing `mz`
+#' @param mz_data_list a list of `data.frame` containing `mz`
 #' @param frequency_fit_description the description for frequency ~ mz
 #' @param mz_fit_description the description for mz ~ frequency
 #' @param frequency_multiplier a value used to convert to integers.
@@ -12,9 +12,9 @@
 #' @importFrom IRanges IRanges
 #' @importFrom S4Vectors mcols
 #' @export
-mz_points_to_frequency_regions <- function(mz_data, frequency_fit_description = c(0, -1/2, -1/3),
+mz_points_to_frequency_regions <- function(mz_data_list, frequency_fit_description = c(0, -1/2, -1/3),
                                            mz_fit_description = c(0, -1, -2, -3), frequency_multiplier = 400){
-  frequency_list = mz_scans_to_frequency(mz_data, frequency_fit_description, mz_fit_description)
+  frequency_list = mz_scans_to_frequency(mz_data_list, frequency_fit_description, mz_fit_description)
 
   # this is a check to make sure we will be able to convert
   # to multiply and still get integers out

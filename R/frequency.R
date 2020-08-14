@@ -140,7 +140,7 @@ predict_exponentials = function(x, coeff, description){
 #'
 #' Given a multi-scan data.frame of m/z, generate frequency values for the data.
 #'
-#' @param mz_scan_df a data.frame with at least `mz` and `scan` columns
+#' @param mz_df_list a list of data.frame with at least `mz` and `scan` columns
 #' @param frequency_fit_description the exponentials to use in fitting the frequency ~ mz model
 #' @param mz_fit_description the exponentials to use in fitting the mz ~ frequency model
 #' @param ... other parameters for `convert_mz_frequency`
@@ -149,10 +149,12 @@ predict_exponentials = function(x, coeff, description){
 #'
 #' @export
 #' @return list
-mz_scans_to_frequency = function(mz_scan_df, frequency_fit_description, mz_fit_description, ...){
-  split_mz = split(mz_scan_df, mz_scan_df$scan)
+mz_scans_to_frequency = function(mz_df_list, frequency_fit_description, mz_fit_description, ...){
 
-  mz_frequency = internal_map$map_function(split_mz, function(in_scan){
+  if (is.null(names(mz_df_list))) {
+    names(mz_df_list) = purrr::map_chr(mz_df_list, ~ .x$scan[1])
+  }
+  mz_frequency = internal_map$map_function(mz_df_list, function(in_scan){
     #message(scan_name)
     out_scan = convert_mz_frequency(in_scan, ...)
     out_scan
@@ -190,42 +192,57 @@ mz_scans_to_frequency = function(mz_scan_df, frequency_fit_description, mz_fit_d
   frequency_coefficients = frequency_coefficients[!frequency_coefficients[[first_slope]] %in% bad_coefficients, ]
   mz_coefficients = dplyr::filter(mz_coefficients, scan %in% frequency_coefficients$scan)
 
-  freq_model_coefficients = purrr::map_dbl(paste0("V", seq(1, length(frequency_fit_description))), ~ median(frequency_coefficients[[.x]]))
-  mz_model_coefficients = purrr::map_dbl(paste0("V", seq(1, length(mz_fit_description))), ~ median(mz_coefficients[[.x]]))
+  mz_frequency = mz_frequency[frequency_coefficients$scan]
 
-  mz_frequency_df = do.call(rbind, mz_frequency)
+  median_first = median(frequency_coefficients[[first_slope]])
+  median_index = which(frequency_coefficients[[first_slope]] == median_first)[1]
 
-  mz_frequency_df = mz_frequency_df[mz_frequency_df$scan %in% frequency_coefficients$scan, ]
+  freq_model_coefficients = dplyr::select(frequency_coefficients, -scan) %>% dplyr::slice(median_index) %>% unlist()
+  mz_model_coefficients = dplyr::select(mz_coefficients, -scan) %>% dplyr::slice(median_index) %>% unlist()
 
-  mz_frequency_df$frequency = predict_exponentials(mz_frequency_df$mz, freq_model_coefficients, frequency_fit_description)
+  mz_frequency = purrr::map(mz_frequency, function(in_data){
+    in_data$frequency = predict_exponentials(in_data$mz, freq_model_coefficients, frequency_fit_description)
+    in_data
+  })
 
-  check_mz_frequency_order(mz_frequency_df)
+  mz_frequency = check_mz_frequency_order(mz_frequency)
 
-  rownames(mz_frequency_df) = NULL
-  valid_range = discover_frequency_offset(mz_frequency_df$frequency)
-  mz_frequency_df$frequency_diff = dplyr::lag(mz_frequency_df$frequency) - mz_frequency_df$frequency
-  mz_frequency_df$convertable = dplyr::between(mz_frequency_df$frequency_diff, valid_range$range[1], valid_range$range[2])
-  mz_frequency_df[is.na(mz_frequency_df$convertable), "convertable"] = FALSE
-  list(frequency = mz_frequency_df, frequency_coefficients_all = frequency_coefficients, frequency_coefficients = freq_model_coefficients,
+  valid_ranges = purrr::map_df(mz_frequency, function(in_mz_freq){
+    out_range = discover_frequency_offset(in_mz_freq$frequency)
+    data.frame(common = out_range$most_common, min = out_range$range[1], max = out_range$range[2])
+  })
+
+  valid_unique = unique(valid_ranges[, c("min", "max")])
+
+  if (nrow(valid_unique) == 1) {
+    mz_frequency = purrr::map(mz_frequency, function(.x){
+      .x$frequency_diff = dplyr::lag(.x$frequency) - .x$frequency
+      .x$convertable = dplyr::between(.x$frequency_diff, valid_unique$min, valid_unique$max)
+      .x[is.na(.x$convertable), "convertable"] = FALSE
+      .x
+    })
+  } else (
+    stop("Convertable ranges were not unique across scans, stopping!")
+  )
+
+  list(frequency = mz_frequency, frequency_coefficients_all = frequency_coefficients, frequency_coefficients = freq_model_coefficients,
        mz_coefficients_all = mz_coefficients, mz_coefficients = mz_model_coefficients,
-       frequency_fit_description = frequency_fit_description, mz_fit_description = mz_fit_description, difference_range = valid_range)
+       frequency_fit_description = frequency_fit_description, mz_fit_description = mz_fit_description, difference_range = valid_unique)
 }
 
-check_mz_frequency_order = function(mz_frequency_data){
-  if ("scan" %in% names(mz_frequency_data)) {
-    split_scan = split(mz_frequency_data, mz_frequency_data$scan)
+check_mz_frequency_order = function(mz_frequency){
+  if (inherits(mz_frequency, "list")) {
 
-    match_order = purrr::map_lgl(split_scan, function(.x){
+    match_order = purrr::map_lgl(mz_frequency, function(.x){
       mz_order = order(.x$mz)
       freq_order = order(.x$frequency, decreasing = TRUE)
       identical(mz_order, freq_order)
     })
 
-    split_scan = split_scan[match_order]
-    out_data = purrr::map_df(split_scan, ~ .x)
-    scan_perc = length(unique(out_data$scan)) / length(unique(mz_frequency_data$scan))
-    if (scan_perc >= 0.9) {
-      return(out_data)
+    order_perc = sum(match_order) / length(match_order)
+
+    if (order_perc >= 0.9) {
+      return(mz_frequency[match_order])
     } else {
       stop("M/Z and frequency point ordering are not the same over more than 90% of scans!")
     }
