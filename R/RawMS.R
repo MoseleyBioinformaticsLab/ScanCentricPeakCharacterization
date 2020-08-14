@@ -144,7 +144,7 @@ RawMS <- R6::R6Class("RawMS",
        if (is.null(scan_range) && is.null(rt_range)) {
          message("Setting scans to be MS1 non-precursor scans!")
          self$scan_range <- ms_scan_info$scan
-         self$rt_range <- range(ms_scan_info$time)
+         self$rt_range <- range(ms_scan_info$rtime)
        } else {
          if (!is.null(scan_range)) {
            if ((length(scan_range) == 2) && ((scan_range[2] - scan_range[1]) != 1)) {
@@ -160,7 +160,7 @@ RawMS <- R6::R6Class("RawMS",
          }
 
          self$scan_range <- ms_scan_info$scan
-         self$rt_range <- range(ms_scan_info$time)
+         self$rt_range <- range(ms_scan_info$rtime)
 
        }
      },
