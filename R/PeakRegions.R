@@ -178,8 +178,8 @@ PeakRegions <- R6::R6Class("PeakRegions",
                                                                       frequency_fit_description = self$frequency_fit_description,
                                                                       mz_fit_description = self$mz_fit_description,
                                                                       frequency_multiplier = self$frequency_multiplier)
-        self$frequency_multiplier = self$frequency_point_regions@metadata$frequency_multiplier
-        self$frequency_range = range(S4Vectors::mcols(self$frequency_point_regions)$frequency)
+        self$frequency_multiplier = self$frequency_point_regions$metadata$frequency_multiplier
+        self$frequency_range = purrr::map(self$frequency_point_regions$frequency, ~ range(S4Vectors::mcols(.x)$frequency)) %>% do.call(c, .) %>% range(.)
         self$set_min_scan()
 
       }
