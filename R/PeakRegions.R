@@ -44,6 +44,7 @@ mz_points_to_frequency_regions <- function(mz_data_list, frequency_fit_descripti
   }
 
   frequency_regions = purrr::map(frequency_list$frequency, frequency_points_to_frequency_regions, multiplier = frequency_multiplier)
+  frequency_list$frequency_multiplier = frequency_multiplier
   return(list(frequency = frequency_regions,
        metadata = frequency_list[seq(2, length(frequency_list))]))
 }
