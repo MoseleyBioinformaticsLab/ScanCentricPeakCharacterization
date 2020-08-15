@@ -1174,11 +1174,12 @@ characterize_mz_points <- function(in_region, peak_scans = NULL){
   in_points = in_region$points
   scan_peaks = in_region$peaks
   if (is.null(peak_scans)) {
-    peak_scans <- unique(in_points@elementMetadata$scan)
+    peak_scans <- unique(names(in_points))
   }
 
   # first trim to the scans actually available from the scan peaks
   peak_scans <- base::intersect(peak_scans, scan_peaks$scan)
+  char_scans = as.character(peak_scans)
 
   if ((nrow(scan_peaks) == 0) || (length(peak_scans) == 0) || (length(in_points) == 0)) {
     peak_info <- data.frame(Height = NA,
@@ -1205,9 +1206,11 @@ characterize_mz_points <- function(in_region, peak_scans = NULL){
                                ObservedMZ = NA,
                                ObservedFrequency = NA)
   } else {
-    in_points <- in_points[in_points@elementMetadata$scan %in% peak_scans]
+    in_points <- in_points[char_scans]
 
-    peak_info <- get_merged_peak_info(as.data.frame(S4Vectors::mcols(in_points)))
+    all_points = purrr::map_df(in_points, ~ as.data.frame(S4Vectors::mcols(.x)))
+
+    peak_info <- get_merged_peak_info(all_points)
     peak_info$ObservedMZSD <- sd(scan_peaks$ObservedMZ)
     peak_info$ObservedFrequencySD <- sd(scan_peaks$ObservedFrequency)
     peak_info$Log10ObservedMZSD <- sd(log10(scan_peaks$ObservedMZ))
@@ -1219,16 +1222,14 @@ characterize_mz_points <- function(in_region, peak_scans = NULL){
     peak_info$HeightSD <- sd(scan_peaks$Height)
     peak_info$Log10HeightSD <- sd(log10(scan_peaks$Height))
 
-    point_data <- as.data.frame(S4Vectors::mcols(in_points))
-    peak_start <- min(point_data[point_data$intensity > 0, "mz"])
-    peak_stop <- max(point_data[point_data$intensity > 0, "mz"])
+    peak_start <- min(all_points[all_points$intensity > 0, "mz"])
+    peak_stop <- max(all_points[all_points$intensity > 0, "mz"])
 
     peak_info$Start <- peak_start
     peak_info$Stop <- peak_stop
     peak_info$NScan <- length(peak_scans)
 
-    point_by_scan <- split(point_data, point_data$scan)
-    peak_info$NPoint <- median(purrr::map_int(point_by_scan, nrow))
+    peak_info$NPoint <- median(purrr::map_int(in_points, length))
 
     scan_heights <- data.frame(Scan = scan_peaks$scan, LogHeight = log10(scan_peaks$Height), ObservedMZ = scan_peaks$ObservedMZ,
                                ObservedFrequency = scan_peaks$ObservedFrequency)
