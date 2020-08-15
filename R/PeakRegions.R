@@ -1181,6 +1181,10 @@ characterize_mz_points <- function(in_region, peak_scans = NULL){
   peak_scans <- base::intersect(peak_scans, scan_peaks$scan)
   char_scans = as.character(peak_scans)
 
+  in_points <- in_points[char_scans]
+  null_points = purrr::map_lgl(in_points, is.null)
+  in_points = in_points[!null_points]
+
   if ((nrow(scan_peaks) == 0) || (length(peak_scans) == 0) || (length(in_points) == 0)) {
     peak_info <- data.frame(Height = NA,
                             Area = NA,
@@ -1206,7 +1210,6 @@ characterize_mz_points <- function(in_region, peak_scans = NULL){
                                ObservedMZ = NA,
                                ObservedFrequency = NA)
   } else {
-    in_points <- in_points[char_scans]
 
     all_points = purrr::map_df(in_points, ~ as.data.frame(S4Vectors::mcols(.x)))
 
