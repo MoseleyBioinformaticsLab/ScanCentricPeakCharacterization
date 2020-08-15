@@ -19,6 +19,9 @@ log_memory = function(){
 
     active_to_total = memory_numbers["Active"] / memory_numbers["MemTotal"]
     swapfree_to_swap = memory_numbers["SwapFree"] / memory_numbers["SwapTotal"]
+    if (is.nan(swapfree_to_swap)) {
+      swapfree_to_swap = 1
+    }
 
     if ((active_to_total >= 0.95) || (swapfree_to_swap <= 0.95)) {
       memory_string2 = paste0("HIGH MEMORY USAGE!!! ", memory_string)
