@@ -653,16 +653,16 @@ split_region_by_peaks <- function(region_list, peak_method = "lm_weighted", min_
 
     secondary_regions = split_reduced_points(reduced_points, tiled_regions, n_zero = 1)
 
-    n_region = length(secondary_regions$region)
+    out_regions = purrr::imap(secondary_regions$region, function(in_region, region_name){
+      f_data_list = purrr::map(names(in_region), function(.x){
+        IRanges::subsetByOverlaps(frequency_point_list[[.x]], in_region[[.x]])
+      })
+      t_data_list = purrr::map(names(in_region), function(.x){
+        IRanges::subsetByOverlaps(tiled_regions, in_region[[.x]])
+      })
 
-    out_regions = purrr::map(seq_len(n_region), function(in_region){
-      f_points = IRanges::IRanges(start = unlist(secondary_regions$peaks[[in_region]]$points),
-                                  width = 1)
-      f_data = IRanges::subsetByOverlaps(frequency_point_regions, f_points)
-      t_data = IRanges::subsetByOverlaps(tiled_regions, secondary_regions$region[[in_region]])
-
-      list(points = f_data, tiles = t_data, region = secondary_regions$region[[in_region]],
-           peaks = rename_peak_data(secondary_regions$peaks[[in_region]]))
+      list(points = f_data_list, tiles = t_data_list, region = in_region,
+           peaks = rename_peak_data(secondary_regions$peaks[[region_name]]))
     })
 
   } else {
