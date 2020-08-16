@@ -374,9 +374,9 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
     add_offset = function(){
       peak_data = self$peak_regions$peak_data
-      frequency_offset = self$peak_regions$frequency_point_regions@metadata$difference_range$most_common
-      mz_coefficients = self$peak_regions$frequency_point_regions@metadata$mz_coefficients
-      mz_description = self$peak_regions$frequency_point_regions@metadata$mz_fit_description
+      frequency_offset = mean(unlist(self$peak_regions$frequency_point_regions$metadata$difference_range))
+      mz_coefficients = self$peak_regions$frequency_point_regions$metadata$mz_coefficients
+      mz_description = self$peak_regions$frequency_point_regions$metadata$mz_fit_description
       mz_1 = predict_exponentials(peak_data$ObservedFrequency, mz_coefficients, mz_description)
       mz_2 = predict_exponentials(peak_data$ObservedFrequency + frequency_offset, mz_coefficients, mz_description)
       peak_data$Offset = (mz_1 - mz_2) * self$offset_multiplier
