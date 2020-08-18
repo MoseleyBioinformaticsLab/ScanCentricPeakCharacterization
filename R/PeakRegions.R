@@ -732,9 +732,10 @@ split_regions <- function(signal_regions, frequency_point_regions, tiled_regions
   # multiprocessing on it. If so, that would be a good thing to do.
   signal_list = as.list(split(signal_regions, seq(1, length(signal_regions))))
   min_scan2 = floor(min_scan / 2)
-  #pb = knitrProgressBar::progress_estimated(length(signal_list))
+  message("separating sub regions")
+  pb = knitrProgressBar::progress_estimated(length(signal_list))
   point_regions_list = purrr::map(signal_list, function(in_region){
-    #knitrProgressBar::update_progress(pb)
+    knitrProgressBar::update_progress(pb)
     points_list = purrr::map(frequency_point_regions$frequency, function(in_points){
       IRanges::subsetByOverlaps(in_points, in_region)
     })
@@ -762,6 +763,7 @@ split_regions <- function(signal_regions, frequency_point_regions, tiled_regions
   #   message(.y)
   #   split_region_by_peaks(.x, peak_method = peak_method, min_points = min_points)
   # })
+  message("finding peaks within them")
   split_data = internal_map$map_function(point_regions_list, split_region_by_peaks,
                                           peak_method = peak_method, min_points = min_points,
                                          metadata = metadata)
