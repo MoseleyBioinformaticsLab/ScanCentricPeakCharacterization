@@ -721,7 +721,7 @@ split_reduced_points = function(reduced_points, tiled_regions, n_zero = 2){
   for (iregion in seq_len(length(sub_point))) {
     all_points <- unique(unlist(sub_point[[iregion]]$points))
     tmp_range <- IRanges::IRanges(start = min(all_points), end = max(all_points))
-    S4Vectors::mcols(tmp_range) <- I(list(as.numeric(sub_point[[iregion]]$scan)))
+    S4Vectors::mcols(tmp_range) <- S4Vectors::DataFrame(points = I(list(as.numeric(sub_point[[iregion]]$scan))))
     sub_region[[iregion]] <- tmp_range
   }
 
