@@ -733,10 +733,10 @@ split_regions <- function(signal_regions, frequency_point_regions, tiled_regions
   signal_list = as.list(split(signal_regions, seq(1, length(signal_regions))))
   min_scan2 = floor(min_scan / 2)
   message("separating sub regions")
-  pb = knitrProgressBar::progress_estimated(length(signal_list))
+  #pb = knitrProgressBar::progress_estimated(length(signal_list))
   point_regions_list = purrr::map(signal_list, function(in_region){
-    knitrProgressBar::update_progress(pb)
-    points_list = purrr::map(frequency_point_regions$frequency, function(in_points){
+    #knitrProgressBar::update_progress(pb)
+    points_list = internal_map$map_function(frequency_point_regions$frequency, function(in_points){
       IRanges::subsetByOverlaps(in_points, in_region)
     })
 
