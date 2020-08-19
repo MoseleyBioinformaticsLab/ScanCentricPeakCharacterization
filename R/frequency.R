@@ -192,7 +192,7 @@ mz_scans_to_frequency = function(mz_df_list, frequency_fit_description, mz_fit_d
   frequency_coefficients = frequency_coefficients[!frequency_coefficients[[first_slope]] %in% bad_coefficients, ]
   mz_coefficients = dplyr::filter(mz_coefficients, scan %in% frequency_coefficients$scan)
 
-  mz_frequency = mz_frequency[frequency_coefficients$scan]
+  mz_frequency = mz_frequency[as.character(frequency_coefficients$scan)]
 
   median_first = median(frequency_coefficients[[first_slope]])
   median_index = which(frequency_coefficients[[first_slope]] == median_first)[1]
