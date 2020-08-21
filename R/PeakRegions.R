@@ -14,7 +14,9 @@
 #' @export
 mz_points_to_frequency_regions <- function(mz_data_list, frequency_fit_description = c(0, -1/2, -1/3),
                                            mz_fit_description = c(0, -1, -2, -3), frequency_multiplier = 400){
+  log_message("converting scans to frequency")
   frequency_list = mz_scans_to_frequency(mz_data_list, frequency_fit_description, mz_fit_description)
+  log_message("done converting to frequency")
 
   # this is a check to make sure we will be able to convert
   # to multiply and still get integers out
@@ -43,7 +45,9 @@ mz_points_to_frequency_regions <- function(mz_data_list, frequency_fit_descripti
     }
   }
 
-  frequency_regions = purrr::map(frequency_list$frequency, frequency_points_to_frequency_regions, multiplier = frequency_multiplier)
+  log_message("creating point regions")
+  frequency_regions = internal_map$map_function(frequency_list$frequency, frequency_points_to_frequency_regions, multiplier = frequency_multiplier)
+  log_message("done creating point regions")
   log_memory()
   frequency_list$frequency_multiplier = frequency_multiplier
   return(list(frequency = frequency_regions,
