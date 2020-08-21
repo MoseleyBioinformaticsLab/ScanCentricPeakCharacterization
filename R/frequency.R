@@ -221,17 +221,20 @@ mz_scans_to_frequency = function(mz_df_list, frequency_fit_description, mz_fit_d
   valid_unique = unique(valid_ranges[, c("min", "max")])
 
   log_message("setting convertable and not")
+
+  find_convertable = function(mz_df, valid_unique){
+    set_1 = seq(1, nrow(mz_df) - 1)
+    set_2 = seq(2, nrow(mz_df))
+    mz_df$frequency_diff = c(mz_df$frequency[set_1] - mz_df$frequency[set_2], 999)
+    mz_df$convertable = dplyr::between(mz_df$frequency_diff, valid_unique$min, valid_unique$max)
+    mz_df
+  }
   if (nrow(valid_unique) == 1) {
-    mz_frequency = purrr::map(mz_frequency, function(.x){
-      .x$frequency_diff = dplyr::lag(.x$frequency) - .x$frequency
-      .x$convertable = dplyr::between(.x$frequency_diff, valid_unique$min, valid_unique$max)
-      .x[is.na(.x$convertable), "convertable"] = FALSE
-      .x
-    })
+    mz_frequency = internal_map$map_function(mz_frequency, find_convertable, valid_unique)
   } else (
     stop("Convertable ranges were not unique across scans, stopping!")
   )
-
+  log_message("done convertable")
   list(frequency = mz_frequency, frequency_coefficients_all = frequency_coefficients, frequency_coefficients = freq_model_coefficients,
        mz_coefficients_all = mz_coefficients, mz_coefficients = mz_model_coefficients,
        frequency_fit_description = frequency_fit_description, mz_fit_description = mz_fit_description, difference_range = valid_unique)
