@@ -159,13 +159,14 @@ mz_scans_to_frequency = function(mz_df_list, frequency_fit_description, mz_fit_d
     out_scan = convert_mz_frequency(in_scan, ...)
     out_scan
   })
-
+  log_message("converted frequencies")
   frequency_fits = internal_map$map_function(mz_frequency, function(in_freq){
     use_peaks = in_freq$convertable
     tmp_fit = fit_exponentials(in_freq$mean_mz[use_peaks], in_freq$mean_frequency[use_peaks], frequency_fit_description)
     tmp_fit$scan = in_freq[1, "scan"]
     tmp_fit
   })
+  log_message("fit frequencies")
 
   mz_fits = internal_map$map_function(mz_frequency, function(in_freq){
     use_peaks = in_freq$convertable
@@ -173,12 +174,14 @@ mz_scans_to_frequency = function(mz_df_list, frequency_fit_description, mz_fit_d
     tmp_fit$scan = in_freq[1, "scan"]
     tmp_fit
   })
+  log_message("fit mz")
 
   frequency_coefficients = purrr::map_df(frequency_fits, function(.x){
     tmp_df = as.data.frame(matrix(.x$coefficients, nrow = 1))
     tmp_df$scan = .x$scan
     tmp_df
   })
+  log_message("extracted coefficients")
 
   mz_coefficients = purrr::map_df(mz_fits, function(.x){
     tmp_df = as.data.frame(matrix(.x$coefficients, nrow = 1))
@@ -193,20 +196,23 @@ mz_scans_to_frequency = function(mz_df_list, frequency_fit_description, mz_fit_d
   mz_coefficients = dplyr::filter(mz_coefficients, scan %in% frequency_coefficients$scan)
 
   mz_frequency = mz_frequency[as.character(frequency_coefficients$scan)]
-
+  log_message("filtered scans by coefficients")
   median_first = median(frequency_coefficients[[first_slope]])
   median_index = which.min(abs(frequency_coefficients[[first_slope]] - median_first))[1]
 
   freq_model_coefficients = dplyr::select(frequency_coefficients, -scan) %>% dplyr::slice(median_index) %>% unlist()
   mz_model_coefficients = dplyr::select(mz_coefficients, -scan) %>% dplyr::slice(median_index) %>% unlist()
-
+  log_message("predicting frequency")
   mz_frequency = purrr::map(mz_frequency, function(in_data){
     in_data$frequency = predict_exponentials(in_data$mz, freq_model_coefficients, frequency_fit_description)
     in_data
   })
+  log_message("finished predicting frequency")
 
+  log_message("checking point order")
   mz_frequency = check_mz_frequency_order(mz_frequency)
 
+  log_message("finding convertable range")
   valid_ranges = purrr::map_df(mz_frequency, function(in_mz_freq){
     out_range = discover_frequency_offset(in_mz_freq$frequency)
     data.frame(common = out_range$most_common, min = out_range$range[1], max = out_range$range[2])
@@ -214,6 +220,7 @@ mz_scans_to_frequency = function(mz_df_list, frequency_fit_description, mz_fit_d
 
   valid_unique = unique(valid_ranges[, c("min", "max")])
 
+  log_message("setting convertable and not")
   if (nrow(valid_unique) == 1) {
     mz_frequency = purrr::map(mz_frequency, function(.x){
       .x$frequency_diff = dplyr::lag(.x$frequency) - .x$frequency
