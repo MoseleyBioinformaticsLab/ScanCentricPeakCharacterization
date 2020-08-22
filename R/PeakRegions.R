@@ -20,7 +20,8 @@ mz_points_to_frequency_regions <- function(mz_data_list, frequency_fit_descripti
 
   # this is a check to make sure we will be able to convert
   # to multiply and still get integers out
-  range_freq = purrr::map(frequency_list$frequency, ~ range(.x$frequency)) %>% do.call(c, .) %>% range(.)
+  log_message("getting / checking ranges")
+  range_freq = internal_map$map_function(frequency_list$frequency, ~ range(.x$frequency)) %>% do.call(c, .) %>% range(.)
 
   if (any(is.na(range_freq))) {
     stop("NA entries in conversion from M/Z to frequency! Stopping!")
@@ -44,6 +45,7 @@ mz_points_to_frequency_regions <- function(mz_data_list, frequency_fit_descripti
       stop("No good point multiplier found, stopping.")
     }
   }
+  log_message("done getting / checking ranges")
 
   log_message("creating point regions")
   frequency_regions = internal_map$map_function(frequency_list$frequency, frequency_points_to_frequency_regions, multiplier = frequency_multiplier)
