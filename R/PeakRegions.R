@@ -21,7 +21,8 @@ mz_points_to_frequency_regions <- function(mz_data_list, frequency_fit_descripti
   # this is a check to make sure we will be able to convert
   # to multiply and still get integers out
   log_message("getting / checking ranges")
-  range_freq = internal_map$map_function(frequency_list$frequency, ~ range(.x$frequency)) %>% do.call(c, .) %>% range(.)
+  all_range = internal_map$map_function(frequency_list$frequency, ~ range(.x$frequency, na.rm = TRUE))
+  range_freq = range(unlist(all_range))
 
   if (any(is.na(range_freq))) {
     stop("NA entries in conversion from M/Z to frequency! Stopping!")
