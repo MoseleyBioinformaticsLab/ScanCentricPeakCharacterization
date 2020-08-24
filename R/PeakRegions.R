@@ -32,15 +32,16 @@ mz_points_to_frequency_regions <- function(mz_data_list, frequency_fit_descripti
   na_conversion = any(is.na(init_conversion))
   reduce_value = 1
   if (na_conversion) {
-    reduce_value = reduce_value - 0.1
-    while (na_conversion && (reduce_value >= 0.3)) {
+    while (na_conversion && (reduce_value >= 0.29)) {
+      reduce_value = reduce_value - 0.05
       new_multiplier = (frequency_multiplier * reduce_value)
+      #message(new_multiplier)
       new_conversion = suppressWarnings(as.integer(range_freq * new_multiplier))
       na_conversion = any(is.na(new_conversion))
     }
 
-    if (!na_conversion && (reduce_value >= 0.3)) {
-      message("Frequency point multiplier modified to avoid NA values ...")
+    if (!na_conversion && (reduce_value >= 0.29)) {
+      log_message("Frequency point multiplier modified to avoid NA values ...")
       frequency_multiplier = new_multiplier
     } else {
       stop("No good point multiplier found, stopping.")
