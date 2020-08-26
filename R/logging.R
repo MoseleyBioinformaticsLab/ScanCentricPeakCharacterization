@@ -51,6 +51,9 @@ log_message = function(message_string){
   if (get("logger", envir = has_logger)) {
     logger::log_info(message_string, namespace = "FTMS.peakCharacterization")
   }
+  if (get("status", envir = pc_progress)) {
+    message(message_string)
+  }
 }
 
 #' turn logging off

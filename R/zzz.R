@@ -22,6 +22,9 @@ has_logger = new.env(hash = TRUE)
 assign("logger", FALSE, envir = has_logger)
 assign("memory", FALSE, envir = has_logger)
 
+pc_progress = new.env(hash = TRUE)
+assign("status", FALSE, envir = pc_progress)
+
 .onLoad <- function(libname, pkgname) {
   tmp_packages = installed.packages()
   if ("logger" %in% rownames(tmp_packages)) {

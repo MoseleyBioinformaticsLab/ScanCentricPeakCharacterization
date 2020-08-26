@@ -14,13 +14,13 @@
 #' @export
 mz_points_to_frequency_regions <- function(mz_data_list, frequency_fit_description = c(0, -1/2, -1/3),
                                            mz_fit_description = c(0, -1, -2, -3), frequency_multiplier = 400){
-  log_message("converting scans to frequency")
+  log_message("Converting scans to frequency")
   frequency_list = mz_scans_to_frequency(mz_data_list, frequency_fit_description, mz_fit_description)
-  log_message("done converting to frequency")
+  log_message("Done converting to frequency")
 
   # this is a check to make sure we will be able to convert
   # to multiply and still get integers out
-  log_message("getting / checking ranges")
+  log_message("Getting / checking ranges")
   all_range = internal_map$map_function(frequency_list$frequency, ~ range(.x$frequency, na.rm = TRUE))
   range_freq = range(unlist(all_range))
 
@@ -47,11 +47,11 @@ mz_points_to_frequency_regions <- function(mz_data_list, frequency_fit_descripti
       stop("No good point multiplier found, stopping.")
     }
   }
-  log_message("done getting / checking ranges")
+  log_message("Done getting / checking ranges")
 
-  log_message("creating point regions")
+  log_message("Creating point regions")
   frequency_regions = internal_map$map_function(frequency_list$frequency, frequency_points_to_frequency_regions, multiplier = frequency_multiplier)
-  log_message("done creating point regions")
+  log_message("Done creating point regions")
   log_memory()
   frequency_list$frequency_multiplier = frequency_multiplier
   return(list(frequency = frequency_regions,
@@ -242,9 +242,6 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     progress = NULL,
 
     add_regions = function(){
-      if (self$progress) {
-        message("Adding sliding and tiled regions ...")
-      }
       log_message("Addling sliding and tiled regions ...")
       sliding_regions <- function(self){
         create_frequency_regions(frequency_range = self$peak_regions$frequency_range, n_point = self$sliding_region_size,
@@ -270,18 +267,12 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
 
     reduce_sliding_regions = function(){
-      if (self$progress) {
-        message("Finding initial signal regions ...")
-      }
-      log_message("Finding initial signal regions ...")
+     log_message("Finding initial signal regions ...")
       self$peak_regions$peak_regions <- find_signal_regions(self$peak_regions$sliding_regions, self$peak_regions$frequency_point_regions$frequency, self$quantile_multiplier)
       log_memory()
     },
 
     split_peak_regions = function(use_regions = NULL){
-      if (self$progress) {
-        message("Splitting signal regions by peaks ...")
-      }
       log_message("Splitting signal regions by peaks ...")
       if (is.null(use_regions)) {
         use_regions <- seq_len(length(self$peak_regions$peak_regions))
@@ -322,9 +313,6 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     },
 
     normalize_data = function(which_data = "both"){
-      if (self$progress) {
-        message("Normalizing scans ...")
-      }
       log_message("Normalizing scans ...")
 
       if (!self$zero_normalization) {
@@ -338,9 +326,6 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     },
 
     find_peaks_in_regions = function(which_data = "raw"){
-      if (self$progress) {
-        message("Finding peaks in regions ...")
-      }
       log_message("Finding peaks in regions ...")
       self$peak_regions <- characterize_peaks(self$peak_regions)
     },
@@ -521,7 +506,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       self$peak_method = peak_method
       self$min_points = min_points
       self$zero_normalization = zero_normalization
-      self$progress = progress
+      assign("status", progress, envir = pc_progress)
       self$offset_multiplier = offset_multiplier
 
 
@@ -741,10 +726,14 @@ split_regions <- function(signal_regions, frequency_point_regions, tiled_regions
   # multiprocessing on it. If so, that would be a good thing to do.
   signal_list = as.list(split(signal_regions, seq(1, length(signal_regions))))
   min_scan2 = floor(min_scan / 2)
-  message("separating sub regions")
-  #pb = knitrProgressBar::progress_estimated(length(signal_list))
+  log_message("Separating sub regions")
+  if (get("status", envir = pc_progress)) {
+    pb = knitrProgressBar::progress_estimated(length(signal_list))
+  } else {
+    pb = NULL
+  }
   point_regions_list = purrr::map(signal_list, function(in_region){
-    #knitrProgressBar::update_progress(pb)
+    knitrProgressBar::update_progress(pb)
     points_list = purrr::map(frequency_point_regions$frequency, function(in_points){
       IRanges::subsetByOverlaps(in_points, in_region)
     })
@@ -772,7 +761,7 @@ split_regions <- function(signal_regions, frequency_point_regions, tiled_regions
   #   message(.y)
   #   split_region_by_peaks(.x, peak_method = peak_method, min_points = min_points)
   # })
-  message("finding peaks within them")
+  log_message("Finding peaks within them")
   split_data = internal_map$map_function(point_regions_list, split_region_by_peaks,
                                           peak_method = peak_method, min_points = min_points,
                                          metadata = metadata)

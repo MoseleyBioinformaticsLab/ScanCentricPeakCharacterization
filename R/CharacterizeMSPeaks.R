@@ -6,11 +6,7 @@
 #' @export
 CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
   public = list(
-   progress = NULL,
    load_file = function(){
-     if (self$progress) {
-       message("Loading raw data ...")
-     }
      log_message("Loading raw data ...")
      self$zip_ms <- ZipMS$new(self$in_file, self$metadata_file, self$out_file, temp_loc = self$temp_loc)
    },
@@ -18,9 +14,7 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
    raw_scan_filter = NULL,
 
    find_peaks = function(...){
-     if (self$progress) {
-       message("Characterizing peaks ...")
-     }
+     log_message("Characterizing peaks ...")
      if (inherits(self$peak_finder, "R6")) {
        self$zip_ms$peak_finder <- self$peak_finder
        self$zip_ms$peak_finder$add_data(self$zip_ms$raw_ms)
@@ -46,9 +40,6 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
    },
 
    write_zip = function(){
-     if (self$progress) {
-       message("Writing zip file ...")
-     }
      log_message("Writing zip file ...")
      if (!is.null(self$out_file)) {
        self$zip_ms$write_zip(out_file = self$out_file)
@@ -63,9 +54,6 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
    },
 
    filter_raw_scans = function(){
-     if (self$progress) {
-       message("Filtering and removing bad scans ...")
-     }
      log_message("Filtering and removing bad scans ...")
      if (!is.null(self$raw_scan_filter)) {
        self$zip_ms$raw_ms <- self$raw_scan_filter(self$zip_ms$raw_ms)
@@ -96,9 +84,8 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
      self$load_file()
      self$peak_finder$start_time <- Sys.time()
      self$filter_raw_scans()
-     if (self$progress) {
-       message("Characterizing peaks ...")
-     }
+     log_message("Characterizing peaks ...")
+
 
      self$zip_ms$peak_finder <- self$peak_finder
      self$zip_ms$peak_finder$add_data(self$zip_ms$raw_ms)
@@ -139,12 +126,12 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
        self$raw_scan_filter <- default_scan_filter
      }
 
-     self$progress <- progress
+     assign("status", progress, envir = pc_progress)
 
      if (!is.null(peak_finder)) {
        self$peak_finder <- peak_finder
      } else {
-       self$peak_finder <- PeakRegionFinder$new(progress = self$progress)
+       self$peak_finder <- PeakRegionFinder$new()
      }
 
      if (!is.null(temp_loc)) {
