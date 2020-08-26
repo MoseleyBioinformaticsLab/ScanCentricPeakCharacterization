@@ -26,7 +26,7 @@ get_raw_ms_metadata <- function(in_file){
 #' @export
 get_mzml_metadata <- function(mzml_file){
   xml_doc <- XML::xmlTreeParse(mzml_file, useInternalNodes = TRUE)
-  ns <- XML::xmlNamespaceDefinitions(xmlRoot(xml_doc), recursive = TRUE, simplify = TRUE)
+  ns <- XML::xmlNamespaceDefinitions(XML::xmlRoot(xml_doc), recursive = TRUE, simplify = TRUE)
   missing_name = which(names(ns) %in% "")
   names(ns)[missing_name] <- "d1"
 
@@ -59,7 +59,7 @@ get_mzml_metadata <- function(mzml_file){
 
   mz_meta_frame <- .to_data_frame(mz_meta)
 
-  mz_meta_frame$run$scanPolarity <- .get_scan_polarity(other_list$run$spectrumList)
+  #mz_meta_frame$run$scanPolarity <- .get_scan_polarity(other_list$run$spectrumList)
 
   mz_meta_frame$run$startTimeStamp <- gsub("T", " ", mz_meta_frame$run$startTimeStamp)
 
