@@ -778,7 +778,8 @@ split_regions <- function(signal_regions, frequency_point_regions, tiled_regions
   #   split_region_by_peaks(.x, peak_method = peak_method, min_points = min_points)
   # })
   log_message("Finding peaks within them")
-  split_data = internal_map$map_function(point_regions_list, split_region_by_peaks,
+  safe_split_region = purrr::possibly(split_region_by_peaks, otherwise = NULL, quiet = TRUE)
+  split_data = internal_map$map_function(point_regions_list, safe_split_region,
                                           peak_method = peak_method, min_points = min_points,
                                          metadata = metadata)
 
