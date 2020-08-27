@@ -732,24 +732,40 @@ split_regions <- function(signal_regions, frequency_point_regions, tiled_regions
   } else {
     pb = NULL
   }
-  point_regions_list = purrr::map(signal_list, function(in_region){
-    knitrProgressBar::update_progress(pb)
-    points_list = internal_map$map_function(frequency_point_regions$frequency, function(in_points){
+  scan_regions_list = internal_map$map_function(frequency_point_regions$frequency, function(in_points){
+    points_list = purrr::map(signal_list, function(in_region){
       IRanges::subsetByOverlaps(in_points, in_region)
     })
+    null_points = purrr::map_lgl(points_list, ~ length(.x) == 0)
+    points_list[!null_points]
+  })
 
-    nonzero_scans = purrr::map_dbl(points_list, function(in_points){
+  all_regions = vector("list", length(scan_regions_list))
+  names(all_regions) = names(scan_regions_list)
+  all_points = purrr::map(scan_regions_list, ~ names(.x)) %>% unlist(.) %>% unique(.)
+  point_regions_list = vector("list", length(all_points))
+  names(point_regions_list) = all_points
+
+  pb = knitrProgressBar::progress_estimated(length(point_regions_list))
+  for (ipoints in names(point_regions_list)) {
+    tmp_scans = all_regions
+    for (iscan in names(tmp_scans)) {
+      tmp_scans[[iscan]] = scan_regions_list[[iscan]][[ipoints]]
+    }
+    nonzero_scans = purrr::map_dbl(tmp_scans, function(in_points){
       as.data.frame(in_points@elementMetadata) %>%
-      dplyr::filter(intensity > 0) %>%
-      dplyr::pull(scan) %>% unique(.) %>% length(.)
+        dplyr::filter(intensity > 0) %>%
+        dplyr::pull(scan) %>% unique(.) %>% length(.)
     })
     if (sum(nonzero_scans) >= min_scan2) {
-      tiles = IRanges::subsetByOverlaps(tiled_regions, in_region)
-      return(list(points = points_list[nonzero_scans > 0], tiles = tiles, region = in_region))
-    } else {
-      return(NULL)
+      tiles = IRanges::subsetByOverlaps(tiled_regions, signal_list[[ipoints]])
+      point_regions_list[[ipoints]] = list(
+        points = tmp_scans[nonzero_scans > 0],
+        tiles = tiles, region = signal_list[[ipoints]]
+      )
     }
-  })
+    knitrProgressBar::update_progress(pb)
+  }
 
   not_null = purrr::map_lgl(point_regions_list, ~ !is.null(.x))
   point_regions_list = point_regions_list[not_null]
