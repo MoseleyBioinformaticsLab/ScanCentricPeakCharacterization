@@ -246,7 +246,7 @@ check_mz_frequency_order = function(mz_frequency){
     match_order = purrr::map_lgl(mz_frequency, function(.x){
       mz_order = order(.x$mz)
       freq_diff = .x$mean_freq_diff
-      freq_diff = freq_diff[!is.na(.x$convertable)]
+      freq_diff = freq_diff[!is.na(freq_diff)]
       if (sign(freq_diff[1]) < 0) {
         reverse = FALSE
       } else {
@@ -267,7 +267,7 @@ check_mz_frequency_order = function(mz_frequency){
     tmp_frequency = mz_frequency[mz_frequency$convertable, ]
     mz_order = order(tmp_frequency$mz)
 
-    if (sign(tmp_frequency$mean_freq_diff) < 0) {
+    if (sign(tmp_frequency$mean_freq_diff[1]) < 0) {
       reverse = FALSE
     } else {
       reverse = TRUE
