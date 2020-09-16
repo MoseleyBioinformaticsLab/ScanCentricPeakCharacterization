@@ -245,7 +245,14 @@ check_mz_frequency_order = function(mz_frequency){
 
     match_order = purrr::map_lgl(mz_frequency, function(.x){
       mz_order = order(.x$mz)
-      freq_order = order(.x$frequency, decreasing = TRUE)
+      freq_diff = .x$mean_freq_diff
+      freq_diff = freq_diff[!is.na(.x$convertable)]
+      if (sign(freq_diff[1]) < 0) {
+        reverse = FALSE
+      } else {
+        reverse = TRUE
+      }
+      freq_order = order(.x$frequency, decreasing = reverse)
       identical(mz_order, freq_order)
     })
 
@@ -257,8 +264,15 @@ check_mz_frequency_order = function(mz_frequency){
       stop("M/Z and frequency point ordering are not the same over more than 90% of scans!")
     }
   } else {
-    mz_order = order(mz_frequency_data$mz)
-    freq_order = order(mz_frequency_data$frequency, decreasing = TRUE)
+    tmp_frequency = mz_frequency[mz_frequency$convertable, ]
+    mz_order = order(tmp_frequency$mz)
+
+    if (sign(tmp_frequency$mean_freq_diff) < 0) {
+      reverse = FALSE
+    } else {
+      reverse = TRUE
+    }
+    freq_order = order(tmp_frequency$frequency, decreasing = reverse)
     order_same = identical(mz_order, freq_order)
     if (order_same) {
       return(mz_frequency_data)
