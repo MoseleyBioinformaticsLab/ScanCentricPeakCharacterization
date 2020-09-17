@@ -451,14 +451,14 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     },
 
     peak_meta = function(){
-      mz_point_data <- as.data.frame(self$peak_regions$frequency_point_regions@elementMetadata)
-      mz_point_data <- split(mz_point_data, mz_point_data$scan)
+      mz_point_data <- self$peak_regions$frequency_point_regions$frequency
       mz_point_data <- mz_point_data[names(mz_point_data) %in% as.character(self$peak_regions$normalization_factors$scan)]
 
       tmp_ms_info = purrr::map_df(mz_point_data, function(in_scan){
-        data.frame(scan = in_scan[1, "scan"],
-                   tic = sum(in_scan[, "intensity"]),
-                   raw_tic = sum(in_scan[, "RawIntensity"]))
+        tmp_data = S4Vectors::mcols(in_scan)
+        data.frame(scan = tmp_data[1, "scan"],
+                   tic = sum(tmp_data[, "intensity"]),
+                   raw_tic = sum(tmp_data[, "RawIntensity"]))
       })
 
       list(run_time_info = list(
@@ -467,7 +467,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
               n_scans = length(self$peak_regions$normalization_factors$scan)
               ),
            ms_info = tmp_ms_info,
-           frequency_mz = self$peak_regions$frequency_point_regions@metadata,
+           frequency_mz = self$peak_regions$frequency_point_regions$metadata,
            peaks = list(n_peaks = nrow(self$peak_regions$peak_data),
                         mz_range = range(self$peak_regions$peak_data$ObservedMZ, na.rm = TRUE)),
            other_info = list(
