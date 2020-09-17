@@ -227,6 +227,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
     sliding_region_size = NULL,
     sliding_region_delta = NULL,
     quantile_multiplier = NULL,
+    n_point_region = NULL,
 
     tiled_region_size = NULL,
     tiled_region_delta = NULL,
@@ -268,7 +269,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
 
     reduce_sliding_regions = function(){
      log_message("Finding initial signal regions ...")
-      self$peak_regions$peak_regions <- find_signal_regions(self$peak_regions$sliding_regions, self$peak_regions$frequency_point_regions$frequency, self$quantile_multiplier)
+      self$peak_regions$peak_regions <- find_signal_regions(self$peak_regions$sliding_regions, self$peak_regions$frequency_point_regions$frequency, self$quantile_multiplier, self$n_point_region)
       log_memory()
     },
 
@@ -481,10 +482,20 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
            ))
     },
 
-    initialize = function(raw_ms = NULL, sliding_region_size = 10, sliding_region_delta = 1, tiled_region_size = 1, tiled_region_delta = 1,
-                          region_percentage = 0.99, offset_multiplier = 1, frequency_multiplier = 400,
-                          quantile_multiplier = 1.5, peak_method = "lm_weighted", min_points = 4,
-                          zero_normalization = FALSE, frequency_fit_description = c(0, -1/2, -1/3),
+    initialize = function(raw_ms = NULL,
+                          sliding_region_size = 10,
+                          sliding_region_delta = 1,
+                          tiled_region_size = 1,
+                          tiled_region_delta = 1,
+                          region_percentage = 0.99,
+                          offset_multiplier = 1,
+                          frequency_multiplier = 400,
+                          quantile_multiplier = 1.5,
+                          n_point_region = 10000,
+                          peak_method = "lm_weighted",
+                          min_points = 4,
+                          zero_normalization = FALSE,
+                          frequency_fit_description = c(0, -1/2, -1/3),
                           mz_fit_description = c(0, -1, -2, -3), progress = FALSE){
       if (inherits(raw_ms, "RawMS")) {
         self$peak_regions <- PeakRegions$new(raw_ms = raw_ms$extract_raw_data(), frequency_fit_description = frequency_fit_description,
@@ -502,6 +513,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       self$tiled_region_delta <- tiled_region_delta
       self$region_percentage <- region_percentage
       self$quantile_multiplier = quantile_multiplier
+      self$n_point_region = n_point_region
 
       self$peak_method = peak_method
       self$min_points = min_points
@@ -537,7 +549,7 @@ count_overlaps <- function(regions, point_regions){
 #'
 #' @export
 #' @return IRanges
-find_signal_regions <- function(regions, point_regions_list, multiplier = 1.5){
+find_signal_regions <- function(regions, point_regions_list, multiplier = 1.5, n_point_region = 10000){
   nz_counts = count_overlaps(regions, point_regions_list[[1]])
   n_region = seq(2, length(point_regions_list))
   for (iregion in n_region) {
@@ -545,7 +557,7 @@ find_signal_regions <- function(regions, point_regions_list, multiplier = 1.5){
     nz_counts = nz_counts + nz_counts_iregion
   }
 
-  chunk_indices = seq(1, length(nz_counts), by = 10000)
+  chunk_indices = seq(1, length(nz_counts), by = n_point_region)
 
   chunk_perc = purrr::map_dbl(chunk_indices, function(in_index){
     use_counts = nz_counts[seq(in_index, min(in_index + 9999, length(nz_counts)))]
