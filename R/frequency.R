@@ -212,6 +212,9 @@ mz_scans_to_frequency = function(mz_df_list, frequency_fit_description, mz_fit_d
   log_message("checking point order")
   mz_frequency = check_mz_frequency_order(mz_frequency)
 
+  log_message("removing extraneous zero values")
+  mz_frequency = internal_map$map_function(mz_frequency, extract_nonzero)
+
   log_message("finding convertable range")
   valid_ranges = purrr::map_df(mz_frequency, function(in_mz_freq){
     out_range = discover_frequency_offset(in_mz_freq$frequency)
@@ -416,4 +419,17 @@ discover_frequency_offset = function(frequency_values, cutoff_range = 0.02){
   useful_points = frequency_diffs[dplyr::between(frequency_diffs, range_value[1], range_value[2])]
   list(most_common = median(useful_points, na.rm = TRUE),
        range = range_value)
+}
+
+extract_nonzero = function(mz_df){
+  stopifnot(!is.null(mz_df$intensity))
+
+  peak_locs = pracma::findpeaks(mz_df$intensity, nups = 1)
+  peak_seq = purrr::map(seq(1, nrow(peak_locs)), function(in_row){
+    seq(peak_locs[in_row, 3], peak_locs[in_row, 4])
+  })
+  peak_seq2 = unlist(peak_seq)
+
+  nonzero_df = mz_df[peak_seq2, ]
+  nonzero_df
 }
