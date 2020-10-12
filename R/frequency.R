@@ -428,7 +428,7 @@ extract_nonzero = function(mz_df){
   peak_seq = purrr::map(seq(1, nrow(peak_locs)), function(in_row){
     seq(peak_locs[in_row, 3], peak_locs[in_row, 4])
   })
-  peak_seq2 = unlist(peak_seq)
+  peak_seq2 = unique(unlist(peak_seq))
 
   nonzero_df = mz_df[peak_seq2, ]
   nonzero_df
