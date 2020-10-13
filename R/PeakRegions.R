@@ -738,8 +738,8 @@ split_regions <- function(signal_regions, frequency_point_regions, tiled_regions
   # multiprocessing on it. If so, that would be a good thing to do.
   signal_list = as.list(split(signal_regions, seq(1, length(signal_regions))))
   min_scan2 = floor(min_scan / 2)
-  log_message("Separating sub regions")
-
+  log_message("Separating sub regions:")
+  log_message("Finding non-zero regions")
   scan_regions_list = internal_map$map_function(frequency_point_regions$frequency, function(in_points){
     points_list = purrr::map(signal_list, function(in_region){
       IRanges::subsetByOverlaps(in_points, in_region)
@@ -747,6 +747,8 @@ split_regions <- function(signal_regions, frequency_point_regions, tiled_regions
     null_points = purrr::map_lgl(points_list, ~ length(.x) == 0)
     points_list[!null_points]
   })
+
+  log_message("Reversing the mapping back to regions")
 
   all_regions = vector("list", length(scan_regions_list))
   names(all_regions) = names(scan_regions_list)
