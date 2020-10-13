@@ -739,11 +739,7 @@ split_regions <- function(signal_regions, frequency_point_regions, tiled_regions
   signal_list = as.list(split(signal_regions, seq(1, length(signal_regions))))
   min_scan2 = floor(min_scan / 2)
   log_message("Separating sub regions")
-  if (get("status", envir = pc_progress)) {
-    pb = knitrProgressBar::progress_estimated(length(signal_list))
-  } else {
-    pb = NULL
-  }
+
   scan_regions_list = internal_map$map_function(frequency_point_regions$frequency, function(in_points){
     points_list = purrr::map(signal_list, function(in_region){
       IRanges::subsetByOverlaps(in_points, in_region)
@@ -758,7 +754,11 @@ split_regions <- function(signal_regions, frequency_point_regions, tiled_regions
   point_regions_list = vector("list", length(all_points))
   names(point_regions_list) = all_points
 
-  pb = knitrProgressBar::progress_estimated(length(point_regions_list))
+  if (get("status", envir = pc_progress)) {
+    pb = knitrProgressBar::progress_estimated(length(point_regions_list))
+  } else {
+    pb = NULL
+  }
   for (ipoints in names(point_regions_list)) {
     tmp_scans = all_regions
     for (iscan in names(tmp_scans)) {
