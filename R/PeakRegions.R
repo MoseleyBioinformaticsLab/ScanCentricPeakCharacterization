@@ -745,6 +745,7 @@ split_regions <- function(signal_regions, frequency_point_regions, tiled_regions
       IRanges::subsetByOverlaps(in_points, in_region)
     })
     null_points = purrr::map_lgl(points_list, ~ length(.x) == 0)
+    log_memory()
     points_list[!null_points]
   })
 
