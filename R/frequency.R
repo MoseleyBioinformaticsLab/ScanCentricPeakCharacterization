@@ -203,7 +203,7 @@ mz_scans_to_frequency = function(mz_df_list, frequency_fit_description, mz_fit_d
   freq_model_coefficients = dplyr::select(frequency_coefficients, -scan) %>% dplyr::slice(median_index) %>% unlist()
   mz_model_coefficients = dplyr::select(mz_coefficients, -scan) %>% dplyr::slice(median_index) %>% unlist()
   log_message("predicting frequency")
-  mz_frequency = purrr::map(mz_frequency, function(in_data){
+  mz_frequency = internal_map$map_function(mz_frequency, function(in_data){
     in_data$frequency = predict_exponentials(in_data$mz, freq_model_coefficients, frequency_fit_description)
     in_data
   })
