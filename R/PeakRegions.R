@@ -734,8 +734,10 @@ split_reduced_points = function(reduced_points, tiled_regions, n_zero = 2){
 
 
 split_regions <- function(signal_regions, frequency_point_regions, tiled_regions, min_scan, peak_method = "lm_weighted", min_points = 4) {
-  # I'm really curious if we could reduce the memory footprint by splitting this into a list first, and then doing the
-  # multiprocessing on it. If so, that would be a good thing to do.
+  # alternative idea to current implementation:
+  #   take each scan, and then do the subsetting in parallel
+  #   the object that needs to be cloned is "in_points", which is points from "frequency"
+  #   hmmm, so maybe not.
   signal_list = as.list(split(signal_regions, seq(1, length(signal_regions))))
   min_scan2 = floor(min_scan / 2)
   log_message("Separating sub regions:")
