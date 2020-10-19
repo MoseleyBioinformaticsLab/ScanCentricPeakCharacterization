@@ -168,10 +168,10 @@ default_scan_filter <- function(raw_ms){
 #' @export
 #' @return RawMS
 scan_time_filter <- function(raw_ms, min_time_difference = 4){
-  scan_times <- data.frame(scan = raw_ms$scan_range,
-                          time = raw_ms$raw_data@scantime[raw_ms$scan_range])
+  scan_times = raw_ms$ms_info
+  scan_times = scan_times[scan_times$scan %in% raw_ms$scan_range, ]
 
-  scan_times <- dplyr::mutate(scan_times, lag = time - dplyr::lag(time), lead = dplyr::lead(time) - time)
+  scan_times <- dplyr::mutate(scan_times, lag = rtime - dplyr::lag(rtime), lead = dplyr::lead(rtime) - rtime)
 
   high_lag <- scan_times$lag >= min_time_difference
   high_lag[is.na(high_lag)] <- TRUE
