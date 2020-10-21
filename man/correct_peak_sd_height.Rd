@@ -4,8 +4,12 @@
 \alias{correct_peak_sd_height}
 \title{correct peak height and sd}
 \usage{
-correct_peak_sd_height(original_height, list_of_heights, n_observed,
-  n_should_observe)
+correct_peak_sd_height(
+  original_height,
+  list_of_heights,
+  n_observed,
+  n_should_observe
+)
 }
 \arguments{
 \item{original_height}{the original height estimate to correct}

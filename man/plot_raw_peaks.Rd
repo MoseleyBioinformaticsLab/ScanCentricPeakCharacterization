@@ -4,8 +4,7 @@
 \alias{plot_raw_peaks}
 \title{plot raw peaks}
 \usage{
-plot_raw_peaks(raw_ms, scan_range = NULL, mz_range = NULL,
-  transform = NULL)
+plot_raw_peaks(raw_ms, scan_range = NULL, mz_range = NULL, transform = NULL)
 }
 \arguments{
 \item{raw_ms}{either a RawMS object, or data.frame of mz / intensity}

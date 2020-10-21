@@ -4,8 +4,13 @@
 \alias{run_mzml_list}
 \title{run list of mzML files}
 \usage{
-run_mzml_list(mzml_files, json_files = NULL, progress = TRUE,
-  save_loc = ".", ...)
+run_mzml_list(
+  mzml_files,
+  json_files = NULL,
+  progress = TRUE,
+  save_loc = ".",
+  ...
+)
 }
 \arguments{
 \item{mzml_files}{the list of mzML files to use}

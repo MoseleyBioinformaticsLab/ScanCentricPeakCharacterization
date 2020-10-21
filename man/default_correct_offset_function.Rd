@@ -4,8 +4,11 @@
 \alias{default_correct_offset_function}
 \title{correct offsets}
 \usage{
-default_correct_offset_function(master_peak_list, multi_scan_peaklist,
-  min_scan = 0.1)
+default_correct_offset_function(
+  master_peak_list,
+  multi_scan_peaklist,
+  min_scan = 0.1
+)
 }
 \arguments{
 \item{master_peak_list}{the MasterPeakList object of correspondent peaks}

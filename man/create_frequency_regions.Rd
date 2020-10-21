@@ -4,8 +4,13 @@
 \alias{create_frequency_regions}
 \title{create frequency regions}
 \usage{
-create_frequency_regions(point_spacing = 0.5, frequency_range = NULL,
-  n_point = 10, delta_point = 1, multiplier = 500)
+create_frequency_regions(
+  point_spacing = 0.5,
+  frequency_range = NULL,
+  n_point = 10,
+  delta_point = 1,
+  multiplier = 500
+)
 }
 \arguments{
 \item{point_spacing}{how far away are subsequent points.}

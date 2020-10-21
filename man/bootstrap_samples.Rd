@@ -4,8 +4,12 @@
 \alias{bootstrap_samples}
 \title{generate bootstrap samples}
 \usage{
-bootstrap_samples(n_indices, n_bootstrap = 100, n_sample = NULL,
-  min_indices = 4)
+bootstrap_samples(
+  n_indices,
+  n_bootstrap = 100,
+  n_sample = NULL,
+  min_indices = 4
+)
 }
 \arguments{
 \item{n_indices}{the indices to take the bootstrap sample from}

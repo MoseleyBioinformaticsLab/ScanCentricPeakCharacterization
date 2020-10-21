@@ -7,7 +7,7 @@
 get_ms_info(raw_data, include_msn = FALSE, include_precursor = FALSE)
 }
 \arguments{
-\item{raw_data}{the xcms raw data object}
+\item{raw_data}{the MSnbase raw data object}
 
 \item{include_msn}{should information from MSn scans be included?}
 

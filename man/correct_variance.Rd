@@ -16,7 +16,7 @@ corrected variance
 }
 \description{
 Given a variance observed from a truncated normal distribution, correct it
-assuming that it should have had 100% observaionts
+assuming that it should have had 100\% observaionts
 }
 \references{
 https://en.wikipedia.org/wiki/Truncated_normal_distribution

@@ -4,8 +4,12 @@
 \alias{split_region_by_peaks}
 \title{split signal region}
 \usage{
-split_region_by_peaks(region_list, peak_method = "lm_weighted",
-  min_points = 4)
+split_region_by_peaks(
+  region_list,
+  peak_method = "lm_weighted",
+  min_points = 4,
+  metadata = NULL
+)
 }
 \arguments{
 \item{region_list}{a list with points and tiles IRanges objects}

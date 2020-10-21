@@ -4,9 +4,14 @@
 \alias{indicate_standards_contaminents}
 \title{indicate standards}
 \usage{
-indicate_standards_contaminents(zip_dir, file_pattern = ".zip",
-  blank_pattern = "^blank", save_dir = NULL, conversion_factor = 400,
-  progress = TRUE)
+indicate_standards_contaminents(
+  zip_dir,
+  file_pattern = ".zip",
+  blank_pattern = "^blank",
+  save_dir = NULL,
+  conversion_factor = 400,
+  progress = TRUE
+)
 }
 \arguments{
 \item{zip_dir}{which directories to look for files within}
@@ -29,8 +34,8 @@ may be standards or contaminants that should be removed after assignment.
 \details{
 For each sample, the scan level frequencies are read in and converted
 to ranges, and then compared with tiled ranges over the whole frequency range.
-For those ranges that have 90 to 110% of scan level peaks in ALL blanks, and
-have 10 to 110% of scan level peaks in at least N-sample - 1, we consider a
+For those ranges that have 90 to 110\% of scan level peaks in ALL blanks, and
+have 10 to 110\% of scan level peaks in at least N-sample - 1, we consider a
 possible standard or contaminant. The peak is marked so that it can be removed
 by filtering out it's assignments later.
 }

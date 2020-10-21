@@ -4,8 +4,12 @@
 \alias{scan_mzML}
 \title{import mzML by scans}
 \usage{
-scan_mzML(mz_file, scan_indices = NULL, scan_times = NULL,
-  mz_range = numeric())
+scan_mzML(
+  mz_file,
+  scan_indices = NULL,
+  scan_times = NULL,
+  mz_range = numeric()
+)
 }
 \arguments{
 \item{mz_file}{the mzML file}

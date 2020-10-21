@@ -4,16 +4,12 @@
 \alias{import_raw_ms}
 \title{import raw mass spec data}
 \usage{
-import_raw_ms(raw_data, profstep = 0, includeMSn = TRUE)
+import_raw_ms(raw_data, ms_level = 1)
 }
 \arguments{
 \item{raw_data}{the raw mass spec file to import}
 
-\item{profstep}{the profile step to use, should be 0 to make our lives easier}
-
-\item{includeMSn}{whether to include MSn data, should be TRUE to get \emph{all data}.}
-
-\item{...}{other xcmsRaw parameters}
+\item{ms_level}{which MS-level data to import}
 }
 \value{
 xcmsRaw

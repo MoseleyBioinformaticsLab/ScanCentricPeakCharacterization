@@ -4,8 +4,12 @@
 \alias{lists_2_json}
 \title{lists_2_json}
 \usage{
-lists_2_json(lists_to_save, zip_file = NULL, digits = 8,
-  temp_dir = tempfile(pattern = "json"))
+lists_2_json(
+  lists_to_save,
+  zip_file = NULL,
+  digits = 8,
+  temp_dir = tempfile(pattern = "json")
+)
 }
 \arguments{
 \item{lists_to_save}{the set of lists to create the json from}

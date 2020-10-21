@@ -4,8 +4,12 @@
 \alias{mz_frequency_interpolation}
 \title{convert mz to frequency using linear fit}
 \usage{
-mz_frequency_interpolation(mz_query, mz_values = NULL,
-  frequency_values = NULL, model = NULL)
+mz_frequency_interpolation(
+  mz_query,
+  mz_values = NULL,
+  frequency_values = NULL,
+  model = NULL
+)
 }
 \arguments{
 \item{mz_query}{the M/Z value to fit}

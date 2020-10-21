@@ -4,8 +4,7 @@
 \alias{test_peak_area_slope}
 \title{test points area slope}
 \usage{
-test_peak_area_slope(mz_peak, min_points = 5, min_area = 0.1,
-  max_slope = 0.1)
+test_peak_area_slope(mz_peak, min_points = 5, min_area = 0.1, max_slope = 0.1)
 }
 \arguments{
 \item{mz_peak}{the mz and intensity values defining the peak}

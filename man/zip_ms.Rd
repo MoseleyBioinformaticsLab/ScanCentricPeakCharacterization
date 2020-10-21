@@ -4,8 +4,13 @@
 \alias{zip_ms}
 \title{make a new ZipMS}
 \usage{
-zip_ms(in_file, mzml_meta_file = NULL, out_file = NULL,
-  load_raw = TRUE, load_peak_list = TRUE)
+zip_ms(
+  in_file,
+  mzml_meta_file = NULL,
+  out_file = NULL,
+  load_raw = TRUE,
+  load_peak_list = TRUE
+)
 }
 \arguments{
 \item{in_file}{the file to use (either .zip or .mzML)}

@@ -4,7 +4,9 @@
 \name{ZipMS}
 \alias{ZipMS}
 \title{Represents the zip mass spec file}
-\format{An object of class \code{R6ClassGenerator} of length 25.}
+\format{
+An object of class \code{R6ClassGenerator} of length 25.
+}
 \usage{
 ZipMS
 }

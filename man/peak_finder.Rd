@@ -4,8 +4,11 @@
 \alias{peak_finder}
 \title{peak finding and reporting}
 \usage{
-peak_finder(raw_data, method = "lm_weighted",
-  noise_function = noise_sorted_peaklist)
+peak_finder(
+  raw_data,
+  method = "lm_weighted",
+  noise_function = noise_sorted_peaklist
+)
 }
 \value{
 list

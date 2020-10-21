@@ -4,8 +4,15 @@
 \alias{integration_based_area}
 \title{area from integration}
 \usage{
-integration_based_area(mz_data, int_data, full_peak_loc, model_peak_loc,
-  model_coeff, n_point = 100, log_transform = "log")
+integration_based_area(
+  mz_data,
+  int_data,
+  full_peak_loc,
+  model_peak_loc,
+  model_coeff,
+  n_point = 100,
+  log_transform = "log"
+)
 }
 \arguments{
 \item{mz_data}{peak mz values}
