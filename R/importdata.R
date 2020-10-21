@@ -4,16 +4,12 @@
 #' with it. `raw_data` should be the *full path* to the data.
 #'
 #' @param raw_data the raw mass spec file to import
-#' @param profstep the profile step to use, should be 0 to make our lives easier
-#' @param includeMSn whether to include MSn data, should be TRUE to get *all data*.
-#' @param ... other xcmsRaw parameters
-#'
-#' @importFrom xcms xcmsRaw
+#' @param ms_level which MS-level data to import
 #'
 #' @export
 #' @return xcmsRaw
-import_raw_ms <- function(raw_data, profstep = 0, includeMSn = TRUE){
-  raw_data <- xcmsRaw(raw_data, profstep = profstep, includeMSn = includeMSn)
+import_raw_ms <- function(raw_data, ms_level = 1){
+  raw_data <- MSnbase::readMSData(raw_data, msLevel. = ms_level, mode = "inMemory")
 
   raw_data
 }

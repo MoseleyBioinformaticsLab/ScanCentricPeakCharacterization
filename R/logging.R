@@ -19,6 +19,9 @@ log_memory = function(){
 
     active_to_total = memory_numbers["Active"] / memory_numbers["MemTotal"]
     swapfree_to_swap = memory_numbers["SwapFree"] / memory_numbers["SwapTotal"]
+    if (is.nan(swapfree_to_swap)) {
+      swapfree_to_swap = 1
+    }
 
     swapfree_to_swap = memory_numbers["SwapFree"] / memory_numbers["SwapTotal"]
     if (is.nan(swapfree_to_swap)) {
@@ -53,6 +56,9 @@ log_memory = function(){
 log_message = function(message_string){
   if (get("logger", envir = has_logger)) {
     logger::log_info(message_string, namespace = "FTMS.peakCharacterization")
+  }
+  if (get("status", envir = pc_progress)) {
+    message(message_string)
   }
 }
 
