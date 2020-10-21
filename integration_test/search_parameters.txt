@@ -1,0 +1,2 @@
+C:130,  N:7,  O:40,  P:3,  S:3,  H:230, N15 labeling
+Na and H adducts
