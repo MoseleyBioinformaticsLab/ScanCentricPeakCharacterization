@@ -5,3 +5,5 @@
 ^\.Rproj\.user$
 ^\.httr-oauth$
 ^.*\.*.log$
+^.*.mzML$
+^integration_test$
