@@ -18,6 +18,34 @@ get_raw_ms_metadata <- function(in_file){
   raw_metadata
 }
 
+#' extract mzML header
+#'
+#' @param mzml_file the mzML file to get the header from
+#'
+#' @export
+get_mzml_header = function(mzml_file){
+  file_con = file(mzml_file, open = "r")
+
+  file_content = vector("character", 200)
+
+  is_run = FALSE
+  i_line = 1
+  while (!is_run && (i_line < length(file_content))) {
+    file_content[i_line] = readLines(file_con, n = 1)
+    is_run = grepl("<run", file_content[i_line], ignore.case = TRUE)
+    i_line = i_line + 1
+  }
+  close(file_con)
+  file_content = file_content[1:(i_line - 1)]
+
+  if (sum(grepl("indexedmzML", file_content)) > 0) {
+    out_content = c(file_content, "</run>", "</mzML>", "</indexedmzML>")
+  } else {
+    out_content = c(file_content, "</run>", "</mzML>")
+  }
+  paste(out_content, collapse = "\n")
+}
+
 #' get mzML metadata
 #'
 #' @param mzml_file the mzML file to get metadata from
@@ -25,7 +53,8 @@ get_raw_ms_metadata <- function(in_file){
 #' @importFrom XML xmlTreeParse xmlNamespaceDefinitions xmlRoot getNodeSet xmlAttrs xmlChildren xmlToList
 #' @export
 get_mzml_metadata <- function(mzml_file){
-  xml_doc <- XML::xmlTreeParse(mzml_file, useInternalNodes = TRUE)
+  mzml_header = get_mzml_header(mzml_file)
+  xml_doc <- XML::xmlTreeParse(mzml_header, useInternalNodes = TRUE)
   ns <- XML::xmlNamespaceDefinitions(XML::xmlRoot(xml_doc), recursive = TRUE, simplify = TRUE)
   missing_name = which(names(ns) %in% "")
   names(ns)[missing_name] <- "d1"
@@ -52,6 +81,8 @@ get_mzml_metadata <- function(mzml_file){
   other_list <- lapply(other_nodes, XML::xmlToList)
 
   mz_meta <- c(mz_meta, other_list[other_nodes_2_get])
+  null_meta = purrr::map_lgl(mz_meta, is.null)
+  mz_meta = mz_meta[!null_meta]
 
   mz_meta[["run"]][[".attrs"]] <- XML::xmlAttrs(mz_metanodes[[1]][["run"]])
 
@@ -93,6 +124,7 @@ meta_export_json <- function(meta_list){
     }
 
   }
+  #print(out_list)
   out_list
 }
 
