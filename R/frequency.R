@@ -6,6 +6,37 @@
 # getting "back" to M/Z space.
 
 
+#' calculate r2
+#'
+#' @param mz_frequency_df the data.frame with predicted frequencies
+#' @export
+predicted_frequency_r2 = function(mz_frequency_df){
+  stopifnot(!is.null(mz_frequency_df$convertable))
+  stopifnot(!is.null(mz_frequency_df$mean_frequency))
+  stopifnot(!is.null(mz_frequency_df$frequency))
+
+  filter_df = dplyr::filter(mz_frequency_df, convertable)
+  r2 = cor(filter_df$mean_frequency, filter_df$frequency, method = "pearson")^2
+  r2
+}
+
+#' check r2
+#'
+#' @param mz_frequency_list the list of predicted frequency data.frames
+#' @export
+check_frequency_r2 = function(mz_frequency_list){
+  r2_values = purrr::map_dbl(mz_frequency_list, predicted_frequency_r2)
+  keep_df = r2_values >= 0.98
+  if (sum(keep_df) == 0) {
+    stop("No scans with high enough R^2 between derived and predicted frequencies!\n  Is your frequency model appropriately defined?")
+  } else {
+    if (sum(keep_df) < length(r2_values)) {
+      log_message("Some scans removed because of low R^2 between derived and predicted frequencies")
+    }
+    return(mz_frequency_list[keep_df])
+  }
+}
+
 #' Convert M/Z to Frequency
 #'
 #' Given a data.frame of m/z, generate frequency values for the data.
@@ -208,6 +239,9 @@ mz_scans_to_frequency = function(mz_df_list, frequency_fit_description, mz_fit_d
     in_data
   })
   log_message("finished predicting frequency")
+
+  log_message("checking derived vs predicted frequency R^2")
+  mz_frequency = check_frequency_r2(mz_frequency)
 
   log_message("checking point order")
   mz_frequency = check_mz_frequency_order(mz_frequency)
