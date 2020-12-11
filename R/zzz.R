@@ -25,6 +25,13 @@ assign("memory", FALSE, envir = has_logger)
 pc_progress = new.env(hash = TRUE)
 assign("status", FALSE, envir = pc_progress)
 
+check_for_zip = function(){
+  zip = Sys.getenv("R_ZIPCMD", "zip")
+  if (!is.character(zip) || length(zip) != 1L ||  !nzchar(zip)) {
+    warning("A zip command was not found, please see ?zip, and verify one is installed.")
+  }
+}
+
 .onLoad <- function(libname, pkgname) {
   tmp_packages = installed.packages()
   if ("logger" %in% rownames(tmp_packages)) {
@@ -35,5 +42,6 @@ assign("status", FALSE, envir = pc_progress)
     }
     logger::log_appender(logger::appender_file(paste0("FTMS.peakCharacterization_run_", substring(make.names(Sys.time()), 2), ".log")), namespace = "FTMS.peakCharacterization")
   }
+  check_for_zip()
   debugme::debugme()
 }
