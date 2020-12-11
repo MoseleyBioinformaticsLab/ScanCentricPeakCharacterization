@@ -25,10 +25,22 @@ assign("memory", FALSE, envir = has_logger)
 pc_progress = new.env(hash = TRUE)
 assign("status", FALSE, envir = pc_progress)
 
+#' check for zip
+#'
+#' FTMS.peakCharacterization uses zip files to gather all the pieces of results together,
+#' including the original mzML, binary data file, and JSON files. R can be compiled
+#' on systems where there is no zip function installed.
+#' When it is not installed, it generally creates a permission issue when `system2`
+#' tries to call a non-existent command.
+#' This function checks for zip, and warns the user if it can't be found on package load.
+#' If `zip` is installed, you may need to set it using `Sys.setenv(R_ZIPCMD = 'zip_function')`.
+#'
+#' @export
+#' @return NULL
 check_for_zip = function(){
   zip = Sys.getenv("R_ZIPCMD", "zip")
   if (!is.character(zip) || length(zip) != 1L ||  !nzchar(zip)) {
-    warning("A zip command was not found, please see ?zip, and verify one is installed.")
+    warning("A zip command was not found, please see ?zip or ?check_for_zip, and verify one is installed before proceeding.")
   }
 }
 
