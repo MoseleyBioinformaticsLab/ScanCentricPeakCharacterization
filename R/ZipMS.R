@@ -1,3 +1,21 @@
+#' import json
+#'
+#' import json from a file correctly given some things where things get written
+#' differently
+#'
+#' @param json_file the json file to read
+#' @return list
+import_json <- function(json_file){
+  json_data <- jsonlite::fromJSON(json_file, simplifyVector = FALSE)
+  if (length(json_data) == 1) {
+    out_list <- json_data[[1]]
+  } else {
+    out_list <- json_data
+  }
+  out_list
+}
+
+
 #' get raw metadata
 #'
 #' When raw files are copied, we also generated metadata about their original locations
@@ -450,7 +468,8 @@ get_zip_raw_metdata <- function(zip_obj){
   # our zip file
   if (file.exists(file.path(zip_obj$temp_directory, "raw_metadata.json"))) {
     file.path(zip_obj$temp_directory, "raw_metadata.json")
-    raw_metadata <- waitcopy::import_json(file.path(zip_obj$temp_directory, "raw_metadata.json"))
+    raw_metadata <- import_json(file.path(zip_obj$temp_directory, "raw_metadata.json"))
+
 
     if (!is.null(raw_metadata$file)) {
       file_metadata <- raw_metadata$file
@@ -458,7 +477,7 @@ get_zip_raw_metdata <- function(zip_obj){
       file_metadata <- list()
     }
   } else if (file.exists(json_file)) {
-    json_metadata <- waitcopy::import_json(json_file)
+    json_metadata <- import_json(json_file)
 
     if (!is.null(json_metadata$file)) {
       file_metadata <- json_metadata$file
