@@ -28,7 +28,6 @@ import_json <- function(json_file){
 #' @param raw_file_loc the directory holding raw files and json metadata files
 #'
 #' @importFrom purrr map_lgl
-#' @importFrom waitcopy import_json
 #' @importFrom R.utils isAbsolutePath getAbsolutePath
 #'
 #' @export
@@ -58,7 +57,7 @@ raw_metadata_mzml <- function(mzml_files, raw_file_loc, recursive = TRUE){
   json_mzml_match$mzml_meta <- FALSE
 
   did_write_mzml_meta <- purrr::map_lgl(seq(1, nrow(json_mzml_match)), function(in_row){
-    raw_meta <- waitcopy::import_json(json_mzml_match[in_row, "json_file"])
+    raw_meta <- import_json(json_mzml_match[in_row, "json_file"])
     #print(json_mzml_match[in_row, "mzml_file"])
     mzml_meta <- try(get_mzml_metadata(json_mzml_match[in_row, "mzml_file"]))
     if (!inherits(mzml_meta, "try-error")) {
