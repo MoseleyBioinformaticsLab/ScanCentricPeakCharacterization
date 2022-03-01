@@ -109,7 +109,7 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
      self$zip_ms$peak_finder$remove_double_peaks_in_scans()
    },
 
-   initialize = function(in_file, metadata_file = NULL, out_file = NULL, peak_finder = NULL, temp_loc = NULL, raw_scan_filter = NULL, progress = FALSE){
+   initialize = function(in_file, metadata_file = NULL, out_file = NULL, peak_finder = NULL, temp_loc = NULL, raw_scan_filter = NULL){
      self$in_file <- in_file
 
      if (!is.null(metadata_file)) {
@@ -125,8 +125,6 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
      } else {
        self$raw_scan_filter <- default_scan_filter
      }
-
-     assign("status", progress, envir = FTMS.peakCharacterization::pc_progress)
 
      if (!is.null(peak_finder)) {
        self$peak_finder <- peak_finder
