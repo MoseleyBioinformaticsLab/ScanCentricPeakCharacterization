@@ -126,7 +126,7 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
        self$raw_scan_filter <- default_scan_filter
      }
 
-     assign("status", progress, envir = pc_progress)
+     assign("status", progress, envir = FTMS.peakCharacterization::pc_progress)
 
      if (!is.null(peak_finder)) {
        self$peak_finder <- peak_finder
