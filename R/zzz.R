@@ -15,6 +15,19 @@ set_internal_map <- function(map_function = NULL){
 }
 
 
+#' turn progress on off
+#'
+#' Allow the user to turn progress on and off
+#'
+#' @param progress logical to have it on or off
+#'
+#' @export
+#' @return NULL
+show_progress <- function(progress = TRUE){
+  assign("status", proress, envir = pc_progress)
+}
+
+
 internal_map <- new.env(hash = TRUE)
 assign("map_function", purrr::map, envir = internal_map)
 
