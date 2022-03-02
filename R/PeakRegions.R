@@ -496,7 +496,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
                           min_points = 4,
                           zero_normalization = FALSE,
                           frequency_fit_description = c(0, -1/2, -1/3),
-                          mz_fit_description = c(0, -1, -2, -3), progress = FALSE){
+                          mz_fit_description = c(0, -1, -2, -3)){
       if (inherits(raw_ms, "RawMS")) {
         self$peak_regions <- PeakRegions$new(raw_ms = raw_ms$extract_raw_data(), frequency_fit_description = frequency_fit_description,
                                              mz_fit_description = mz_fit_description, frequency_multiplier = frequency_multiplier)
@@ -518,9 +518,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
       self$peak_method = peak_method
       self$min_points = min_points
       self$zero_normalization = zero_normalization
-      assign("status", progress, envir = pc_progress)
       self$offset_multiplier = offset_multiplier
-
 
       invisible(self)
     }
