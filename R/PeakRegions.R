@@ -296,6 +296,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
         tmp_points = in_list$points
         tmp_points = tmp_points[as.character(tmp_peaks$scan)]
         in_list$points = tmp_points
+        in_list$peaks = tmp_peaks
         in_list
       })
 
