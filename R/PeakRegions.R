@@ -491,7 +491,7 @@ PeakRegionFinder <- R6::R6Class("PeakRegionFinder",
                           offset_multiplier = 1,
                           frequency_multiplier = 400,
                           quantile_multiplier = 1.5,
-                          n_point_region = 10000,
+                          n_point_region = 2000,
                           peak_method = "lm_weighted",
                           min_points = 4,
                           zero_normalization = FALSE,
@@ -547,7 +547,7 @@ count_overlaps <- function(regions, point_regions){
 #'
 #' @export
 #' @return IRanges
-find_signal_regions <- function(regions, point_regions_list, multiplier = 1.5, n_point_region = 10000){
+find_signal_regions <- function(regions, point_regions_list, multiplier = 1.5, n_point_region = 2000){
   nz_counts = count_overlaps(regions, point_regions_list[[1]])
   n_region = seq(2, length(point_regions_list))
   for (iregion in n_region) {
@@ -558,7 +558,7 @@ find_signal_regions <- function(regions, point_regions_list, multiplier = 1.5, n
   chunk_indices = seq(1, length(nz_counts), by = n_point_region)
 
   chunk_perc = purrr::map_dbl(chunk_indices, function(in_index){
-    use_counts = nz_counts[seq(in_index, min(in_index + 9999, length(nz_counts)))]
+    use_counts = nz_counts[seq(in_index, min(in_index + (n_point_region - 1), length(nz_counts)))]
     if (max(use_counts) > 0) {
       return(stats::quantile(use_counts, 0.99))
     } else {
@@ -750,7 +750,7 @@ split_regions <- function(signal_regions, frequency_point_regions, tiled_regions
     points_list[!null_points]
   })
 
-  log_message("Reversing the mapping back to regions")
+  log_message("Mapping back to regions")
 
   all_regions = vector("list", length(scan_regions_list))
   names(all_regions) = names(scan_regions_list)
