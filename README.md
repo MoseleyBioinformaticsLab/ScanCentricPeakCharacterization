@@ -12,6 +12,14 @@ Scan-Centric, Frequency-Based Method for Characterizing Peaks from Direct Inject
 
 doi: https://doi.org/10.1101/2022.04.14.488423
 
+## License
+
+This package is licensed with a [BSD-like license](LICENSE.md) with a 4th clause: No commercial use.
+
+Academics who want to use it at their institution, please try it.
+
+If you are at a business and want to use it, please contact the authors about licensing.
+
 ## Installation
 
 **Warning**: The authors of this package have not gone through and updated the dependencies for this package for a while.
