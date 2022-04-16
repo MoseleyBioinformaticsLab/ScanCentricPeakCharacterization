@@ -7,7 +7,9 @@ The goal of the FTMS.peakCharacterization package is to facilitate scan-centric 
 You can read more about the merits of this scan-centric method in:
 
 RM Flight, JM Mitchell & HNB Moseley
+
 Scan-Centric, Frequency-Based Method for Characterizing Peaks from Direct Injection Fourier transform Mass Spectrometry Experiments
+
 doi: https://doi.org/10.1101/2022.04.14.488423
 
 ## Installation
