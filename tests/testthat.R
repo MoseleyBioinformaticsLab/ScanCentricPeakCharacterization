@@ -1,4 +1,4 @@
 library(testthat)
-library(SIRM.FTMS.peakCharacterization)
+library(FTMS.peakCharacterization)
 
-test_check("SIRM.FTMS.peakCharacterization")
+test_check("FTMS.peakCharacterization")

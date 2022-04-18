@@ -112,6 +112,8 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
    initialize = function(in_file, metadata_file = NULL, out_file = NULL, peak_finder = NULL, temp_loc = NULL, raw_scan_filter = NULL){
      self$in_file <- in_file
 
+     check_for_zip()
+
      if (!is.null(metadata_file)) {
        self$metadata_file <- metadata_file
      }

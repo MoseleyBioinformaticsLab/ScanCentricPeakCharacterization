@@ -1,3 +1,23 @@
+#' check for zip
+#'
+#' FTMS.peakCharacterization uses zip files to gather all the pieces of results together,
+#' including the original mzML, binary data file, and JSON files. R can be compiled
+#' on systems where there is no zip function installed.
+#' When it is not installed, it generally creates a permission issue when `system2`
+#' tries to call a non-existent command.
+#' This function checks for zip, and warns the user if it can't be found on package load.
+#' If `zip` is installed, you may need to set it using `Sys.setenv(R_ZIPCMD = 'zip_function')`.
+#'
+#' @export
+#' @return NULL
+check_for_zip = function(){
+  zip = Sys.getenv("R_ZIPCMD", "zip")
+  if (!is.character(zip) || length(zip) != 1L ||  !nzchar(zip)) {
+    warning("A zip command was not found, please see ?zip or ?check_for_zip, and verify one is installed before proceeding.")
+  }
+}
+
+
 #' import json
 #'
 #' import json from a file correctly given some things where things get written
@@ -303,6 +323,7 @@ ZipMS <- R6::R6Class("ZipMS",
     initialize = function(in_file, mzml_meta_file = NULL, out_file = NULL, load_raw = TRUE,
                           load_peak_list = TRUE,
                           temp_loc = NULL){
+      check_for_zip()
       private$do_load_raw <- load_raw
       private$do_load_peak_list <- load_peak_list
 
@@ -527,85 +548,6 @@ write_zip_file_metadata <- function(zip_obj){
   }
 }
 
-#' plot raw peaks
-#'
-#' Given the raw_ms object, generate a plot of the peaks that are generated from
-#' averaging the scans in the currently set scan-range.
-#'
-#' @param raw_ms either a RawMS object, or data.frame of mz / intensity
-#' @param scan_range which scans to use
-#' @param mz_range the range of M/z's to consider
-#' @param transform apply a transform to the data
-#'
-#' @return ggplot2 object
-#' @export
-#'
-plot_raw_peaks <- function(raw_ms, scan_range = NULL, mz_range = NULL, transform = NULL) {
-  if (inherits(raw_ms, "RawMS")) {
-    if (is.null(scan_range)) {
-      scan_range <- raw_ms$scan_range
-    }
-    peaks <- raw_peak_intensity(raw_ms, scanrange = scan_range)
-
-  } else if (inherits(raw_ms, "data.frame")) {
-    peaks <- raw_ms
-
-  }
-  if (!is.null(mz_range)) {
-    peaks <- peaks[(peaks$mz >= mz_range[1]) & (peaks$mz <= mz_range[2]), ]
-  }
-
-  if (!is.null(transform)) {
-    peaks$intensity <- transform(peaks$intensity + 1)
-  }
-
-  ggplot(peaks, aes(x = mz, xend = mz, y = 0, yend = intensity)) + geom_segment() +
-    labs(x = "M/Z", y = "Intensity")
-}
-
-#' raw peaks intensities
-#'
-#' generate raw peaks from just averaging scans via xcms
-#'
-#' @param raw_ms an RawMS object
-#' @param scanrange the range of scans to use, default is derived from raw_ms
-#'
-#' @export
-#' @importFrom xcms getSpec
-#' @importFrom pracma findpeaks
-#' @return data.frame of mz and intensity
-#'
-raw_peak_intensity <- function(raw_ms, scanrange = raw_ms$scan_range) {
-  mean_scan <- xcms::getSpec(raw_ms$raw_data, scanrange = scanrange)
-  mean_scan <- mean_scan[!is.na(mean_scan[, 2]), ]
-  mean_peaks <- pracma::findpeaks(mean_scan[, 2], nups = 2)
-
-  mean_peak_intensity <- data.frame(mz = mean_scan[mean_peaks[, 2], 1],
-                             intensity = mean_scan[mean_peaks[, 2], 2])
-  mean_peak_intensity
-}
-
-
-#' raw peaks
-#'
-#' generate raw peaks from just averaging scans via xcms
-#'
-#' @param raw_ms an RawMS object
-#' @param scanrange the range of scans to use, default is derived from raw_ms
-#'
-#' @export
-#' @importFrom xcms getSpec
-#' @importFrom pracma findpeaks
-#' @return numeric
-#'
-raw_peaks <- function(raw_ms, scanrange = raw_ms$scan_range) {
-  mean_scan <- xcms::getSpec(raw_ms$raw_data, scanrange = scanrange)
-  mean_scan <- mean_scan[!is.na(mean_scan[, 2]), ]
-  mean_peaks <- pracma::findpeaks(mean_scan[, 2], nups = 2)
-
-  mean_peak_mz <- mean_scan[mean_peaks[, 2], 1]
-  mean_peak_mz
-}
 
 #' peak density
 #'
@@ -671,70 +613,4 @@ sample_run_time = function(zip, units = "m"){
     zip$cleanup()
   }
   data.frame(sample = zip$id, start = start_time, run = total_time_out, end = end_time)
-}
-
-#' get frequencies for all data
-#'
-#' Given a zip object, gets frequency conversions for *all* of the scans, not just the MS1
-#' or filtered scans.
-#'
-#' @param zip the zip object
-#'
-#' @export
-#' @return data.frame
-every_scan_frequency = function(zip){
-  if (inherits(zip, "character")) {
-    zip = zip_ms(zip)
-    cleanup = TRUE
-  }
-
-  if (is.null(zip$raw_ms)) {
-    zip$load_raw()
-    cleanup = FALSE
-  } else {
-    cleanup = FALSE
-  }
-
-  scan_data = get_ms_info(zip$raw_ms$raw_data, include_msn = TRUE, include_precursor = TRUE)
-  scan_data = scan_data[order(scan_data$time), ]
-
-  mz_data = purrr::map(seq(1, nrow(scan_data)), function(scan_row){
-    if (!is.na(scan_data[scan_row, "scan"])) {
-      tmp = as.data.frame(xcms::getScan(zip$raw_ms$raw_data, scan_data[scan_row, "scan"]),
-                          strinsAsFactors = FALSE)
-    }  else {
-      tmp = as.data.frame(xcms::getMsnScan(zip$raw_ms$raw_data, scan_data[scan_row, "scan_msn"]),
-                          stringsAsFactors = FALSE)
-    }
-    tmp$scan = scan_data[scan_row, "acquisition"]
-    tmp
-  })
-
-  if (cleanup){
-    zip$cleanup()
-  }
-
-  ... = NULL
-  frequency_fit_description = c(0, -1/2, -1/3)
-  mz_fit_description = c(0, -1, -2, -3)
-  mz_frequency = purrr::map(mz_data, function(in_scan){
-    #message(scan_name)
-    out_scan = FTMS.peakCharacterization::convert_mz_frequency(in_scan, ...)
-    out_scan
-  })
-  frequency_fits = purrr::map(mz_frequency, function(in_freq){
-    use_peaks = in_freq$convertable
-    tmp_fit = FTMS.peakCharacterization:::fit_exponentials(in_freq$mean_mz[use_peaks], in_freq$mean_frequency[use_peaks], frequency_fit_description)
-    tmp_fit$scan = in_freq[1, "scan"]
-    tmp_fit
-  })
-  frequency_coefficients = purrr::map_df(frequency_fits, function(.x){
-      tmp_df = as.data.frame(matrix(.x$coefficients, nrow = 1))
-      names(tmp_df) = c("intercept", "sqrt", "cubert")
-      tmp_df$scan = .x$scan
-      tmp_df
-  })
-
-  coefficients = dplyr::left_join(scan_data, frequency_coefficients, by = c("acquisition" = "scan"))
-  list(mz_data = mz_frequency, coefficients = coefficients)
 }

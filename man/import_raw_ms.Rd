@@ -12,7 +12,7 @@ import_raw_ms(raw_data, ms_level = 1)
 \item{ms_level}{which MS-level data to import}
 }
 \value{
-xcmsRaw
+list
 }
 \description{
 function to import raw mass spec data in a way that provides what we need to work

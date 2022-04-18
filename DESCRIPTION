@@ -1,20 +1,23 @@
 Package: FTMS.peakCharacterization
 Title: Functionality for Detecting and Characterizing Peaks
-Version: 0.1.108
+Version: 0.1.109
 Date: 2022-04-18
-Authors@R: person(given = c("Robert", "M"), family = c("Flight"), email
-        = "rflight79@gmail.com", role = c("aut", "cre"))
+Authors@R: c(person(given = c("Robert", "M"), family = c("Flight"),
+        email = "rflight79@gmail.com", role = c("aut", "cre")),
+        person(given = c("Hunter", "NB"), family = c("Moseley"), email
+        = "hunter.moseley@gmail.com", role = "aut"))
 Description: Provides a functions and classes for detecting,
         characterizing, and integrating peaks across scans from
         direct-injection FTMS data.
 Depends: R (>= 3.5.0)
-Imports: cowplot, dplyr, ggplot2, readxl, MSnbase, debugme, assertthat,
+Imports: cowplot, dplyr, ggplot2, readxl, MSnbase, assertthat,
         jsonlite, purrr, R6, tibble, XML, forcats, pracma, R.utils,
-        IRanges, S4Vectors, magrittr, tidyr, lubridate
+        IRanges, S4Vectors, magrittr, tidyr, lubridate, tictoc, utils
 License: BSD + file LICENSE
 LazyData: true
 RoxygenNote: 7.1.2
 Suggests: knitr, rmarkdown, testthat, furrr
 VignetteBuilder: knitr
+Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 biocViews:

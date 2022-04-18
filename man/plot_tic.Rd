@@ -7,7 +7,7 @@
 plot_tic(raw_data, color_ms = TRUE, log_transform = TRUE)
 }
 \arguments{
-\item{raw_data}{an \code{xcmsRaw} object (ideally from \code{import_mzML})}
+\item{raw_data}{an MSnbase raw object}
 
 \item{color_ms}{should scans be colored by their \emph{ms} level and type?}
 }

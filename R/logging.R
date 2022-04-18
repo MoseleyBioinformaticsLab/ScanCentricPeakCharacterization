@@ -64,8 +64,8 @@ log_message = function(message_string){
 
 #' turn logging off
 #'
-#' There may be good reasons to turn the logging off (running tests, etc). This
-#' basically tells the package that the logger isn't available
+#' There may be good reasons to turn the logging off after it's been turned on. This
+#' basically tells the package that the logger isn't available.
 #'
 #' @export
 #' @return NULL
@@ -73,3 +73,64 @@ disable_logging = function(){
   assign("logger", FALSE, envir = has_logger)
   message("Logging disabled.")
 }
+
+
+#' turn logging on
+#'
+#' Choose to enable logging, to a specific file if desired.
+#'
+#' @param log_file the file to log to
+#' @param memory provide memory logging too? Only available on Linux and MacOS
+#'
+#' @details Uses the {logger} package under the hood, which is suggested in the dependencies.
+#'   Having logging enabled is nice to see when things are starting and stopping, and what exactly
+#'   has been done, without needing to write messages to the console. It is especially
+#'   useful if you are getting errors, but can't really see them, then you can add
+#'   "memory" logging to see if you are running out of memory.
+#'
+#'   Default log file has the pattern:
+#'
+#'   FTMS.peakCharacterization_run_YYYY.MM.DD.HH.MM.SS.log
+#'
+#' @export
+#' @return NULL
+enable_logging = function(log_file = NULL, memory = FALSE){
+  has_logger = requireNamespace("logger", quietly = TRUE)
+  if (!has_logger) {
+    stop("logger package is not available. Please install it to enable logging!\ninstall.packages('logger')")
+  } else {
+    if (is.null(log_file)) {
+      log_file = paste0("FTMS.peakCharacterization_run_", substring(make.names(Sys.time()), 2), ".log")
+    }
+    if (memory) {
+      sys_info = Sys.info()
+      if (!grepl("windows", sys_info["sysname"], ignore.case = TRUE)) {
+        assign("memory", TRUE, envir = has_logger)
+      } else {
+        message("Memory logging is not available on Windows!\nMemory use will not be logged.")
+      }
+    }
+    logger::log_appender(logger::appender_file(log_file), namespace = "FTMS.peakCharacterization")
+  }
+  NULL
+}
+
+#' turn progress on off
+#'
+#' Allow the user to turn progress messages to the console and off. Default
+#' is to provide messages to the console.
+#'
+#' @param progress logical to have it on or off
+#'
+#' @export
+#' @return NULL
+show_progress <- function(progress = TRUE){
+  assign("status", progress, envir = pc_progress)
+}
+
+has_logger = new.env(hash = TRUE)
+assign("logger", FALSE, envir = has_logger)
+assign("memory", FALSE, envir = has_logger)
+
+pc_progress = new.env(hash = TRUE)
+assign("status", TRUE, envir = pc_progress)
