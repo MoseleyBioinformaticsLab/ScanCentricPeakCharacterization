@@ -9,3 +9,4 @@
 ^.*\.*.log$
 ^.*.mzML$
 ^integration_test$
+^\.github$
