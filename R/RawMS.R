@@ -307,6 +307,33 @@ RawMS = R6::R6Class("RawMS",
      filter_remove_outlier_scans = NULL,
      choose_single_model = NULL,
 
+     check_frequency_model = function(scan = 1){
+       if (is.null(self$raw_df_data)) {
+         stop("Have you extracted the raw data to scans yet?\nPlease do raw_ms$extract_raw_data() first!")
+       }
+
+       use_scan = self$raw_df_data[[scan]]
+       if (!("mean_predicted" %in% names(use_scan))) {
+         stop("Have you done prediction of frequency yet?\nPlease do raw_ms$predict_frequency() first!")
+       }
+
+       use_scan = use_scan %>%
+         dplyr::filter(convertable)
+
+       p1 = use_scan %>%
+         ggplot(aes(x = mz, y = mean_frequency)) +
+         geom_point() +
+         geom_line(aes(x = mz, y = predicted_frequency), color = "red")
+       p2 = use_scan %>%
+         ggplot(aes(x = mean_frequency, y = predicted_frequency)) +
+         geom_point() +
+         geom_abline(slope = 1, color = "red")
+       p3 = use_scan %>%
+         ggplot(aes(x = mz, y = mean_predicted)) +
+         geom_point()
+       (p1 | p2 | p3)
+     },
+
      get_instrument = function(){
        raw_metadata = self$raw_metadata
        if (!is.null(raw_metadata$referenceableParamGroupList$referenceableParamGroup$cvParam.1)) {

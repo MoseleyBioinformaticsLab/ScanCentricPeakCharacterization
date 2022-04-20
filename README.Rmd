@@ -40,12 +40,7 @@ Please contact us even if you aren't sure what would be required for licensing, 
 
 ## Installation
 
-**Warning**: The authors of this package have not gone through and updated the dependencies for this package for a while.
-Therefore, when installing right now, you will likely get messages about missing dependencies.
-Please feel free to [file an issue](https://github.com/MoseleyBioinformaticsLab/FTMS.peakCharacterization/issues) if you need help getting it up and running.
-This situation should be remedied shortly.
-
-You can install the development version of FTMS.peakCharacterization from [GitHub](https://github.com/) with:
+You can install FTMS.peakCharacterization from [GitHub](https://github.com/) with:
 
 ``` r
 # install.packages("remotes")
@@ -100,24 +95,7 @@ $$frequency = a + \frac{y}{\sqrt{mz}} + \frac{z}{\sqrt[3]{mz}}$$
 And we can verify that with a plot of the m/z vs frequency and their predicted values, in a couple of ways, as well as a plot of the residuals.
 
 ```{r show_predictions}
-mz_freq_pred = raw_lipid$raw_df_data[[1]] %>%
-  dplyr::filter(convertable) %>%
-  ggplot(aes(x = mz, y = mean_frequency)) +
-  geom_point() +
-  geom_line(aes(x = mz, y = predicted_frequency), color = "red")
-
-mz_freq_diff = raw_lipid$raw_df_data[[1]] %>%
-  dplyr::filter(convertable) %>%
-  ggplot(aes(x = mean_frequency, y = predicted_frequency)) +
-  geom_point() +
-  geom_abline(slope = 1, color = "red")
-
-mz_resid = raw_lipid$raw_df_data[[1]] %>%
-  dplyr::filter(convertable) %>%
-  ggplot(aes(x = mz, y = mean_predicted)) +
-  geom_point() 
-
-mz_freq_pred | mz_freq_diff | mz_resid
+raw_lipid$check_frequency_model()
 ```
 
 See the example of `RawMS` below to see how we can change the model being used.
@@ -159,17 +137,7 @@ lipid_1 = RawMS$new(system.file("extdata", "lipid_example.mzML", package = "FTMS
 lipid_1$extract_raw_data()
 lipid_1$predict_frequency()
 
-scan_1 = lipid_1$raw_df_data[[1]] %>%
-  dplyr::filter(convertable)
-
-mz_freq = scan_1 %>%
-  ggplot(aes(x = mean_frequency, y = predicted_frequency)) +
-  geom_point() +
-  geom_abline(slope = 1, color = "red")
-mz_res = scan_1 %>%
-  ggplot(aes(x = mz, y = mean_predicted)) +
-  geom_point()
-mz_freq | mz_res
+lipid_1$check_frequency_model()
 ```
 
 So this model looks right.
@@ -186,41 +154,8 @@ lipid_2 = RawMS$new(system.file("extdata", "lipid_example.mzML", package = "FTMS
 lipid_2$extract_raw_data()
 lipid_2$predict_frequency()
 
-scan_2 = lipid_2$raw_df_data[[1]] %>%
-  dplyr::filter(convertable)
-
-mz_freq_pred2 = scan_2 %>%
-  ggplot(aes(x = mz, y = mean_frequency)) +
-  geom_point() +
-  geom_line(aes(x = mz, y = predicted_frequency), color = "red")
-
-mz_freq2 = scan_2 %>%
-  ggplot(aes(x = mean_frequency, y = predicted_frequency)) +
-  geom_point() +
-  geom_abline(slope = 1, color = "red")
-
-mz_res2 = scan_2 %>%
-  ggplot(aes(x = mz, y = mean_predicted)) +
-  geom_point()
-
-mz_freq_pred2 | mz_freq2 | mz_res2
+lipid_2$check_frequency_model()
 ```
 
 Here we can see in the residuals (mean_predicted) that we've obviously mis-defined the model.
 It's not obvious from the means vs predictions that we've mis-defined it!
-
-```{r compare_models}
-scan_1$source = "model1"
-scan_2$source = "model2"
-
-scan_1_2 = data.frame(model1 = scan_1$mean_predicted,
-                      model2 = scan_2$mean_predicted)
-
-ggplot(scan_1_2, aes(x = model1, y = model2)) +
-  geom_point() +
-  geom_abline(slope = 1, color = "red")
-
-both = rbind(scan_1, scan_2)
-
-ggplot(aes(x = mz, y = mean_predicted, color = ""))
-```
