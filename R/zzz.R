@@ -6,7 +6,7 @@
 #'
 #' @export
 #' @return NULL
-set_internal_map <- function(map_function = NULL){
+set_internal_map = function(map_function = NULL){
   if (is.null(map_function)) {
     assign("map_function", purrr::map, envir = internal_map)
   } else {
@@ -23,12 +23,12 @@ set_internal_map <- function(map_function = NULL){
 #'
 #' @export
 #' @return NULL
-show_progress <- function(progress = TRUE){
+show_progress = function(progress = TRUE){
   assign("status", progress, envir = pc_progress)
 }
 
 
-internal_map <- new.env(hash = TRUE)
+internal_map = new.env(hash = TRUE)
 assign("map_function", purrr::map, envir = internal_map)
 
 has_logger = new.env(hash = TRUE)
@@ -57,7 +57,7 @@ check_for_zip = function(){
   }
 }
 
-.onLoad <- function(libname, pkgname) {
+.onLoad = function(libname, pkgname) {
   tmp_packages = installed.packages()
   if ("logger" %in% rownames(tmp_packages)) {
     assign("logger", TRUE, envir = has_logger)

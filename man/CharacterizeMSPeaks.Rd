@@ -135,8 +135,7 @@ of reading in the mass
   out_file = NULL,
   peak_finder = NULL,
   temp_loc = NULL,
-  raw_scan_filter = NULL,
-  progress = FALSE
+  raw_scan_filter = NULL
 )}\if{html}{\out{</div>}}
 }
 

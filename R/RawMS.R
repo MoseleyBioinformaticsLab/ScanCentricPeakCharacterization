@@ -24,10 +24,10 @@
 #'
 #' \dontrun{
 #' # setting different files
-#' rms <- raw_ms("mzmlFile.mzML")
-#' rms <- raw_ms("mzmlFile.mzML", "someDirectoryForZip")
+#' rms = raw_ms("mzmlFile.mzML")
+#' rms = raw_ms("mzmlFile.mzML", "someDirectoryForZip")
 #'
-#' rms <- raw_ms("mzmlZipFile.zip")
+#' rms = raw_ms("mzmlZipFile.zip")
 #'
 #' # Plot the total-ion-chromatogram
 #' rms$plot_tic()
@@ -36,7 +36,7 @@
 #' rms$set_scans(rt_range = c(0, 50.1)) # uses seconds
 #'
 #' # set the find_peaks method
-#' rms$find_peaks <- function(){
+#' rms$find_peaks = function(){
 #'
 #' }
 #'
@@ -54,24 +54,24 @@
 #'
 #' @export
 #' @return xcmsRaw
-import_raw_ms <- function(raw_data, ms_level = 1){
-  raw_data <- MSnbase::readMSData(raw_data, msLevel. = ms_level, mode = "onDisk")
+import_raw_ms = function(raw_data, ms_level = 1){
+  raw_data = MSnbase::readMSData(raw_data, msLevel. = ms_level, mode = "onDisk")
 
   raw_data
 }
 
 
-get_ms1_scans <- function(raw_data){
-  ms1_index <- seq_along(raw_data@scantime)
-  msn_precursor_scans <- raw_data@msnPrecursorScan
+get_ms1_scans = function(raw_data){
+  ms1_index = seq_along(raw_data@scantime)
+  msn_precursor_scans = raw_data@msnPrecursorScan
   if (length(msn_precursor_scans) != 0) {
-    msn_precursor_scans <- unique(msn_precursor_scans)
-    msn_precursor_scans <- msn_precursor_scans[!is.na(msn_precursor_scans)]
-    scan_range <- ms1_index[-msn_precursor_scans]
+    msn_precursor_scans = unique(msn_precursor_scans)
+    msn_precursor_scans = msn_precursor_scans[!is.na(msn_precursor_scans)]
+    scan_range = ms1_index[-msn_precursor_scans]
   } else {
-    scan_range <- ms1_index
+    scan_range = ms1_index
   }
-  rt_range <- range(raw_data@scantime[scan_range])
+  rt_range = range(raw_data@scantime[scan_range])
 
   list(scan_range = scan_range, rt_range = rt_range)
 }
@@ -89,27 +89,27 @@ get_ms1_scans <- function(raw_data){
 #' @importFrom forcats fct_relevel
 #' @return ggplot
 #' @export
-plot_tic <- function(raw_data, color_ms = TRUE, log_transform = TRUE){
-  all_data <- get_ms_info(raw_data, include_msn = TRUE, include_precursor = TRUE)
+plot_tic = function(raw_data, color_ms = TRUE, log_transform = TRUE){
+  all_data = get_ms_info(raw_data)
 
 
   if ((length(unique(all_data$ms_level)) > 1) || (length(unique(all_data$type)) > 1)) {
-    all_data$ms_type <- paste0(all_data$ms_type, ".", all_data$ms_level)
+    all_data$ms_type = paste0(all_data$ms_type, ".", all_data$ms_level)
   }
 
   if (log_transform) {
-    all_data$tic <- log10(all_data$tic + 1)
-    y_lab <- "Log10(TIC)"
+    all_data$tic = log10(all_data$tic + 1)
+    y_lab = "Log10(TIC)"
   } else {
-    y_lab <- "TIC"
+    y_lab = "TIC"
   }
 
   if (!is.null(all_data$ms_type)) {
-    all_data$ms_type <- forcats::fct_relevel(all_data$ms_type, "normal.1", "precursor.1", "normal.2")
-    tic_plot <- ggplot(all_data, aes(x = time, xend = time, y = 0, yend = tic, color = ms_type)) + geom_segment() +
+    all_data$ms_type = forcats::fct_relevel(all_data$ms_type, "normal.1", "precursor.1", "normal.2")
+    tic_plot = ggplot(all_data, aes(x = time, xend = time, y = 0, yend = tic, color = ms_type)) + geom_segment() +
       labs(y = y_lab)
   } else {
-    tic_plot <- ggplot(all_data, aes(x = time, xend = time, y = 0, yend = tic)) + geom_segment() +
+    tic_plot = ggplot(all_data, aes(x = time, xend = time, y = 0, yend = tic)) + geom_segment() +
       labs(y = y_lab)
   }
   tic_plot
@@ -124,20 +124,92 @@ plot_tic <- function(raw_data, color_ms = TRUE, log_transform = TRUE){
 #'
 #' @return data.frame with scan, time, acquisition, tic, ms_level and ms_type
 #' @export
-get_ms_info <- function(raw_data, include_msn = FALSE, include_precursor = FALSE){
-  ms_scan_info = data.frame(rtime = MSnbase::rtime(raw_data),
-                            tic = MSnbase::tic(raw_data),
-                            scanIndex = MSnbase::scanIndex(raw_data))
-  ms_scan_info$scan = seq(1, nrow(ms_scan_info))
+get_ms_info = function(raw_data){
+  ms_scan_info = data.frame(scanIndex = MSnbase::scanIndex(raw_data),
+                            scan = seq(1, length(raw_data)),
+                            rtime = MSnbase::rtime(raw_data),
+                            tic = MSnbase::tic(raw_data))
+  ms_scan_info = ms_scan_info %>%
+    dplyr::mutate(rtime_lag = rtime - dplyr::lag(rtime),
+                  rtime_lead = dplyr::lead(rtime) - rtime)
   rownames(ms_scan_info) = NULL
 
   ms_scan_info
 }
 
+#' default outlier scan function
+#'
+#' @param raw_ms the raw_ms object
+#'
+#' @details This is the default filtering and removing outliers function.
+#'   It is based on the Moseley groups normal samples and experience.
+#'   However, it does not reflect everyone's experience and needs.
+#'   We expect that others have different use cases and needs, and therefore
+#'   they should create their own function and use it appropriately.
+#'
+#'   Please examine this function and write your own as needed.
+#'   It should at the very least take a RawMS object, work on the ms_info slot,
+#'   and then create a column with the name "keep" denoting which scans to keep.
+#'
+#' @export
+#' @return RawMS
+filter_remove_outlier_scans_default = function(raw_ms){
+  ms_info = raw_ms$ms_info
+
+  # filter based on the injection time of the scan
+  rtime_keep = dplyr::between(ms_info$rtime, 0, 450)
+
+  # filter based on the *resolution* of the scan, which is
+  # defined by the square root term of the model, which is
+  # the y.freq term here
+  y_freq_keep = ms_info$y.freq >= 2.9e7
+
+  # look for outliers based on boxplot.stats *after*
+  # applying the other two filters
+  stats_y_freq = boxplot.stats(ms_info$y.freq[rtime_keep & y_freq_keep])
+
+  stats_keep = !(ms_info$y.freq %in% stats_y_freq$out)
+  ms_info$keep = rtime_keep & y_freq_keep & stats_keep
+  raw_ms$ms_info = ms_info
+  raw_ms
+}
+
+#' default single model
+#'
+#' @param raw_ms the raw_ms object
+#'
+#' @details This is the default function to choose a single frequency and mz model.
+#'   It takes the ms_info after filtering scans, and calculates the median of the
+#'   square root terms, and chooses the one closest to the median value.
+#'
+#'   Please examine this function and write your own if needed.
+#'
+#' @export
+#' @return RawMS
+choose_single_model_default = function(raw_ms){
+  ms_info = raw_ms$ms_info
+
+  # filtering to those things we decided to keep
+  keep_freq = ms_info$y.freq[ms_info$keep]
+  median_freq = median(keep_freq)
+  freq_index = which.min(abs(keep_freq - median_freq))
+
+  # actually get the one that matches the one found to be closest of the
+  # previously filtered.
+  freq_loc = which(ms_info$y.freq == keep_freq[freq_index])[1]
+  freq_cols = grepl("freq$", names(ms_info))
+  mz_cols = grepl("mz$", names(ms_info))
+
+  # set the coefficients
+  raw_ms$frequency_coefficients = as.matrix(ms_info[freq_loc, freq_cols])
+  raw_ms$mz_coefficients = as.matrix(ms_info[freq_loc, mz_cols])
+  raw_ms
+}
+
 #' @importFrom R6 R6Class
 #' @importFrom jsonlite fromJSON
 #' @export
-RawMS <- R6::R6Class("RawMS",
+RawMS = R6::R6Class("RawMS",
    public = list(
      raw_metadata = NULL,
      raw_data = NULL,
@@ -160,33 +232,30 @@ RawMS <- R6::R6Class("RawMS",
      },
      set_scans = function(scan_range = NULL, rt_range = NULL){
 
-       ms_scan_info <- get_ms_info(self$raw_data)
-       ms_info <- ms_scan_info
+       ms_scan_info = get_ms_info(self$raw_data)
+       ms_info = ms_scan_info
        if (is.null(scan_range) && is.null(rt_range)) {
-         message("Setting scans to be MS1 non-precursor scans!")
-         self$scan_range <- ms_scan_info$scan
-         self$rt_range <- range(ms_scan_info$rtime)
+         #message("Setting scans to be MS1 scans!")
+         self$scan_range = ms_scan_info$scan
+         self$rt_range = range(ms_scan_info$rtime)
        } else {
          if (!is.null(scan_range)) {
            if ((length(scan_range) == 2) && ((scan_range[2] - scan_range[1]) != 1)) {
-             scan_range <- seq(scan_range[1], scan_range[2])
+             scan_range = seq(scan_range[1], scan_range[2])
            }
-           ms_scan_info <- ms_scan_info[(ms_scan_info$scan %in% scan_range),]
+           ms_scan_info = ms_scan_info[(ms_scan_info$scan %in% scan_range),]
          } else if (!is.null(rt_range)) {
            assert_that(length(rt_range) == 2)
 
-           rt_call <- paste0("(time >= ", rt_range[1], ") & (time <= ", rt_range[2], ")")
+           rt_call = paste0("(time >= ", rt_range[1], ") & (time <= ", rt_range[2], ")")
 
-           ms_scan_info <- filter_(ms_scan_info, rt_call)
+           ms_scan_info = filter_(ms_scan_info, rt_call)
          }
 
-         self$scan_range <- ms_scan_info$scan
-         self$rt_range <- range(ms_scan_info$rtime)
+         self$scan_range = ms_scan_info$scan
+         self$rt_range = range(ms_scan_info$rtime)
 
        }
-     },
-     count_raw_peaks = function(){
-       count_raw_peaks(self$raw_data, self$scan_range)
      },
      extract_raw_data = function(remove_zero = self$remove_zero){
        all_scan_data = MSnbase::extractSpectraData(self$raw_data)
@@ -206,14 +275,37 @@ RawMS <- R6::R6Class("RawMS",
        })
 
        self$raw_df_data = raw_scan_data
+       invisible(self)
      },
 
-     convert_to_frequency = function(frequency_fit_description = self$frequency_fit_description,
-                                     mz_fit_description = self$mz_fit_description){
+     predict_frequency = function(frequency_fit_description = self$frequency_fit_description,
+                                  mz_fit_description = self$mz_fit_description){
         freq_list = mz_scans_to_frequency(self$raw_df_data,
                                           frequency_fit_description = frequency_fit_description,
                                           mz_fit_description = mz_fit_description)
+
+        self$raw_df_data = freq_list$frequency_list
+        mean_predicted_mad = internal_map$map_function(self$raw_df_data, function(in_df){
+          data.frame(scan = in_df$scan[1], mad = mad(in_df$mean_predicted[in_df$convertable], na.rm = TRUE))
+        })
+        mad_df = purrr::map_dfr(mean_predicted_mad, ~ .x)
+        self$ms_info = dplyr::left_join(self$ms_info, mad_df, by = "scan")
+        self$ms_info = dplyr::left_join(self$ms_info, freq_list$frequency_coefficients, by = "scan")
+        self$ms_info = dplyr::left_join(self$ms_info, freq_list$mz_coefficients, by = "scan")
+        invisible(self)
      },
+
+     convert_to_frequency = function(){
+       freq_list = self$raw_df_data
+       converted = mz_scans_convert_to_frequency(freq_list,
+                                                 self$frequency_fit_description,
+                                                 self$frequency_coefficients,
+                                                 self$mz_fit_description,
+                                                 self$mz_coefficients)
+     },
+
+     filter_remove_outlier_scans = NULL,
+     choose_single_model = NULL,
 
      get_instrument = function(){
        raw_metadata = self$raw_metadata
@@ -225,61 +317,6 @@ RawMS <- R6::R6Class("RawMS",
        }
      },
 
-     get_mz_models = function(){
-       self$mz_model_list <- internal_map$map_function(self$scan_range, function(in_scan){
-         create_mz_model(as.data.frame(xcms::getScan(self$raw_data, in_scan)), self$sd_fit_function)
-       })
-     },
-
-     average_mz_models = function(){
-       if (is.null(self$mz_model_list)) {
-         self$get_mz_models()
-       }
-
-       if (length(self$mz_model_list) != length(self$scan_range)) {
-         self$get_mz_models()
-       }
-
-       model_list <- self$mz_model_list
-       mz_ranges <- round(range(unlist(purrr::map(model_list, function(x){range(x$x)}))))
-
-       mz_values <- seq(mz_ranges[1], mz_ranges[2], 0.5)
-       sd_predictions <- internal_map$map_function(model_list, self$sd_predict_function, mz_values)
-       mean_sd_preds <- colMeans(do.call(rbind, sd_predictions))
-
-       self$mz_model <- self$sd_fit_function(mz_values, mean_sd_preds)
-
-       use_scans <- self$scan_range
-       scan_mz_sd <- purrr::map_df(seq_len(length(use_scans)), function(scan_index){
-         scan_prediction <- sd_predictions[[scan_index]]
-         diff_prediction_mean <- abs(scan_prediction - mean_sd_preds)
-         data.frame(scan = use_scans[scan_index],
-                    sum_diff = sum(diff_prediction_mean),
-                    median_diff = median(diff_prediction_mean))
-       })
-       self$mz_model_differences <- scan_mz_sd
-     },
-
-     remove_bad_resolution_scans = function(){
-       if (is.null(self$mz_model_diffs)) {
-         self$average_mz_models()
-       }
-       diff_model <- self$mz_model_differences
-       max_out <- max(grDevices::boxplot.stats(diff_model$sum_diff)$stats)
-       keep_scans <- self$scan_range[self$scan_range %in% diff_model$scan[diff_model$sum_diff <= max_out]]
-
-       #self$peak_list_by_scans <- self$peak_list_by_scans[keep_scans]
-       #self$noise_info <- self$noise_info[keep_scans, ]
-
-       self$scan_range <- keep_scans
-       self$ms_info$kept <- FALSE
-       self$ms_info[self$ms_info$scan %in% keep_scans, "kept"] <- TRUE
-       self$mz_model_list <- NULL
-       self$average_mz_models()
-       invisible(self)
-     },
-
-
 
    initialize = function(raw_file,
                          frequency_fit_description = c("a.freq" = 0, "y.freq" = -1/2, "z.freq" = -1/3),
@@ -288,18 +325,20 @@ RawMS <- R6::R6Class("RawMS",
                          scan_range = NULL,
                          rt_range = NULL,
                          mz_range = NULL,
-                         remove_zero = FALSE){
-     self$raw_data <- import_raw_ms(raw_file)
+                         remove_zero = FALSE,
+                         filter_remove_outlier_scans = NULL,
+                         choose_single_model = NULL){
+     self$raw_data = import_raw_ms(raw_file)
      if (!is.null(metadata_file)) {
-       self$raw_metadata <- fromJSON(metadata_file)
+       self$raw_metadata = fromJSON(metadata_file)
      }
 
      # default is to use the MS1 non-precursor scans
      if (is.null(scan_range) && is.null(rt_range)) {
        # message("Using MS1 non-precursor scans!")
-       self$ms_info <- get_ms_info(self$raw_data)
-       self$scan_range <- self$ms_info$scan
-       self$rt_range <- range(self$ms_info$rtime)
+       self$ms_info = get_ms_info(self$raw_data)
+       self$scan_range = self$ms_info$scan
+       self$rt_range = range(self$ms_info$rtime)
 
      } else {
        self$set_scans(scan_range, rt_range)
@@ -309,6 +348,13 @@ RawMS <- R6::R6Class("RawMS",
      self$mz_fit_description = mz_fit_description
      self$remove_zero = remove_zero
 
+     if (is.null(filter_remove_outlier_scans)) {
+       self$filter_remove_outlier_scans = filter_remove_outlier_scans_default
+     }
+     if (is.null(choose_single_model)) {
+       self$choose_single_model = choose_single_model_default
+     }
+    invisible(self)
    }
   )
 )
@@ -326,9 +372,9 @@ RawMS <- R6::R6Class("RawMS",
 #'
 #' @export
 #' @return numeric
-count_raw_peaks <- function(rawdata, scans){
-  raw_points <- as.data.frame(xcms::getSpec(rawdata, scanrange = scans))
+count_raw_peaks = function(rawdata, scans){
+  raw_points = as.data.frame(xcms::getSpec(rawdata, scanrange = scans))
 
-  raw_peaks <- pracma::findpeaks(raw_points$intensity, nups = 2, ndowns = 2)
+  raw_peaks = pracma::findpeaks(raw_points$intensity, nups = 2, ndowns = 2)
   nrow(raw_peaks)
 }

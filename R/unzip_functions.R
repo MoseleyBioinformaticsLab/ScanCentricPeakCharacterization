@@ -6,12 +6,12 @@
 # My hope is that this goes into it's own package, and I can delete this
 # stuff out of here.
 
-my_unzip <- function(src, target, unzip = getOption("unzip")) {
+my_unzip = function(src, target, unzip = getOption("unzip")) {
   if (unzip == "internal") {
     return(utils::unzip(src, exdir = target))
   }
 
-  args <- paste(
+  args = paste(
     "-oq", shQuote(src),
     "-d", shQuote(target)
   )
@@ -32,27 +32,27 @@ my_unzip <- function(src, target, unzip = getOption("unzip")) {
 #' @keywords internal
 #' @export
 #' @return The exit status of the command, invisibly.
-system_check <- function(cmd, args = character(), env_vars = character(),
+system_check = function(cmd, args = character(), env_vars = character(),
                          path = ".", quiet = FALSE, throw = TRUE,
                          ...) {
-  full <- paste(shQuote(cmd), " ", paste(args, collapse = " "), sep = "")
+  full = paste(shQuote(cmd), " ", paste(args, collapse = " "), sep = "")
 
   if (!quiet) {
     message(wrap_command(full))
     message()
   }
 
-  result <- suppressWarnings(withr::with_dir(path, withr::with_envvar(env_vars,
+  result = suppressWarnings(withr::with_dir(path, withr::with_envvar(env_vars,
                                                                       system(full, intern = quiet, ignore.stderr = quiet, ...)
   )))
 
   if (quiet) {
-    status <- attr(result, "status") # %||% 0L
+    status = attr(result, "status") # %||% 0L
   } else {
-    status <- result
+    status = result
   }
 
-  ok <- identical(as.character(status), "0")
+  ok = identical(as.character(status), "0")
   if (throw && !ok) {
     stop("Command failed (", status, ")", call. = FALSE)
   }

@@ -90,17 +90,17 @@ convert_mz_frequency = function(mz_data, keep_all = TRUE){
   frequency_data
 }
 
-fit_frequency_linear <- function(x, y, w = NULL){
-  #center_x <- x - mean(x)
+fit_frequency_linear = function(x, y, w = NULL){
+  #center_x = x - mean(x)
 
-  X <- matrix(c(rep(1, length(x)), x), nrow = length(x), ncol = 2, byrow = FALSE)
+  X = matrix(c(rep(1, length(x)), x), nrow = length(x), ncol = 2, byrow = FALSE)
 
   if (is.null(w)) {
-    out_fit <- stats::lm.fit(X, y)
+    out_fit = stats::lm.fit(X, y)
   } else {
-    out_fit <- stats::lm.wfit(X, y, w)
+    out_fit = stats::lm.wfit(X, y, w)
   }
-  names(out_fit$coefficients) <- NULL
+  names(out_fit$coefficients) = NULL
   out_fit
 }
 
@@ -209,56 +209,54 @@ mz_scans_to_frequency = function(mz_df_list, frequency_fit_description, mz_fit_d
     tmp_df$scan = .x$scan
     tmp_df
   })
+  n_freq_coef = length(frequency_fit_description)
+  names(frequency_coefficients)[1:n_freq_coef] = names(frequency_fit_description)
 
   mz_coefficients = purrr::map_df(mz_fits, function(.x){
     tmp_df = as.data.frame(matrix(.x$coefficients, nrow = 1))
     tmp_df$scan = .x$scan
     tmp_df
   })
+  n_mz_coef = length(mz_fit_description)
+  names(mz_coefficients)[1:n_mz_coef] = names(mz_fit_description)
+
+  mz_frequency = internal_map$map_function(frequency_coefficients$scan, function(in_scan){
+    use_coefficients = dplyr::filter(frequency_coefficients, scan %in% in_scan) %>%
+      dplyr::select(-scan) %>%
+      as.matrix()
+    use_mz = mz_frequency[[in_scan]]
+    use_mz$predicted_frequency = predict_exponentials(use_mz$mz, use_coefficients, frequency_fit_description)
+    use_mz$mean_predicted = use_mz$mean_frequency - use_mz$predicted_frequency
+    use_mz
+  })
+
   list(frequency_list = mz_frequency,
        frequency_coefficients = frequency_coefficients,
        mz_coefficients = mz_coefficients)
 }
 
-filtering_frequency = function(){
-  first_slope = min(which(frequency_fit_description != 0))
-  bad_coefficients = boxplot.stats(frequency_coefficients[[first_slope]])$out
-
-  frequency_coefficients = frequency_coefficients[!frequency_coefficients[[first_slope]] %in% bad_coefficients, ]
-  mz_coefficients = dplyr::filter(mz_coefficients, scan %in% frequency_coefficients$scan)
-
-  mz_frequency = mz_frequency[as.character(frequency_coefficients$scan)]
-  log_message("filtered scans by coefficients")
-  median_first = median(frequency_coefficients[[first_slope]])
-  median_index = which.min(abs(frequency_coefficients[[first_slope]] - median_first))[1]
-
-  freq_model_coefficients = dplyr::select(frequency_coefficients, -scan) %>% dplyr::slice(median_index) %>% unlist()
-  mz_model_coefficients = dplyr::select(mz_coefficients, -scan) %>% dplyr::slice(median_index) %>% unlist()
-  log_message("predicting frequency")
+mz_scans_convert_to_frequency = function(mz_frequency,
+                                         frequency_fit_description,
+                                         freq_model_coefficients,
+                                         mz_fit_description,
+                                         mz_model_coefficients){
   mz_frequency = internal_map$map_function(mz_frequency, function(in_data){
     in_data$frequency = predict_exponentials(in_data$mz, freq_model_coefficients, frequency_fit_description)
     in_data
   })
-  log_message("finished predicting frequency")
 
-  log_message("checking derived vs predicted frequency R^2")
   mz_frequency = check_frequency_r2(mz_frequency)
 
-  log_message("checking point order")
   mz_frequency = check_mz_frequency_order(mz_frequency)
 
-  log_message("removing extraneous zero values")
   mz_frequency = internal_map$map_function(mz_frequency, extract_nonzero)
 
-  log_message("finding convertable range")
   valid_ranges = purrr::map_df(mz_frequency, function(in_mz_freq){
     out_range = discover_frequency_offset(in_mz_freq$frequency)
     data.frame(common = out_range$most_common, min = out_range$range[1], max = out_range$range[2])
   })
 
   valid_unique = unique(valid_ranges[, c("min", "max")])
-
-  log_message("setting convertable and not")
 
   find_convertable = function(mz_df, valid_unique){
     set_1 = seq(1, nrow(mz_df) - 1)
@@ -272,10 +270,8 @@ filtering_frequency = function(){
   } else (
     stop("Convertable ranges were not unique across scans, stopping!")
   )
-  log_message("done convertable")
-  list(frequency = mz_frequency, frequency_coefficients_all = frequency_coefficients, frequency_coefficients = freq_model_coefficients,
-       mz_coefficients_all = mz_coefficients, mz_coefficients = mz_model_coefficients,
-       frequency_fit_description = frequency_fit_description, mz_fit_description = mz_fit_description, difference_range = valid_unique)
+  list(frequency = mz_frequency,
+       difference_range = valid_unique)
 }
 
 check_mz_frequency_order = function(mz_frequency){

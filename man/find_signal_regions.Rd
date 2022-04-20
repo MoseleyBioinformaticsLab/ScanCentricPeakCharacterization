@@ -8,7 +8,7 @@ find_signal_regions(
   regions,
   point_regions_list,
   multiplier = 1.5,
-  n_point_region = 10000
+  n_point_region = 2000
 )
 }
 \arguments{

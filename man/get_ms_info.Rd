@@ -4,7 +4,7 @@
 \alias{get_ms_info}
 \title{get MS info}
 \usage{
-get_ms_info(raw_data, include_msn = FALSE, include_precursor = FALSE)
+get_ms_info(raw_data)
 }
 \arguments{
 \item{raw_data}{the MSnbase raw data object}

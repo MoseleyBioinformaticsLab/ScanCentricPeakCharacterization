@@ -31,9 +31,9 @@ Returns a list of \code{tbl_df}'s, with \code{mz} and \code{intensity}.
 }
 \examples{
 \dontrun{
-  mz_file <- "example_file.mzML"
-  scan_data <- scan_mzML(mz_file) # imports all scans
-  scan_data <- scan_mzML(mz_file, scan_indices = seq(1, 5)) # scans 1-5
-  scan_data <- scan_mzML(mz_file, scan_times = c(24, 80)) # scans in this time range
+  mz_file = "example_file.mzML"
+  scan_data = scan_mzML(mz_file) # imports all scans
+  scan_data = scan_mzML(mz_file, scan_indices = seq(1, 5)) # scans 1-5
+  scan_data = scan_mzML(mz_file, scan_times = c(24, 80)) # scans in this time range
 }
 }

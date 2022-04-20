@@ -7,9 +7,9 @@
 #'
 #' @export
 #' @return tbl_df
-pracma_findpeaks <- function(avg_spectra, ...){
-  out_peaks <- pracma::findpeaks(avg_spectra$intensity, ...)
-  mz_peaks <- avg_spectra[out_peaks[, 2], ]
+pracma_findpeaks = function(avg_spectra, ...){
+  out_peaks = pracma::findpeaks(avg_spectra$intensity, ...)
+  mz_peaks = avg_spectra[out_peaks[, 2], ]
   mz_peaks
 }
 
@@ -23,18 +23,18 @@ pracma_findpeaks <- function(avg_spectra, ...){
 #'   by user stas-g
 #' @export
 #' @return tbl_df
-find_peaks_diff <- function(avg_spectra, m = 3){
-  x <- avg_spectra$Intensity
-  shape <- diff(sign(diff(x, na.pad = FALSE)))
-  pks <- lapply(which(shape < 0), FUN = function(i){
-    z <- i - m + 1
-    z <- ifelse(z > 0, z, 1)
-    w <- i + m + 1
-    w <- ifelse(w < length(x), w, length(x))
+find_peaks_diff = function(avg_spectra, m = 3){
+  x = avg_spectra$Intensity
+  shape = diff(sign(diff(x, na.pad = FALSE)))
+  pks = lapply(which(shape < 0), FUN = function(i){
+    z = i - m + 1
+    z = ifelse(z > 0, z, 1)
+    w = i + m + 1
+    w = ifelse(w < length(x), w, length(x))
     if(all(x[c(z : i, (i + 2) : w)] <= x[i + 1])) return(i + 1) else return(numeric(0))
   })
-  pks <- unlist(pks)
-  avg_peaks <- avg_spectra[pks, ]
+  pks = unlist(pks)
+  avg_peaks = avg_spectra[pks, ]
   avg_peaks
 }
 
@@ -46,9 +46,9 @@ find_peaks_diff <- function(avg_spectra, m = 3){
 #'
 #' @param x the number to extract the parts from
 #' @return list
-extract <- function(x){
-  e <- ifelse(x == 0, 0, floor(log10(x)))
-  m <- x/10^e
+extract = function(x){
+  e = ifelse(x == 0, 0, floor(log10(x)))
+  m = x/10^e
   list(mantissa = m, exponent = e)
 }
 
@@ -60,7 +60,7 @@ extract <- function(x){
 #' @param exponent the exponent part
 #'
 #' @return numeric
-create_value <- function(mantissa, exponent){
+create_value = function(mantissa, exponent){
   mantissa * 10 ^ exponent
 }
 
@@ -76,7 +76,7 @@ create_value <- function(mantissa, exponent){
 #' @param log_fun what log function to use for the transformation
 #'
 #' @return matrix
-log_with_min <- function(data, min_value = NULL, order_mag = 3, log_fun = log){
+log_with_min = function(data, min_value = NULL, order_mag = 3, log_fun = log){
   #stopifnot(class(data_matrix) == "matrix")
   #stopifnot(class(data_matrix) == "numeric")
 
@@ -85,15 +85,15 @@ log_with_min <- function(data, min_value = NULL, order_mag = 3, log_fun = log){
   }
 
   if (is.null(min_value)) {
-    min_value <- min(data[data > 0])
+    min_value = min(data[data > 0])
   }
 
-  split_min <- extract(min_value)
-  split_min$exponent <- split_min$exponent - order_mag
-  add_value <- create_value(split_min$mantissa, split_min$exponent)
+  split_min = extract(min_value)
+  split_min$exponent = split_min$exponent - order_mag
+  add_value = create_value(split_min$mantissa, split_min$exponent)
 
-  out_data <- data + add_value
-  log_data <- log_fun(out_data)
+  out_data = data + add_value
+  log_data = log_fun(out_data)
   log_data
 }
 
@@ -107,10 +107,10 @@ log_with_min <- function(data, min_value = NULL, order_mag = 3, log_fun = log){
 #'
 #' @export
 #' @return data.frame
-log_peaks <- function(mz_data, intensity = "intensity"){
-  #out_command <- paste0("metabolomicsUtilities::log_with_min(", intensity, ")")
-  log_values <- log_with_min(mz_data[, intensity])
-  mz_data$log_int <- log_values
+log_peaks = function(mz_data, intensity = "intensity"){
+  #out_command = paste0("metabolomicsUtilities::log_with_min(", intensity, ")")
+  log_values = log_with_min(mz_data[, intensity])
+  mz_data$log_int = log_values
   mz_data
 }
 
@@ -123,9 +123,9 @@ log_peaks <- function(mz_data, intensity = "intensity"){
 #'
 #' @importFrom stats poly
 #' @return numeric
-r_squared <- function(x, y){
-  x <- x - mean(x)
-  x_2 <- poly(x, 2)
+r_squared = function(x, y){
+  x = x - mean(x)
+  x_2 = poly(x, 2)
 
   (t(y) %*% x_2 %*% t(x_2) %*% y) / (t(y) %*% (diag(length(y)) -
                                                  1 / length(y)) %*% y)
@@ -147,24 +147,24 @@ r_squared <- function(x, y){
 #'   \item r-square fit for the set of points
 #' }
 #' @return numeric
-test_peak_rsq <- function(mz_peak, min_points = 5){
-  n_point <- nrow(mz_peak)
+test_peak_rsq = function(mz_peak, min_points = 5){
+  n_point = nrow(mz_peak)
   if (n_point >= min_points) {
-    test_index <- lapply(seq(1, n_point - min_points), function(start_loc){
+    test_index = lapply(seq(1, n_point - min_points), function(start_loc){
       lapply(seq(start_loc + min_points - 1, n_point), function(end_loc){
         c(start_loc, end_loc)
       })
     })
-    index_matrix <- matrix(unlist(test_index), ncol = 2, byrow = TRUE)
+    index_matrix = matrix(unlist(test_index), ncol = 2, byrow = TRUE)
 
-    n_test <- nrow(index_matrix)
-    pt_rsq <- t(vapply(seq(1, n_test), function(in_row){
-      use_index <- index_matrix[in_row, ]
+    n_test = nrow(index_matrix)
+    pt_rsq = t(vapply(seq(1, n_test), function(in_row){
+      use_index = index_matrix[in_row, ]
       c(use_index, use_index[2] - use_index[1] + 1,
         r_squared(mz_peak[use_index[1]:use_index[2], "mz"], mz_peak[use_index[1]:use_index[2], "log_int"]))
     }, numeric(4)))
   } else {
-    pt_rsq <- matrix(NA, nrow = 1, 4)
+    pt_rsq = matrix(NA, nrow = 1, 4)
   }
   pt_rsq
 }
@@ -175,14 +175,14 @@ test_peak_rsq <- function(mz_peak, min_points = 5){
 #' @param min_rsq minimum cutoff for the fit to use
 #'
 #' @return numeric
-choose_peak_rsq <- function(rsq_results, min_rsq = 0.98){
-  filter_rsq <- rsq_results[rsq_results[,4] >= min_rsq, , drop = FALSE]
+choose_peak_rsq = function(rsq_results, min_rsq = 0.98){
+  filter_rsq = rsq_results[rsq_results[,4] >= min_rsq, , drop = FALSE]
 
   if (nrow(filter_rsq) > 0) {
-    out_index <- filter_rsq[which.max(filter_rsq[, 3]), 1:2]
-    out_points <- seq(out_index[1], out_index[2])
+    out_index = filter_rsq[which.max(filter_rsq[, 3]), 1:2]
+    out_points = seq(out_index[1], out_index[2])
   } else {
-    out_points <- NA
+    out_points = NA
   }
   out_points
 }
@@ -202,18 +202,18 @@ choose_peak_rsq <- function(rsq_results, min_rsq = 0.98){
 #'   \item area
 #' }
 #' @return numeric
-test_peak_area <- function(mz_peak, min_points = 5, min_area = 0.1){
-  non_zero_points <- which(mz_peak$intensity != 0)
-  mz_peak_nonzero <- mz_peak[non_zero_points, ]
-  n_point <- nrow(mz_peak_nonzero)
+test_peak_area = function(mz_peak, min_points = 5, min_area = 0.1){
+  non_zero_points = which(mz_peak$intensity != 0)
+  mz_peak_nonzero = mz_peak[non_zero_points, ]
+  n_point = nrow(mz_peak_nonzero)
 
   if (n_point >= min_points) {
-    mean_mz_diff <- mean(diff(mz_peak$mz))
-    peak_area <- sum(mean_mz_diff * mz_peak$intensity)
-    peak_info <- c(start = non_zero_points[1], stop = non_zero_points[length(non_zero_points)],
+    mean_mz_diff = mean(diff(mz_peak$mz))
+    peak_area = sum(mean_mz_diff * mz_peak$intensity)
+    peak_info = c(start = non_zero_points[1], stop = non_zero_points[length(non_zero_points)],
         area = peak_area)
   } else {
-    peak_info <- c(start = NA, stop = NA, area = NA)
+    peak_info = c(start = NA, stop = NA, area = NA)
   }
   peak_info
 }
@@ -226,10 +226,10 @@ test_peak_area <- function(mz_peak, min_points = 5, min_area = 0.1){
 #' @param intensity the intensity values
 #'
 #' @return numeric
-calc_point_slopes <- function(mz, intensity){
-  n_point <- length(mz)
-  point_slope <- vapply(seq(2, n_point), function(end_point){
-    start_point <- end_point - 1
+calc_point_slopes = function(mz, intensity){
+  n_point = length(mz)
+  point_slope = vapply(seq(2, n_point), function(end_point){
+    start_point = end_point - 1
     (intensity[end_point] - intensity[start_point]) /
       (mz[end_point] - mz[start_point])
   }, numeric(1))
@@ -252,58 +252,58 @@ calc_point_slopes <- function(mz, intensity){
 #'   \item area
 #' }
 #' @return numeric
-test_peak_area_slope <- function(mz_peak, min_points = 5, min_area = 0.1, max_slope = 0.1){
-  org_points <- seq(1, nrow(mz_peak))
-  non_zero_points <- which(mz_peak$intensity != 0)
-  mz_peak <- mz_peak[non_zero_points, ]
-  org_points <- org_points[non_zero_points]
-  new_points <- seq(1, length(org_points))
+test_peak_area_slope = function(mz_peak, min_points = 5, min_area = 0.1, max_slope = 0.1){
+  org_points = seq(1, nrow(mz_peak))
+  non_zero_points = which(mz_peak$intensity != 0)
+  mz_peak = mz_peak[non_zero_points, ]
+  org_points = org_points[non_zero_points]
+  new_points = seq(1, length(org_points))
 
-  point_slopes <- calc_point_slopes(mz_peak[, "mz"], mz_peak[, "intensity"])
-  relative_slopes <- abs(point_slopes / max(point_slopes))
+  point_slopes = calc_point_slopes(mz_peak[, "mz"], mz_peak[, "intensity"])
+  relative_slopes = abs(point_slopes / max(point_slopes))
 
   # this is all to check the ends of the points for low slopes. It starts at
   # each end, checks if point is below the cutoff, and if it is, then adds it.
   # We want to do this to exclude points that are causing low slopes in the peak,
   # but not in the middle. Also do it this way because the slopes are calculated
   # starting with the second point.
-  forward_check <- seq(1, length(relative_slopes))
-  reverse_check <- seq(length(relative_slopes), 1, -1)
+  forward_check = seq(1, length(relative_slopes))
+  reverse_check = seq(length(relative_slopes), 1, -1)
 
-  forward_lo_points <- numeric(0)
-  ipoint <- 1
+  forward_lo_points = numeric(0)
+  ipoint = 1
   while ((ipoint <= length(forward_check)) && (relative_slopes[forward_check[ipoint]] <= max_slope)) {
-    forward_lo_points <- c(forward_lo_points, forward_check[ipoint])
-    ipoint <- ipoint + 1
+    forward_lo_points = c(forward_lo_points, forward_check[ipoint])
+    ipoint = ipoint + 1
   }
 
-  ipoint <- 1
-  rev_lo_points <- numeric(0)
+  ipoint = 1
+  rev_lo_points = numeric(0)
   while ((ipoint <= length(reverse_check)) && (relative_slopes[reverse_check[ipoint]] <= max_slope)) {
-    rev_lo_points <- c(rev_lo_points, reverse_check[ipoint])
-    ipoint <- ipoint + 1
+    rev_lo_points = c(rev_lo_points, reverse_check[ipoint])
+    ipoint = ipoint + 1
   }
 
-  reject_points <- c(seq(1, nrow(mz_peak) - 1)[forward_lo_points],
+  reject_points = c(seq(1, nrow(mz_peak) - 1)[forward_lo_points],
                      seq(2, nrow(mz_peak))[rev_lo_points])
 
 
   if (length(reject_points) == 0) {
-    possible_points <- new_points
+    possible_points = new_points
   } else {
-    possible_points <- new_points[-reject_points]
+    possible_points = new_points[-reject_points]
   }
 
-  n_point <- length(possible_points)
+  n_point = length(possible_points)
 
   if (n_point >= min_points) {
-    possible_mz <- mz_peak[possible_points, ]
-    mean_mz_diff <- mean(diff(possible_mz$mz))
-    peak_area <- sum(mean_mz_diff * possible_mz$intensity)
-    peak_info <- c(start = org_points[possible_points[1]], stop = org_points[possible_points[length(possible_points)]],
+    possible_mz = mz_peak[possible_points, ]
+    mean_mz_diff = mean(diff(possible_mz$mz))
+    peak_area = sum(mean_mz_diff * possible_mz$intensity)
+    peak_info = c(start = org_points[possible_points[1]], stop = org_points[possible_points[length(possible_points)]],
                    area = peak_area)
   } else {
-    peak_info <- c(start = NA, stop = NA, area = NA)
+    peak_info = c(start = NA, stop = NA, area = NA)
   }
   peak_info
 }
@@ -318,11 +318,11 @@ test_peak_area_slope <- function(mz_peak, min_points = 5, min_area = 0.1, max_sl
 #' @param min_area the minimum area to consider
 #'
 #' @return numeric
-choose_peak_points_area <- function(area_results, min_area = 0.1){
+choose_peak_points_area = function(area_results, min_area = 0.1){
   if (!is.na(area_results["area"])) {
-    out_points <- seq(area_results["start"], area_results["stop"])
+    out_points = seq(area_results["start"], area_results["stop"])
   } else {
-    out_points <- NA
+    out_points = NA
   }
 
   out_points
@@ -341,28 +341,28 @@ choose_peak_points_area <- function(area_results, min_area = 0.1){
 #'
 #' @return list
 #' @export
-exponential_fit <- function(x, y, w = NULL, n_exp = 1, center = FALSE){
+exponential_fit = function(x, y, w = NULL, n_exp = 1, center = FALSE){
   if (center) {
-    mean_x <- mean(x, na.rm = TRUE)
-    center_x <- x - mean_x
+    mean_x = mean(x, na.rm = TRUE)
+    center_x = x - mean_x
   } else {
-    center_x <- x
-    mean_x <- 0
+    center_x = x
+    mean_x = 0
   }
 
-  x_exp <- lapply(seq(0, n_exp), function(in_exp){
+  x_exp = lapply(seq(0, n_exp), function(in_exp){
     center_x^in_exp
   })
-  X <- do.call(cbind, x_exp)
+  X = do.call(cbind, x_exp)
 
   if (is.null(w)) {
-    out_fit <- stats::lm.fit(X, y)
+    out_fit = stats::lm.fit(X, y)
   } else {
-    out_fit <- stats::lm.wfit(X, y, w)
+    out_fit = stats::lm.wfit(X, y, w)
   }
-  names(out_fit$coefficients) <- NULL
+  names(out_fit$coefficients) = NULL
 
-  out_fit$mean_x <- mean_x
+  out_fit$mean_x = mean_x
   out_fit
 }
 
@@ -378,51 +378,51 @@ exponential_fit <- function(x, y, w = NULL, n_exp = 1, center = FALSE){
 #'
 #' @return numeric
 #' @export
-exponential_predict <- function(coef, x){
-  n_exp <- seq(0, length(coef) - 1)
+exponential_predict = function(coef, x){
+  n_exp = seq(0, length(coef) - 1)
 
-  x_exp <- lapply(n_exp, function(in_exp){
+  x_exp = lapply(n_exp, function(in_exp){
     x^in_exp
   })
-  X <- do.call(cbind, x_exp)
+  X = do.call(cbind, x_exp)
 
-  Y <- X %*% coef
+  Y = X %*% coef
   Y
 }
 
-exponential_fit_zeroint <- function(x, y, w = NULL, n_exp = 1, center = FALSE){
+exponential_fit_zeroint = function(x, y, w = NULL, n_exp = 1, center = FALSE){
   if (center) {
-    mean_x <- mean(x, na.rm = TRUE)
-    center_x <- x - mean_x
+    mean_x = mean(x, na.rm = TRUE)
+    center_x = x - mean_x
   } else {
-    center_x <- x
-    mean_x <- 0
+    center_x = x
+    mean_x = 0
   }
-  x_exp <- lapply(seq(1, n_exp), function(in_exp){
+  x_exp = lapply(seq(1, n_exp), function(in_exp){
     center_x^in_exp
   })
-  X <- do.call(cbind, x_exp)
+  X = do.call(cbind, x_exp)
 
   if (is.null(w)) {
-    out_fit <- stats::lm.fit(X, y)
+    out_fit = stats::lm.fit(X, y)
   } else {
-    out_fit <- stats::lm.wfit(X, y, w)
+    out_fit = stats::lm.wfit(X, y, w)
   }
-  names(out_fit$coefficients) <- NULL
+  names(out_fit$coefficients) = NULL
 
-  out_fit$mean_x <- mean_x
+  out_fit$mean_x = mean_x
   out_fit
 }
 
-exponential_predict_zeroint <- function(coef, x){
-  n_exp <- seq(0, length(coef))
+exponential_predict_zeroint = function(coef, x){
+  n_exp = seq(0, length(coef))
 
-  x_exp <- lapply(n_exp, function(in_exp){
+  x_exp = lapply(n_exp, function(in_exp){
     x^in_exp
   })
-  X <- do.call(cbind, x_exp)
+  X = do.call(cbind, x_exp)
 
-  Y <- X %*% c(0, coef)
+  Y = X %*% c(0, coef)
   Y
 }
 
@@ -437,17 +437,17 @@ exponential_predict_zeroint <- function(coef, x){
 #'
 #' @importFrom stats lm.fit lm.wfit
 #' @return list
-parabolic_fit <- function(x, y, w = NULL){
-  center_x <- x - mean(x)
+parabolic_fit = function(x, y, w = NULL){
+  center_x = x - mean(x)
 
-  X <- matrix(c(rep(1, length(x)), center_x, center_x^2), nrow = length(x), ncol = 3, byrow = FALSE)
+  X = matrix(c(rep(1, length(x)), center_x, center_x^2), nrow = length(x), ncol = 3, byrow = FALSE)
 
   if (is.null(w)) {
-    out_fit <- stats::lm.fit(X, y)
+    out_fit = stats::lm.fit(X, y)
   } else {
-    out_fit <- stats::lm.wfit(X, y, w)
+    out_fit = stats::lm.wfit(X, y, w)
   }
-  names(out_fit$coefficients) <- NULL
+  names(out_fit$coefficients) = NULL
   out_fit
 }
 
@@ -459,9 +459,9 @@ parabolic_fit <- function(x, y, w = NULL){
 #' @param y the y-values, the dependent value
 #'
 #' @return vector
-linear_fit <- function(x, y){
-  center_x <- x - mean(x)
-  x_matrix <- cbind(1, center_x)
+linear_fit = function(x, y){
+  center_x = x - mean(x)
+  x_matrix = cbind(1, center_x)
   as.vector(solve(t(x_matrix) %*% x_matrix, t(x_matrix) %*% y, tol = 1e-18))
 }
 
@@ -492,10 +492,10 @@ linear_fit <- function(x, y){
 #'
 #' @return numeric
 #' @export
-model_peak_center_intensity <- function(x, coefficients){
-  mn_x <- mean(x)
-  peak_center <- ((-1 * coefficients[2]) / (2 * coefficients[3]))
-  center_int <- coefficients[1] + coefficients[2] * peak_center +
+model_peak_center_intensity = function(x, coefficients){
+  mn_x = mean(x)
+  peak_center = ((-1 * coefficients[2]) / (2 * coefficients[3]))
+  center_int = coefficients[1] + coefficients[2] * peak_center +
     (coefficients[3] * (peak_center ^ 2))
   c(ObservedMZ = peak_center + mn_x, Height = center_int)
 }
@@ -508,13 +508,13 @@ model_peak_center_intensity <- function(x, coefficients){
 #'
 #' @export
 #' @return numeric
-ssr <- function(object){
-  w <- object$weights
-  r <- object$residuals
+ssr = function(object){
+  w = object$weights
+  r = object$residuals
   if (is.null(w)) {
-    rss <- sum(r^2)
+    rss = sum(r^2)
   } else {
-    rss <- sum(r^2 * w)
+    rss = sum(r^2 * w)
   }
 
   sqrt(rss/object$df)
@@ -531,9 +531,9 @@ ssr <- function(object){
 #'
 #' @return numeric
 #' @export
-transform_residuals <- function(original, fitted, transform = exp){
-  org_t <- transform(original)
-  fit_t <- transform(fitted)
+transform_residuals = function(original, fitted, transform = exp){
+  org_t = transform(original)
+  fit_t = transform(fitted)
   org_t - fit_t
 }
 
@@ -548,20 +548,20 @@ transform_residuals <- function(original, fitted, transform = exp){
 #' @importFrom stats weighted.mean
 #' @return numeric
 #' @export
-basic_peak_center_intensity <- function(mz, intensity){
-  peak_center <- mean(mz)
+basic_peak_center_intensity = function(mz, intensity){
+  peak_center = mean(mz)
 
   # this is used to track the points so we can pick the two that are closest
-  point_index <- seq(1, length(mz))
-  diff_center <- abs(peak_center - mz)
+  point_index = seq(1, length(mz))
+  diff_center = abs(peak_center - mz)
 
   # get the two closest points so they can be used for determining the
   # intensity of the center
-  closest_points <- point_index[order(diff_center, decreasing = FALSE)[1:2]]
-  closest_diff <- diff_center[closest_points]
-  closest_intensity <- intensity[closest_points]
+  closest_points = point_index[order(diff_center, decreasing = FALSE)[1:2]]
+  closest_diff = diff_center[closest_points]
+  closest_intensity = intensity[closest_points]
 
-  peak_intensity <- stats::weighted.mean(closest_intensity, 1 / closest_diff)
+  peak_intensity = stats::weighted.mean(closest_intensity, 1 / closest_diff)
 
   c(ObservedMZ = peak_center, Height = peak_intensity)
 }
@@ -575,8 +575,8 @@ basic_peak_center_intensity <- function(mz, intensity){
 #' @param zero_value what value actually represents zero
 #'
 #' @return numeric
-area_sum_points <- function(peak_mz, peak_intensity, zero_value = 0){
-  mean_diff <- mean(diff(peak_mz))
+area_sum_points = function(peak_mz, peak_intensity, zero_value = 0){
+  mean_diff = mean(diff(peak_mz))
   c(Area = sum((peak_intensity - zero_value) * mean_diff))
 }
 
@@ -591,33 +591,33 @@ area_sum_points <- function(peak_mz, peak_intensity, zero_value = 0){
 #' @param model_peak_loc what defined the peak fitting the parabolic model
 #'
 #' @return numeric
-integrate_sides <- function(peak_mz, peak_int, full_peak_loc, model_peak_loc){
-  full_is_model <- which(full_peak_loc %in% model_peak_loc)
-  model_start <- full_is_model[1]
-  model_stop <- full_is_model[length(full_is_model)]
+integrate_sides = function(peak_mz, peak_int, full_peak_loc, model_peak_loc){
+  full_is_model = which(full_peak_loc %in% model_peak_loc)
+  model_start = full_is_model[1]
+  model_stop = full_is_model[length(full_is_model)]
 
-  left_side_index <- c(full_peak_loc[1], full_peak_loc[model_start])
-  right_side_index <- c(full_peak_loc[model_stop], full_peak_loc[length(full_peak_loc)])
+  left_side_index = c(full_peak_loc[1], full_peak_loc[model_start])
+  right_side_index = c(full_peak_loc[model_stop], full_peak_loc[length(full_peak_loc)])
 
   if (length(unique(left_side_index)) > 1) {
-    left_model <- linear_fit(peak_mz[left_side_index], peak_int[left_side_index])
-    left_zero <- (left_model[1] / (-1*left_model[2])) + mean(peak_mz[left_side_index])
+    left_model = linear_fit(peak_mz[left_side_index], peak_int[left_side_index])
+    left_zero = (left_model[1] / (-1*left_model[2])) + mean(peak_mz[left_side_index])
 
-    left_base <- abs(left_zero - peak_mz[left_side_index[2]])
-    left_height <- abs(0 - peak_int[left_side_index[2]])
-    left_area <- 0.5 * (left_base * left_height)
+    left_base = abs(left_zero - peak_mz[left_side_index[2]])
+    left_height = abs(0 - peak_int[left_side_index[2]])
+    left_area = 0.5 * (left_base * left_height)
   } else {
-    left_area <- 0
+    left_area = 0
   }
 
   if (length(unique(right_side_index)) > 1) {
-    right_model <- linear_fit(peak_mz[right_side_index], peak_int[right_side_index])
-    right_zero <- (right_model[1] / (-1*right_model[2])) + mean(peak_mz[right_side_index])
-    right_base <- abs(right_zero - peak_mz[right_side_index[1]])
-    right_height <- abs(0 - peak_int[right_side_index[1]])
-    right_area <- 0.5 * (right_base * right_height)
+    right_model = linear_fit(peak_mz[right_side_index], peak_int[right_side_index])
+    right_zero = (right_model[1] / (-1*right_model[2])) + mean(peak_mz[right_side_index])
+    right_base = abs(right_zero - peak_mz[right_side_index[1]])
+    right_height = abs(0 - peak_int[right_side_index[1]])
+    right_area = 0.5 * (right_base * right_height)
   } else {
-    right_area <- 0
+    right_area = 0
   }
 
   c(Area = right_area + left_area)
@@ -634,23 +634,23 @@ integrate_sides <- function(peak_mz, peak_int, full_peak_loc, model_peak_loc){
 #'
 #' @export
 #' @return numeric
-integrate_model <- function(model_mz, model_coeff, n_point = 100, log_transform = "log"){
+integrate_model = function(model_mz, model_coeff, n_point = 100, log_transform = "log"){
   # setup the model
-  model_function <- function(model_coeff){
+  model_function = function(model_coeff){
     function(x, log_transform = "log"){
-      out_val <- model_coeff[1] + model_coeff[2]*x + model_coeff[3]*(x^2)
+      out_val = model_coeff[1] + model_coeff[2]*x + model_coeff[3]*(x^2)
       if (log_transform == "log") {
-        out_val <- exp(out_val)
+        out_val = exp(out_val)
       }
       out_val
     }
   }
   # and it's function
-  integrate_function <- model_function(model_coeff)
+  integrate_function = model_function(model_coeff)
   # mean center so it works right
-  mn_model_loc <- model_mz - mean(model_mz)
+  mn_model_loc = model_mz - mean(model_mz)
 
-  model_area <- stats::integrate(integrate_function, min(mn_model_loc), max(mn_model_loc), log_transform = log_transform)
+  model_area = stats::integrate(integrate_function, min(mn_model_loc), max(mn_model_loc), log_transform = log_transform)
   c(Area = model_area$value)
 
 }
@@ -666,10 +666,10 @@ integrate_model <- function(model_mz, model_coeff, n_point = 100, log_transform 
 #' @param model_coeff the model of the peak
 #' @param n_point number of points for integration of the model section
 #' @param log_transform which log transformation was used
-integration_based_area <- function(mz_data, int_data, full_peak_loc, model_peak_loc, model_coeff, n_point = 100, log_transform = "log"){
-  model_area <- integrate_model(mz_data[model_peak_loc], model_coeff, n_point, log_transform)
+integration_based_area = function(mz_data, int_data, full_peak_loc, model_peak_loc, model_coeff, n_point = 100, log_transform = "log"){
+  model_area = integrate_model(mz_data[model_peak_loc], model_coeff, n_point, log_transform)
 
-  side_area <- integrate_sides(mz_data, int_data, full_peak_loc, model_peak_loc)
+  side_area = integrate_sides(mz_data, int_data, full_peak_loc, model_peak_loc)
 
   c(Area = model_area + side_area)
 }
@@ -680,23 +680,23 @@ integration_based_area <- function(mz_data, int_data, full_peak_loc, model_peak_
 #' @param min_points how many points needed
 #'
 #' @return numeric
-get_area_peak <- function(possible_peak, min_points){
-  area_peak <- test_peak_area(possible_peak[, c("mz", "intensity")], min_points = min_points - 2)
-  area_points <- choose_peak_points_area(area_peak)
+get_area_peak = function(possible_peak, min_points){
+  area_peak = test_peak_area(possible_peak[, c("mz", "intensity")], min_points = min_points - 2)
+  area_points = choose_peak_points_area(area_peak)
 
   if (!is.na(area_points[1])) {
-    peak_model <- parabolic_fit(possible_peak[area_points, "mz"], possible_peak[area_points, "log_int"])
-    peak_model$residuals <- transform_residuals(possible_peak[area_points, "log_int"], peak_model$fitted.values)
-    peak_ssr <- ssr(peak_model)
-    peak_center_model <- model_peak_center_intensity(possible_peak[area_points, "mz"], peak_model$coefficients)
-    peak_center_model["Height"] <- exp(peak_center_model["Height"])
-    full_points <- seq(1, nrow(possible_peak))
-    peak_area_model <- integration_based_area(possible_peak$mz, possible_peak$intensity,
+    peak_model = parabolic_fit(possible_peak[area_points, "mz"], possible_peak[area_points, "log_int"])
+    peak_model$residuals = transform_residuals(possible_peak[area_points, "log_int"], peak_model$fitted.values)
+    peak_ssr = ssr(peak_model)
+    peak_center_model = model_peak_center_intensity(possible_peak[area_points, "mz"], peak_model$coefficients)
+    peak_center_model["Height"] = exp(peak_center_model["Height"])
+    full_points = seq(1, nrow(possible_peak))
+    peak_area_model = integration_based_area(possible_peak$mz, possible_peak$intensity,
                                               full_points, area_points, peak_model$coefficients)
   } else {
-    peak_center_model <- c(ObservedMZ = NA, Height = NA)
-    peak_area_model <- c(Area = NA)
-    peak_ssr <- NA
+    peak_center_model = c(ObservedMZ = NA, Height = NA)
+    peak_area_model = c(Area = NA)
+    peak_ssr = NA
   }
   data.frame(ObservedMZ = peak_center_model["ObservedMZ"],
              Height = peak_center_model["Height"],
@@ -711,24 +711,24 @@ get_area_peak <- function(possible_peak, min_points){
 #' @param min_points how many points needed
 #'
 #' @return numeric
-get_area_peak_rejslope <- function(possible_peak, min_points){
-  area_peak <- test_peak_area_slope(possible_peak[, c("mz", "intensity")], min_points = min_points - 2)
-  area_points <- choose_peak_points_area(area_peak)
+get_area_peak_rejslope = function(possible_peak, min_points){
+  area_peak = test_peak_area_slope(possible_peak[, c("mz", "intensity")], min_points = min_points - 2)
+  area_points = choose_peak_points_area(area_peak)
 
   if (!is.na(area_points[1])) {
-    peak_model <- parabolic_fit(possible_peak[area_points, "mz"], possible_peak[area_points, "log_int"])
-    peak_model$residuals <- transform_residuals(possible_peak[area_points, "log_int"], peak_model$fitted.values)
-    peak_ssr <- ssr(peak_model)
+    peak_model = parabolic_fit(possible_peak[area_points, "mz"], possible_peak[area_points, "log_int"])
+    peak_model$residuals = transform_residuals(possible_peak[area_points, "log_int"], peak_model$fitted.values)
+    peak_ssr = ssr(peak_model)
 
-    peak_center_model <- model_peak_center_intensity(possible_peak[area_points, "mz"], peak_model$coefficients)
-    peak_center_model["Height"] <- exp(peak_center_model["Height"])
-    full_points <- seq(1, nrow(possible_peak))
-    peak_area_model <- integration_based_area(possible_peak$mz, possible_peak$intensity,
+    peak_center_model = model_peak_center_intensity(possible_peak[area_points, "mz"], peak_model$coefficients)
+    peak_center_model["Height"] = exp(peak_center_model["Height"])
+    full_points = seq(1, nrow(possible_peak))
+    peak_area_model = integration_based_area(possible_peak$mz, possible_peak$intensity,
                                               full_points, area_points, peak_model$coefficients)
   } else {
-    peak_center_model <- c(ObservedMZ = NA, Height = NA)
-    peak_area_model <- c(Area = NA)
-    peak_ssr <- NA
+    peak_center_model = c(ObservedMZ = NA, Height = NA)
+    peak_area_model = c(Area = NA)
+    peak_ssr = NA
   }
   data.frame(ObservedMZ = peak_center_model["ObservedMZ"],
              Height = peak_center_model["Height"],
@@ -744,26 +744,26 @@ get_area_peak_rejslope <- function(possible_peak, min_points){
 #' @param min_points min number of points
 #'
 #' @return numeric
-get_rsq_peak <- function(possible_peak, min_rsq, min_points){
-  rsq_peak <- test_peak_rsq(possible_peak[, c("mz", "log_int")], min_points = min_points)
-  rsq_points <- choose_peak_rsq(rsq_peak, min_rsq)
+get_rsq_peak = function(possible_peak, min_rsq, min_points){
+  rsq_peak = test_peak_rsq(possible_peak[, c("mz", "log_int")], min_points = min_points)
+  rsq_points = choose_peak_rsq(rsq_peak, min_rsq)
 
-  min_rsq_text <- substring(as.character(min_rsq), 3)
+  min_rsq_text = substring(as.character(min_rsq), 3)
 
   if (!is.na(rsq_points[1])) {
-    peak_model <- parabolic_fit(possible_peak[rsq_points, "mz"], possible_peak[rsq_points, "log_int"])
-    peak_model$residuals <- transform_residuals(possible_peak[rsq_points, "log_int"], peak_model$fitted.values)
-    peak_ssr <- ssr(peak_model)
+    peak_model = parabolic_fit(possible_peak[rsq_points, "mz"], possible_peak[rsq_points, "log_int"])
+    peak_model$residuals = transform_residuals(possible_peak[rsq_points, "log_int"], peak_model$fitted.values)
+    peak_ssr = ssr(peak_model)
 
-    peak_center_model <- model_peak_center_intensity(possible_peak[rsq_points, "mz"], peak_model$coefficients)
-    peak_center_model["Height"] <- exp(peak_center_model["Height"])
-    full_points <- seq(1, nrow(possible_peak))
-    peak_area_model <- integration_based_area(possible_peak$mz, possible_peak$intensity,
+    peak_center_model = model_peak_center_intensity(possible_peak[rsq_points, "mz"], peak_model$coefficients)
+    peak_center_model["Height"] = exp(peak_center_model["Height"])
+    full_points = seq(1, nrow(possible_peak))
+    peak_area_model = integration_based_area(possible_peak$mz, possible_peak$intensity,
                                               full_points, rsq_points, peak_model$coefficients)
   } else {
-    peak_center_model <- c(ObservedMZ = NA, Height = NA)
-    peak_area_model <- c(Area = NA)
-    peak_ssr <- NA
+    peak_center_model = c(ObservedMZ = NA, Height = NA)
+    peak_area_model = c(Area = NA)
+    peak_ssr = NA
   }
   data.frame(ObservedMZ = peak_center_model["ObservedMZ"],
              Height = peak_center_model["Height"],
@@ -795,20 +795,20 @@ get_rsq_peak <- function(possible_peak, min_rsq, min_points){
 #'   \item{lm_unweighted}{quadratic linear fit to log-intensities}
 #' }
 #'
-get_peak_info <- function(peak_data, peak_method = "lm_weighted", min_points = 4){
+get_peak_info = function(peak_data, peak_method = "lm_weighted", min_points = 4){
   assertthat::assert_that(all(c("mz", "intensity", "log_int") %in% names(peak_data)))
 
-  peak_info <- switch(peak_method,
+  peak_info = switch(peak_method,
                       lm_weighted = {
-                        weights <- peak_data[, "intensity"] / max(peak_data[, "intensity"])
+                        weights = peak_data[, "intensity"] / max(peak_data[, "intensity"])
                         get_fitted_peak_info(peak_data, w = weights)
                       },
                       lm_unweighted = {
                         get_fitted_peak_info(peak_data)
                       },
                       basic = {
-                        peak_area_basic <- area_sum_points(peak_data$mz, peak_data$intensity)
-                        peak_center_basic <- basic_peak_center_intensity(peak_data$mz, peak_data$intensity)
+                        peak_area_basic = area_sum_points(peak_data$mz, peak_data$intensity)
+                        peak_center_basic = basic_peak_center_intensity(peak_data$mz, peak_data$intensity)
 
                         data.frame(ObservedMZ = peak_center_basic["ObservedMZ"],
                                    Height = peak_center_basic["Height"],
@@ -817,7 +817,7 @@ get_peak_info <- function(peak_data, peak_method = "lm_weighted", min_points = 4
                                    stringsAsFactors = FALSE)
                       })
 
-  peak_info$type <- peak_method
+  peak_info$type = peak_method
   peak_info
 }
 
@@ -832,35 +832,35 @@ get_peak_info <- function(peak_data, peak_method = "lm_weighted", min_points = 4
 #'
 #' @return numeric
 #' @export
-peak_info <- function(possible_peak, min_points = 4, min_area = 0.1){
+peak_info = function(possible_peak, min_points = 4, min_area = 0.1){
   if (nrow(possible_peak) >= min_points) {
     # always do the basic peaks
-    peak_area_basic <- area_sum_points(possible_peak$mz, possible_peak$intensity)
-    peak_center_basic <- basic_peak_center_intensity(possible_peak$mz, possible_peak$intensity)
+    peak_area_basic = area_sum_points(possible_peak$mz, possible_peak$intensity)
+    peak_center_basic = basic_peak_center_intensity(possible_peak$mz, possible_peak$intensity)
 
-    basic_info <- data.frame(ObservedMZ = peak_center_basic["ObservedMZ"],
+    basic_info = data.frame(ObservedMZ = peak_center_basic["ObservedMZ"],
                Height = peak_center_basic["Height"],
                Area = peak_area_basic,
                SSR = NA,
                type = "basic")
     # then try area based first
-    area_info <- get_area_peak(possible_peak, min_points)
+    area_info = get_area_peak(possible_peak, min_points)
 
     # rejecting the low slope points
-    area_info_hislop <- get_area_peak_rejslope(possible_peak, min_points)
+    area_info_hislop = get_area_peak_rejslope(possible_peak, min_points)
 
     # then model with 0.98 as cutoff
-    rsq_98_info <- get_rsq_peak(possible_peak, 0.98, min_points)
+    rsq_98_info = get_rsq_peak(possible_peak, 0.98, min_points)
 
     # then model with 0.95 as cutoff
-    rsq_95_info <- get_rsq_peak(possible_peak, 0.95, min_points)
+    rsq_95_info = get_rsq_peak(possible_peak, 0.95, min_points)
 
-    out_peak <- rbind(basic_info, area_info)
-    out_peak <- rbind(out_peak, rsq_98_info)
-    out_peak <- rbind(out_peak, rsq_95_info)
-    out_peak <- rbind(out_peak, area_info_hislop)
+    out_peak = rbind(basic_info, area_info)
+    out_peak = rbind(out_peak, rsq_98_info)
+    out_peak = rbind(out_peak, rsq_95_info)
+    out_peak = rbind(out_peak, area_info_hislop)
   } else {
-    out_peak <- data.frame(ObservedMZ = NA, Height = NA, Area = NA, type = NA)
+    out_peak = data.frame(ObservedMZ = NA, Height = NA, Area = NA, type = NA)
   }
 
   out_peak
@@ -877,15 +877,15 @@ peak_info <- function(possible_peak, min_points = 4, min_area = 0.1){
 #'
 #' @return data.frame
 #' @export
-get_fitted_peak_info <- function(possible_peak, use_loc = "mz", w = NULL, addend = 1e-8){
-  peak_model <- parabolic_fit(possible_peak[, use_loc], possible_peak[, "log_int"], w)
-  peak_model$residuals <- transform_residuals(possible_peak[, "log_int"], peak_model$fitted.values)
-  peak_ssr <- ssr(peak_model)
+get_fitted_peak_info = function(possible_peak, use_loc = "mz", w = NULL, addend = 1e-8){
+  peak_model = parabolic_fit(possible_peak[, use_loc], possible_peak[, "log_int"], w)
+  peak_model$residuals = transform_residuals(possible_peak[, "log_int"], peak_model$fitted.values)
+  peak_ssr = ssr(peak_model)
 
-  peak_center_model <- model_peak_center_intensity(possible_peak[, use_loc], peak_model$coefficients)
-  peak_center_model["Height"] <- exp(peak_center_model["Height"]) - addend
-  full_points <- seq(1, nrow(possible_peak))
-  peak_area_model <- integration_based_area(possible_peak[, use_loc], possible_peak$intensity,
+  peak_center_model = model_peak_center_intensity(possible_peak[, use_loc], peak_model$coefficients)
+  peak_center_model["Height"] = exp(peak_center_model["Height"]) - addend
+  full_points = seq(1, nrow(possible_peak))
+  peak_area_model = integration_based_area(possible_peak[, use_loc], possible_peak$intensity,
                                             full_points, full_points, peak_model$coefficients)
   data.frame(ObservedCenter = peak_center_model["ObservedMZ"],
              Height = peak_center_model["Height"],
@@ -902,33 +902,33 @@ get_fitted_peak_info <- function(possible_peak, use_loc = "mz", w = NULL, addend
 #'
 #' @return data.frame
 #' @export
-get_cauchy_peak_info <- function(possible_peak, w = NULL){
+get_cauchy_peak_info = function(possible_peak, w = NULL){
   # the function to use for estimating the cauchy peak
   # x: the values in x
   # params: center, peak-width at half-height, and scaling factor
-  cauchy_estimate <- function(x, params){
-    xnot <- params[1]
-    g <- params[2]
-    max_real <- params[3]
-    denom <- pi * g * (1 + ((x - xnot) / g)^2)
-    new_y <- 1 / denom
-    scale_factor <- max_real / max(new_y)
+  cauchy_estimate = function(x, params){
+    xnot = params[1]
+    g = params[2]
+    max_real = params[3]
+    denom = pi * g * (1 + ((x - xnot) / g)^2)
+    new_y = 1 / denom
+    scale_factor = max_real / max(new_y)
     new_y * scale_factor
   }
-  test_mz <- possible_peak
-  fit_weight <- test_mz$intensity / max(test_mz$intensity)
-  x.0 <- median(test_mz$mz[fit_weight >= 0.1])
-  gamma.0 <- 1.2e-4
-  scale.0 <- max(test_mz$intensity)
-  fit <- suppressWarnings(nls(intensity ~ cauchy_estimate(mz, c(xnot, g, scale)), data = test_mz, start = c(xnot = x.0, g = gamma.0, scale = scale.0),
+  test_mz = possible_peak
+  fit_weight = test_mz$intensity / max(test_mz$intensity)
+  x.0 = median(test_mz$mz[fit_weight >= 0.1])
+  gamma.0 = 1.2e-4
+  scale.0 = max(test_mz$intensity)
+  fit = suppressWarnings(nls(intensity ~ cauchy_estimate(mz, c(xnot, g, scale)), data = test_mz, start = c(xnot = x.0, g = gamma.0, scale = scale.0),
              nls.control(minFactor = 1/1e14, warnOnly = TRUE, maxiter = 200), weights = fit_weight))
-  fit_params <- fit$m$getAllPars()
+  fit_params = fit$m$getAllPars()
 
-  fit_cauchy <- fit$m$predict()
-  fit_model <- list(residuals = fit_cauchy - test_mz$intensity, weights = fit_weight,
+  fit_cauchy = fit$m$predict()
+  fit_model = list(residuals = fit_cauchy - test_mz$intensity, weights = fit_weight,
                     df = nrow(possible_peak) - 1)
-  fit_ssr <- ssr(fit_model)
-  fit_area <- stats::integrate(cauchy_estimate, min(test_mz$mz), max(test_mz$mz), params = fit_params)
+  fit_ssr = ssr(fit_model)
+  fit_area = stats::integrate(cauchy_estimate, min(test_mz$mz), max(test_mz$mz), params = fit_params)
 
   data.frame(ObservedMZ = fit_params[1],
              Height = cauchy_estimate(fit_params[1], fit_params),
@@ -947,18 +947,18 @@ get_cauchy_peak_info <- function(possible_peak, w = NULL){
 #'
 #' @return numeric
 #' @export
-peak_info2 <- function(possible_peak, min_points = 5, min_area = 0.1){
+peak_info2 = function(possible_peak, min_points = 5, min_area = 0.1){
   if (nrow(possible_peak) >= min_points) {
 
-    unweighted_info <- get_fitted_peak_info(possible_peak)
-    unweighted_info$type <- "lm_unweighted"
-    weights <- possible_peak[, "intensity"] / max(possible_peak[, "intensity"])
-    weighted_info <- get_fitted_peak_info(possible_peak, w = weights)
-    weighted_info$type <- "lm_weighted"
+    unweighted_info = get_fitted_peak_info(possible_peak)
+    unweighted_info$type = "lm_unweighted"
+    weights = possible_peak[, "intensity"] / max(possible_peak[, "intensity"])
+    weighted_info = get_fitted_peak_info(possible_peak, w = weights)
+    weighted_info$type = "lm_weighted"
 
-    out_peak <- rbind(unweighted_info, weighted_info)
+    out_peak = rbind(unweighted_info, weighted_info)
   } else {
-    out_peak <- data.frame(ObservedMZ = NA, Height = NA, Area = NA, type = NA)
+    out_peak = data.frame(ObservedMZ = NA, Height = NA, Area = NA, type = NA)
   }
 
   out_peak
@@ -974,22 +974,22 @@ peak_info2 <- function(possible_peak, min_points = 5, min_area = 0.1){
 #'
 #' @export
 #' @return list
-define_peak_type <- function(peak_data, flat_cut = 0.98){
-  peak_loc2 <- seq(1, nrow(peak_data))
-  peak_max_loc <- which.max(peak_data$intensity[peak_loc2])
-  peak_loc_nomax <- peak_loc2[peak_loc2 != peak_max_loc]
-  peak_2nd_loc <- peak_loc_nomax[which.max(peak_data$intensity[peak_loc_nomax])]
-  peak_ratio <- peak_data$intensity[peak_2nd_loc] / peak_data$intensity[peak_max_loc]
+define_peak_type = function(peak_data, flat_cut = 0.98){
+  peak_loc2 = seq(1, nrow(peak_data))
+  peak_max_loc = which.max(peak_data$intensity[peak_loc2])
+  peak_loc_nomax = peak_loc2[peak_loc2 != peak_max_loc]
+  peak_2nd_loc = peak_loc_nomax[which.max(peak_data$intensity[peak_loc_nomax])]
+  peak_ratio = peak_data$intensity[peak_2nd_loc] / peak_data$intensity[peak_max_loc]
   if (peak_ratio >= flat_cut) {
-    use_locs <- sort(c(peak_max_loc, peak_2nd_loc))
-    max_data <- list(peak_points = peak_loc2,
+    use_locs = sort(c(peak_max_loc, peak_2nd_loc))
+    max_data = list(peak_points = peak_loc2,
                      max_intensity = peak_data$intensity[peak_max_loc],
                      min_loc = peak_data$mz[use_locs[1]], max_loc = peak_data$mz[use_locs[2]],
                      type = "flat")
   } else {
 
-    either_side_diff <- abs(peak_data$mz[peak_max_loc + 1] - peak_data$mz[peak_max_loc - 1]) / 2
-    max_data <- list(peak_points = peak_loc2,
+    either_side_diff = abs(peak_data$mz[peak_max_loc + 1] - peak_data$mz[peak_max_loc - 1]) / 2
+    max_data = list(peak_points = peak_loc2,
                      max_intensity = peak_data$intensity[peak_max_loc],
                      min_loc = peak_data$mz[peak_max_loc] - either_side_diff,
                      max_loc = peak_data$mz[peak_max_loc] + either_side_diff,
@@ -1011,24 +1011,24 @@ define_peak_type <- function(peak_data, flat_cut = 0.98){
 #'
 #' @export
 #' @return list
-find_peaks <- function(mz_data, min_points = 4, n_peak = Inf, flat_cut = 0.98){
-  peak_locations <- pracma::findpeaks(mz_data$intensity, nups = floor(min_points/2),
+find_peaks = function(mz_data, min_points = 4, n_peak = Inf, flat_cut = 0.98){
+  peak_locations = pracma::findpeaks(mz_data$intensity, nups = floor(min_points/2),
                                       ndowns = floor(min_points/2))
-  peak_locations <- matrix(peak_locations, ncol = 4, byrow = FALSE)
-  mz_data$log_int <- metabolomicsUtilities::log_with_min(mz_data$intensity)
+  peak_locations = matrix(peak_locations, ncol = 4, byrow = FALSE)
+  mz_data$log_int = metabolomicsUtilities::log_with_min(mz_data$intensity)
 
   if (is.infinite(n_peak)) {
-    n_peak <- nrow(peak_locations)
+    n_peak = nrow(peak_locations)
   } else {
-    n_peak <- min(c(nrow(peak_locations), n_peak))
+    n_peak = min(c(nrow(peak_locations), n_peak))
   }
-  mz_peaks <- lapply(seq(1, n_peak), function(in_peak){
+  mz_peaks = lapply(seq(1, n_peak), function(in_peak){
     #print(in_peak)
-    peak_loc <- seq(peak_locations[in_peak, 3], peak_locations[in_peak, 4])
-    out_peak <- PeakMS$new(mz_data[peak_loc, ], min_points = min_points, flat_cut = flat_cut)
-    out_peak$peak_id <- in_peak
-    out_peak$n_point <- length(peak_loc)
+    peak_loc = seq(peak_locations[in_peak, 3], peak_locations[in_peak, 4])
+    out_peak = PeakMS$new(mz_data[peak_loc, ], min_points = min_points, flat_cut = flat_cut)
+    out_peak$peak_id = in_peak
+    out_peak$n_point = length(peak_loc)
   })
-  #out_peaks <- do.call(rbind, mz_peaks)
+  #out_peaks = do.call(rbind, mz_peaks)
   mz_peaks
 }

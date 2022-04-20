@@ -4,11 +4,11 @@
 #' of reading in the mass
 #'
 #' @export
-CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
+CharacterizeMSPeaks = R6::R6Class("CharacterizeMSPeaks",
   public = list(
    load_file = function(){
      log_message("Loading raw data ...")
-     self$zip_ms <- ZipMS$new(self$in_file, self$metadata_file, self$out_file, temp_loc = self$temp_loc)
+     self$zip_ms = ZipMS$new(self$in_file, self$metadata_file, self$out_file, temp_loc = self$temp_loc)
    },
    found_peaks = NULL,
    raw_scan_filter = NULL,
@@ -16,22 +16,22 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
    find_peaks = function(...){
      log_message("Characterizing peaks ...")
      if (inherits(self$peak_finder, "R6")) {
-       self$zip_ms$peak_finder <- self$peak_finder
+       self$zip_ms$peak_finder = self$peak_finder
        self$zip_ms$peak_finder$add_data(self$zip_ms$raw_ms)
        if (!is.null(self$zip_ms$id)) {
-         self$zip_ms$peak_finder$sample_id <- self$zip_ms$id
+         self$zip_ms$peak_finder$sample_id = self$zip_ms$id
        } else {
-         self$zip_ms$peak_finder$sample_id <- basename_no_file_ext(self$in_file)
+         self$zip_ms$peak_finder$sample_id = basename_no_file_ext(self$in_file)
        }
        self$zip_ms$peak_finder$characterize_peaks()
-       self$zip_ms$peak_finder$raw_data <- NULL
+       self$zip_ms$peak_finder$raw_data = NULL
      } else if ("function" %in% class(self$peak_finder)) {
-       self$found_peaks <- self$peak_finder(self$zip_ms$raw_ms, ...)
+       self$found_peaks = self$peak_finder(self$zip_ms$raw_ms, ...)
      }
    },
 
    summarize = function(){
-     self$zip_ms$json_summary <- self$zip_ms$peak_finder$summarize()
+     self$zip_ms$json_summary = self$zip_ms$peak_finder$summarize()
    },
 
    save_peaks = function(){
@@ -50,13 +50,13 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
 
    peak_finder_class = NULL,
    set_peak_finder = function(in_function){
-     self$peak_finder <- in_function
+     self$peak_finder = in_function
    },
 
    filter_raw_scans = function(){
      log_message("Filtering and removing bad scans ...")
      if (!is.null(self$raw_scan_filter)) {
-       self$zip_ms$raw_ms <- self$raw_scan_filter(self$zip_ms$raw_ms)
+       self$zip_ms$raw_ms = self$raw_scan_filter(self$zip_ms$raw_ms)
      }
      #self$zip_ms$raw_ms$remove_bad_resolution_scans()
    },
@@ -71,7 +71,7 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
 
    run_all = function(){
      self$load_file()
-     self$peak_finder$start_time <- Sys.time()
+     self$peak_finder$start_time = Sys.time()
      self$filter_raw_scans()
      self$find_peaks()
      self$summarize()
@@ -82,19 +82,19 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
 
    prep_data = function(){
      self$load_file()
-     self$peak_finder$start_time <- Sys.time()
+     self$peak_finder$start_time = Sys.time()
      self$filter_raw_scans()
      log_message("Characterizing peaks ...")
 
 
-     self$zip_ms$peak_finder <- self$peak_finder
+     self$zip_ms$peak_finder = self$peak_finder
      self$zip_ms$peak_finder$add_data(self$zip_ms$raw_ms)
      if (!is.null(self$zip_ms$id)) {
-       self$zip_ms$peak_finder$sample_id <- self$zip_ms$id
+       self$zip_ms$peak_finder$sample_id = self$zip_ms$id
      } else {
-       self$zip_ms$peak_finder$sample_id <- basename_no_file_ext(self$in_file)
+       self$zip_ms$peak_finder$sample_id = basename_no_file_ext(self$in_file)
      }
-     self$zip_ms$peak_finder$raw_data <- NULL
+     self$zip_ms$peak_finder$raw_data = NULL
    },
 
    add_regions = function(){
@@ -110,30 +110,30 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
    },
 
    initialize = function(in_file, metadata_file = NULL, out_file = NULL, peak_finder = NULL, temp_loc = NULL, raw_scan_filter = NULL){
-     self$in_file <- in_file
+     self$in_file = in_file
 
      if (!is.null(metadata_file)) {
-       self$metadata_file <- metadata_file
+       self$metadata_file = metadata_file
      }
 
      if (!is.null(out_file)) {
-       self$out_file <- out_file
+       self$out_file = out_file
      }
 
      if (!is.null(raw_scan_filter)) {
-       self$raw_scan_filter <- raw_scan_filter
+       self$raw_scan_filter = raw_scan_filter
      } else {
-       self$raw_scan_filter <- default_scan_filter
+       self$raw_scan_filter = default_scan_filter
      }
 
      if (!is.null(peak_finder)) {
-       self$peak_finder <- peak_finder
+       self$peak_finder = peak_finder
      } else {
-       self$peak_finder <- PeakRegionFinder$new()
+       self$peak_finder = PeakRegionFinder$new()
      }
 
      if (!is.null(temp_loc)) {
-       self$temp_loc <- temp_loc
+       self$temp_loc = temp_loc
      }
    }
   )
@@ -150,7 +150,7 @@ CharacterizeMSPeaks <- R6::R6Class("CharacterizeMSPeaks",
 #'
 #' @export
 #' @return RawMS
-default_scan_filter <- function(raw_ms){
+default_scan_filter = function(raw_ms){
   scan_time_filter(raw_ms, 4)
 }
 
@@ -165,21 +165,21 @@ default_scan_filter <- function(raw_ms){
 #'
 #' @export
 #' @return RawMS
-scan_time_filter <- function(raw_ms, min_time_difference = 4){
+scan_time_filter = function(raw_ms, min_time_difference = 4){
   scan_times = raw_ms$ms_info
   scan_times = scan_times[scan_times$scan %in% raw_ms$scan_range, ]
 
-  scan_times <- dplyr::mutate(scan_times, lag = rtime - dplyr::lag(rtime), lead = dplyr::lead(rtime) - rtime)
+  scan_times = dplyr::mutate(scan_times, lag = rtime - dplyr::lag(rtime), lead = dplyr::lead(rtime) - rtime)
 
-  high_lag <- scan_times$lag >= min_time_difference
-  high_lag[is.na(high_lag)] <- TRUE
-  high_lead <- scan_times$lead >= min_time_difference
-  high_lead[is.na(high_lead)] <- TRUE
+  high_lag = scan_times$lag >= min_time_difference
+  high_lag[is.na(high_lag)] = TRUE
+  high_lead = scan_times$lead >= min_time_difference
+  high_lead[is.na(high_lead)] = TRUE
 
-  na_lead_high_lag <- is.na(scan_times$lead) & high_lag
-  na_lag_high_lead <- is.na(scan_times$lag) & high_lead
+  na_lead_high_lag = is.na(scan_times$lead) & high_lag
+  na_lag_high_lead = is.na(scan_times$lag) & high_lead
 
-  keep_scans <- (na_lead_high_lag | high_lag) & (na_lag_high_lead | high_lead)
+  keep_scans = (na_lead_high_lag | high_lag) & (na_lag_high_lead | high_lead)
   raw_ms$set_scans(scan_range = scan_times$scan[keep_scans])
   raw_ms
 }
