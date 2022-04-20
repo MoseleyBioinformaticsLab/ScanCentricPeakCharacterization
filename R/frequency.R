@@ -190,14 +190,12 @@ mz_scans_to_frequency = function(mz_df_list, frequency_fit_description, mz_fit_d
     out_scan = convert_mz_frequency(in_scan, ...)
     out_scan
   })
-  log_message("converted frequencies")
   frequency_fits = internal_map$map_function(mz_frequency, function(in_freq){
     use_peaks = in_freq$convertable
     tmp_fit = fit_exponentials(in_freq$mean_mz[use_peaks], in_freq$mean_frequency[use_peaks], frequency_fit_description)
     tmp_fit$scan = in_freq[1, "scan"]
     tmp_fit
   })
-  log_message("fit frequencies")
 
   mz_fits = internal_map$map_function(mz_frequency, function(in_freq){
     use_peaks = in_freq$convertable
@@ -205,21 +203,24 @@ mz_scans_to_frequency = function(mz_df_list, frequency_fit_description, mz_fit_d
     tmp_fit$scan = in_freq[1, "scan"]
     tmp_fit
   })
-  log_message("fit mz")
 
   frequency_coefficients = purrr::map_df(frequency_fits, function(.x){
     tmp_df = as.data.frame(matrix(.x$coefficients, nrow = 1))
     tmp_df$scan = .x$scan
     tmp_df
   })
-  log_message("extracted coefficients")
 
   mz_coefficients = purrr::map_df(mz_fits, function(.x){
     tmp_df = as.data.frame(matrix(.x$coefficients, nrow = 1))
     tmp_df$scan = .x$scan
     tmp_df
   })
+  list(frequency_list = mz_frequency,
+       frequency_coefficients = frequency_coefficients,
+       mz_coefficients = mz_coefficients)
+}
 
+filtering_frequency = function(){
   first_slope = min(which(frequency_fit_description != 0))
   bad_coefficients = boxplot.stats(frequency_coefficients[[first_slope]])$out
 

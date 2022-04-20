@@ -55,7 +55,7 @@
 #' @export
 #' @return xcmsRaw
 import_raw_ms <- function(raw_data, ms_level = 1){
-  raw_data <- MSnbase::readMSData(raw_data, msLevel. = ms_level, mode = "inMemory")
+  raw_data <- MSnbase::readMSData(raw_data, msLevel. = ms_level, mode = "onDisk")
 
   raw_data
 }
@@ -141,18 +141,19 @@ RawMS <- R6::R6Class("RawMS",
    public = list(
      raw_metadata = NULL,
      raw_data = NULL,
+     raw_df_data = NULL,
      scan_range = NULL,
      rt_range = NULL,
      mz_range = NULL,
-     sd_fit_function = NULL,
-     sd_predict_function = NULL,
-     mz_model_list = NULL,
-     mz_model_differences = NULL,
-     mz_model = NULL,
      ms_info = NULL,
+
+     remove_zero = NULL,
 
      frequency_fit_description = NULL,
      mz_fit_description = NULL,
+
+     frequency_coefficients = NULL,
+     mz_coefficients = NULL,
 
      plot_tic = function(color_ms = TRUE, log_transform = TRUE){
        plot_tic(self$raw_data, color_ms = color_ms, log_transform = log_transform)
@@ -187,7 +188,7 @@ RawMS <- R6::R6Class("RawMS",
      count_raw_peaks = function(){
        count_raw_peaks(self$raw_data, self$scan_range)
      },
-     extract_raw_data = function(remove_zero = FALSE){
+     extract_raw_data = function(remove_zero = self$remove_zero){
        all_scan_data = MSnbase::extractSpectraData(self$raw_data)
 
        scan_range = self$scan_range
@@ -197,23 +198,23 @@ RawMS <- R6::R6Class("RawMS",
        raw_scan_data = internal_map$map_function(seq(1, nrow(all_scan_data)), function(in_scan){
          tmp_data = data.frame(mz = all_scan_data$mz[[in_scan]],
                     intensity = all_scan_data$intensity[[in_scan]],
-                    spectrum = all_scan_data$spectrum[[in_scan]])
+                    scan = all_scan_data$spectrum[[in_scan]])
          if (remove_zero) {
            tmp_data = dplyr::filter(tmp_data, !(intensity == 0))
          }
          tmp_data
        })
 
-       raw_scan_data <- purrr::map(scan_range, function(in_scan){
-         tmp_scan = self$raw_data[[in_scan]]
-         scan_data <- data.frame(mz = tmp_scan@mz, intensity = tmp_scan@intensity, scan = in_scan)
-         if (!is.null(self$mz_range)) {
-           scan_data = dplyr::filter(scan_data, dplyr::between(mz, self$mz_range[1], self$mz_range[2]))
-         }
-         scan_data
-       })
-       raw_scan_data
+       self$raw_df_data = raw_scan_data
      },
+
+     convert_to_frequency = function(frequency_fit_description = self$frequency_fit_description,
+                                     mz_fit_description = self$mz_fit_description){
+        freq_list = mz_scans_to_frequency(self$raw_df_data,
+                                          frequency_fit_description = frequency_fit_description,
+                                          mz_fit_description = mz_fit_description)
+     },
+
      get_instrument = function(){
        raw_metadata = self$raw_metadata
        if (!is.null(raw_metadata$referenceableParamGroupList$referenceableParamGroup$cvParam.1)) {
@@ -281,12 +282,13 @@ RawMS <- R6::R6Class("RawMS",
 
 
    initialize = function(raw_file,
-                         frequency_fit_description = c(0, -1/2, -1/3),
-                         mz_fit_description = c(0, -1, -2, -3),
+                         frequency_fit_description = c("a.freq" = 0, "y.freq" = -1/2, "z.freq" = -1/3),
+                         mz_fit_description = c("a.mz" = 0, "x.mz" = -1, "y.mz" = -2, "z.mz" = -3),
                          metadata_file = NULL,
                          scan_range = NULL,
                          rt_range = NULL,
-                         mz_range = NULL){
+                         mz_range = NULL,
+                         remove_zero = FALSE){
      self$raw_data <- import_raw_ms(raw_file)
      if (!is.null(metadata_file)) {
        self$raw_metadata <- fromJSON(metadata_file)
@@ -305,6 +307,7 @@ RawMS <- R6::R6Class("RawMS",
 
      self$frequency_fit_description = frequency_fit_description
      self$mz_fit_description = mz_fit_description
+     self$remove_zero = remove_zero
 
    }
   )
