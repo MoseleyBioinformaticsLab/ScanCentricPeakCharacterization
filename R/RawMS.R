@@ -44,6 +44,23 @@
 #'
 "RawMS"
 
+#' import raw mass spec data
+#'
+#' function to import raw mass spec data in a way that provides what we need to work
+#' with it. `raw_data` should be the *full path* to the data.
+#'
+#' @param raw_data the raw mass spec file to import
+#' @param ms_level which MS-level data to import
+#'
+#' @export
+#' @return xcmsRaw
+import_raw_ms <- function(raw_data, ms_level = 1){
+  raw_data <- MSnbase::readMSData(raw_data, msLevel. = ms_level, mode = "inMemory")
+
+  raw_data
+}
+
+
 get_ms1_scans <- function(raw_data){
   ms1_index <- seq_along(raw_data@scantime)
   msn_precursor_scans <- raw_data@msnPrecursorScan
@@ -134,6 +151,9 @@ RawMS <- R6::R6Class("RawMS",
      mz_model = NULL,
      ms_info = NULL,
 
+     frequency_fit_description = NULL,
+     mz_fit_description = NULL,
+
      plot_tic = function(color_ms = TRUE, log_transform = TRUE){
        plot_tic(self$raw_data, color_ms = color_ms, log_transform = log_transform)
      },
@@ -167,8 +187,23 @@ RawMS <- R6::R6Class("RawMS",
      count_raw_peaks = function(){
        count_raw_peaks(self$raw_data, self$scan_range)
      },
-     extract_raw_data = function(){
-       scan_range <- self$scan_range
+     extract_raw_data = function(remove_zero = FALSE){
+       all_scan_data = MSnbase::extractSpectraData(self$raw_data)
+
+       scan_range = self$scan_range
+       keep_scans = self$ms_info$scanIndex %in% scan_range
+       all_scan_data = all_scan_data[keep_scans, ]
+
+       raw_scan_data = internal_map$map_function(seq(1, nrow(all_scan_data)), function(in_scan){
+         tmp_data = data.frame(mz = all_scan_data$mz[[in_scan]],
+                    intensity = all_scan_data$intensity[[in_scan]],
+                    spectrum = all_scan_data$spectrum[[in_scan]])
+         if (remove_zero) {
+           tmp_data = dplyr::filter(tmp_data, !(intensity == 0))
+         }
+         tmp_data
+       })
+
        raw_scan_data <- purrr::map(scan_range, function(in_scan){
          tmp_scan = self$raw_data[[in_scan]]
          scan_data <- data.frame(mz = tmp_scan@mz, intensity = tmp_scan@intensity, scan = in_scan)
@@ -245,24 +280,18 @@ RawMS <- R6::R6Class("RawMS",
 
 
 
-   initialize = function(raw_file, metadata_file = NULL, scan_range = NULL, rt_range = NULL, sd_fit_function = NULL,
-                         sd_predict_function = NULL){
+   initialize = function(raw_file,
+                         frequency_fit_description = c(0, -1/2, -1/3),
+                         mz_fit_description = c(0, -1, -2, -3),
+                         metadata_file = NULL,
+                         scan_range = NULL,
+                         rt_range = NULL,
+                         mz_range = NULL){
      self$raw_data <- import_raw_ms(raw_file)
      if (!is.null(metadata_file)) {
        self$raw_metadata <- fromJSON(metadata_file)
      }
 
-
-     if (is.null(sd_fit_function)) {
-       self$sd_fit_function <- default_sd_fit_function
-     } else {
-       self$sd_fit_function <- sd_fit_function
-     }
-     if (is.null(sd_predict_function)) {
-       self$sd_predict_function <- default_sd_predict_function
-     } else {
-       self$sd_predict_function <- sd_predict_function
-     }
      # default is to use the MS1 non-precursor scans
      if (is.null(scan_range) && is.null(rt_range)) {
        # message("Using MS1 non-precursor scans!")
@@ -273,6 +302,9 @@ RawMS <- R6::R6Class("RawMS",
      } else {
        self$set_scans(scan_range, rt_range)
      }
+
+     self$frequency_fit_description = frequency_fit_description
+     self$mz_fit_description = mz_fit_description
 
    }
   )
