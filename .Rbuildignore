@@ -1,3 +1,5 @@
+^renv$
+^renv\.lock$
 ^old_code_files$
 ^other_testing$
 ^other_reports$
@@ -7,3 +9,5 @@
 ^.*\.*.log$
 ^.*.mzML$
 ^integration_test$
+^README\.Rmd$
+^example_data$
