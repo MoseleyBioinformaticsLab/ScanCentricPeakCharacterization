@@ -55,7 +55,7 @@
 #' @export
 #' @return xcmsRaw
 import_sc_raw = function(raw_data, ms_level = 1){
-  raw_data = MSnbase::readMSData(raw_data, msLevel. = ms_level, mode = "onDisk")
+  raw_data = MSnbase::readMSData(raw_data, msLevel. = ms_level, mode = "inMemory")
 
   raw_data
 }
@@ -127,6 +127,7 @@ plot_tic = function(raw_data, color_ms = TRUE, log_transform = TRUE){
 get_scan_info = function(raw_data){
   ms_scan_info = data.frame(scanIndex = MSnbase::scanIndex(raw_data),
                             scan = seq(1, length(raw_data)),
+                            polarty = MSnbase::polarity(raw_data),
                             rtime = MSnbase::rtime(raw_data),
                             tic = MSnbase::tic(raw_data))
   ms_scan_info = ms_scan_info %>%
