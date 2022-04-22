@@ -193,7 +193,7 @@ filter_remove_outlier_scans_default = function(raw_ms){
 #'
 #' @export
 #' @return RawMS
-choose_single_model_default = function(raw_ms){
+choose_single_frequency_model_default = function(raw_ms){
   scan_info = raw_ms$scan_info
 
   # filtering to those things we decided to keep
@@ -324,7 +324,7 @@ RawMS = R6::R6Class("RawMS",
      difference_range = NULL,
 
      filter_remove_outlier_scans = NULL,
-     choose_single_model = NULL,
+     choose_single_frequency_model = NULL,
 
      check_frequency_model = function(scan = 1){
        if (is.null(self$raw_df_data)) {
@@ -386,7 +386,7 @@ RawMS = R6::R6Class("RawMS",
                          mz_range = NULL,
                          remove_zero = FALSE,
                          filter_remove_outlier_scans = NULL,
-                         choose_single_model = NULL){
+                         choose_single_frequency_model = NULL){
      self$raw_data = import_raw_ms(raw_file)
      if (!is.null(metadata_file)) {
        self$raw_metadata = fromJSON(metadata_file)
@@ -410,8 +410,8 @@ RawMS = R6::R6Class("RawMS",
      if (is.null(filter_remove_outlier_scans)) {
        self$filter_remove_outlier_scans = filter_remove_outlier_scans_default
      }
-     if (is.null(choose_single_model)) {
-       self$choose_single_model = choose_single_model_default
+     if (is.null(choose_single_frequency_model)) {
+       self$choose_single_frequency_model = choose_single_frequency_model_default
      }
     invisible(self)
    }
