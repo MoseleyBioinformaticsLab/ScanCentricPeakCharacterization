@@ -7,7 +7,7 @@
 check_for_zip()
 }
 \description{
-FTMS.peakCharacterization uses zip files to gather all the pieces of results together,
+ScanCentricPeakCharacterization uses zip files to gather all the pieces of results together,
 including the original mzML, binary data file, and JSON files. R can be compiled
 on systems where there is no zip function installed.
 When it is not installed, it generally creates a permission issue when \code{system2}

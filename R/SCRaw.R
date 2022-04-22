@@ -24,10 +24,10 @@
 #'
 #' \dontrun{
 #' # setting different files
-#' rms = raw_ms("mzmlFile.mzML")
-#' rms = raw_ms("mzmlFile.mzML", "someDirectoryForZip")
+#' rms = sc_raw("mzmlFile.mzML")
+#' rms = sc_raw("mzmlFile.mzML", "someDirectoryForZip")
 #'
-#' rms = raw_ms("mzmlZipFile.zip")
+#' rms = sc_raw("mzmlZipFile.zip")
 #'
 #' # Plot the total-ion-chromatogram
 #' rms$plot_tic()
@@ -42,7 +42,7 @@
 #'
 #' }
 #'
-"RawMS"
+"SCRaw"
 
 #' import raw mass spec data
 #'
@@ -54,7 +54,7 @@
 #'
 #' @export
 #' @return xcmsRaw
-import_raw_ms = function(raw_data, ms_level = 1){
+import_sc_raw = function(raw_data, ms_level = 1){
   raw_data = MSnbase::readMSData(raw_data, msLevel. = ms_level, mode = "onDisk")
 
   raw_data
@@ -139,7 +139,7 @@ get_scan_info = function(raw_data){
 
 #' default outlier scan function
 #'
-#' @param raw_ms the raw_ms object
+#' @param sc_raw the sc_raw object
 #'
 #' @details This is the default filtering and removing outliers function.
 #'   It is based on the Moseley groups normal samples and experience.
@@ -148,13 +148,13 @@ get_scan_info = function(raw_data){
 #'   they should create their own function and use it appropriately.
 #'
 #'   Please examine this function and write your own as needed.
-#'   It should at the very least take a RawMS object, work on the scan_info slot,
+#'   It should at the very least take a SCRaw object, work on the scan_info slot,
 #'   and then create a column with the name "keep" denoting which scans to keep.
 #'
 #' @export
-#' @return RawMS
-filter_remove_outlier_scans_default = function(raw_ms){
-  scan_info = raw_ms$scan_info
+#' @return SCRaw
+filter_remove_outlier_scans_default = function(sc_raw){
+  scan_info = sc_raw$scan_info
 
   # notice we are keeping each of the filters and recording them
   # in the data.frame, so we can go back and see why a
@@ -177,13 +177,13 @@ filter_remove_outlier_scans_default = function(raw_ms){
   # combine them together
   scan_info$keep = scan_info$rtime_keep & scan_info$y_freq_keep & scan_info$stats_keep
 
-  raw_ms$scan_info = scan_info
-  raw_ms
+  sc_raw$scan_info = scan_info
+  sc_raw
 }
 
 #' default single model
 #'
-#' @param raw_ms the raw_ms object
+#' @param sc_raw the sc_raw object
 #'
 #' @details This is the default function to choose a single frequency and mz model.
 #'   It takes the scan_info after filtering scans, and calculates the median of the
@@ -192,9 +192,9 @@ filter_remove_outlier_scans_default = function(raw_ms){
 #'   Please examine this function and write your own if needed.
 #'
 #' @export
-#' @return RawMS
-choose_single_frequency_model_default = function(raw_ms){
-  scan_info = raw_ms$scan_info
+#' @return SCRaw
+choose_single_frequency_model_default = function(sc_raw){
+  scan_info = sc_raw$scan_info
 
   # filtering to those things we decided to keep
   keep_freq = scan_info$y.freq[scan_info$keep]
@@ -208,15 +208,15 @@ choose_single_frequency_model_default = function(raw_ms){
   mz_cols = grepl("mz$", names(scan_info))
 
   # set the coefficients
-  raw_ms$frequency_coefficients = as.matrix(scan_info[freq_loc, freq_cols])
-  raw_ms$mz_coefficients = as.matrix(scan_info[freq_loc, mz_cols])
-  raw_ms
+  sc_raw$frequency_coefficients = as.matrix(scan_info[freq_loc, freq_cols])
+  sc_raw$mz_coefficients = as.matrix(scan_info[freq_loc, mz_cols])
+  sc_raw
 }
 
 #' @importFrom R6 R6Class
 #' @importFrom jsonlite fromJSON
 #' @export
-RawMS = R6::R6Class("RawMS",
+SCRaw = R6::R6Class("SCRaw",
    public = list(
      raw_metadata = NULL,
      raw_data = NULL,
@@ -305,10 +305,10 @@ RawMS = R6::R6Class("RawMS",
      convert_to_frequency = function(){
        freq_list = self$raw_df_data
        if (is.null(self$scan_info$keep)) {
-         stop("No scan filtering has been applied!\nPlease run raw_ms$filter_remove_outlier_scans() first!")
+         stop("No scan filtering has been applied!\nPlease run sc_raw$filter_remove_outlier_scans() first!")
        }
        if (is.null(self$frequency_coefficients)) {
-         stop("No frequency_coefficients!\nPlease run raw_ms$choose_single_model() first!")
+         stop("No frequency_coefficients!\nPlease run sc_raw$choose_single_model() first!")
        }
        freq_list = freq_list[self$scan_info$scan[self$scan_info$keep]]
        converted = mz_scans_convert_to_frequency(freq_list,
@@ -328,12 +328,12 @@ RawMS = R6::R6Class("RawMS",
 
      check_frequency_model = function(scan = 1){
        if (is.null(self$raw_df_data)) {
-         stop("Have you extracted the raw data to scans yet?\nPlease do raw_ms$extract_raw_data() first!")
+         stop("Have you extracted the raw data to scans yet?\nPlease do sc_raw$extract_raw_data() first!")
        }
 
        use_scan = self$raw_df_data[[scan]]
        if (!("mean_predicted" %in% names(use_scan))) {
-         stop("Have you done prediction of frequency yet?\nPlease do raw_ms$predict_frequency() first!")
+         stop("Have you done prediction of frequency yet?\nPlease do sc_raw$predict_frequency() first!")
        }
 
        use_scan = use_scan %>%
@@ -365,7 +365,7 @@ RawMS = R6::R6Class("RawMS",
 
      get_frequency_data = function(){
        if (is.null(self$raw_df_data[[1]]$frequency)) {
-         stop("No frequency found! Did you convert to frequency yet?\nraw_ms$convert_to_frequeny()")
+         stop("No frequency found! Did you convert to frequency yet?\nsc_raw$convert_to_frequeny()")
        }
        list(frequency = self$raw_df_data,
             info = self$scan_info[self$scan_info$keep, ],
@@ -387,7 +387,7 @@ RawMS = R6::R6Class("RawMS",
                          remove_zero = FALSE,
                          filter_remove_outlier_scans = NULL,
                          choose_single_frequency_model = NULL){
-     self$raw_data = import_raw_ms(raw_file)
+     self$raw_data = import_sc_raw(raw_file)
      if (!is.null(metadata_file)) {
        self$raw_metadata = fromJSON(metadata_file)
      }
@@ -417,23 +417,3 @@ RawMS = R6::R6Class("RawMS",
    }
   )
 )
-
-
-#' count raw peaks
-#'
-#' from a RawMS object, get the scans, average them, and count the peaks.
-#'
-#' @param rawdata the raw_data bit of the RawMS object
-#' @param scans which scans to use.
-#'
-#' @importFrom pracma findpeaks
-#' @importFrom xcms getSpec
-#'
-#' @export
-#' @return numeric
-count_raw_peaks = function(rawdata, scans){
-  raw_points = as.data.frame(xcms::getSpec(rawdata, scanrange = scans))
-
-  raw_peaks = pracma::findpeaks(raw_points$intensity, nups = 2, ndowns = 2)
-  nrow(raw_peaks)
-}

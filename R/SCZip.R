@@ -98,16 +98,16 @@ basename_no_file_ext = function(in_files){
   basename(file_no_ext)
 }
 
-zip_ms_from_zip = function(in_file){
-  ZipMS$new(in_file)
-  ZipMS
+sc_zip_from_zip = function(in_file){
+  SCZip$new(in_file)
+  SCZip
 }
 
-zip_ms_from_mzml = function(in_file, out_dir){
+sc_zip_from_mzml = function(in_file, out_dir){
   message("creating zip file from mzML and populating raw metadata")
   zip_file = mzml_to_zip(in_file, out_dir)
   if (!is.null(zip_file)) {
-    zip_ms_from_zip(zip_file)
+    sc_zip_from_zip(zip_file)
   }
 }
 
@@ -116,16 +116,16 @@ zip_ms_from_mzml = function(in_file, out_dir){
 #' This reference class represents the zip mass spec file. It does this by
 #' providing objects for the zip file, the metadata, as well as various bits
 #' underneath such as the raw data and peak lists, and their
-#' associated metadata. Although it is possible to work with the ZipMS object directly, it
-#' is heavily recommended to use the AnalyzeMS object
+#' associated metadata. Although it is possible to work with the SCSCZip object directly, it
+#' is heavily recommended to use the SCCharacterizePeaks object
 #' for carrying out the various steps of an analysis, including peak finding.
 #'
-#' @section `ZipMS` Methods:
+#' @section `SCZip` Methods:
 #'
 #'  use `?method-name` to see more details about each individual method
 #'
 #'  \describe{
-#'   \item{`zip_ms`}{make a new `ZipMS`}
+#'   \item{`sc_zip`}{make a new `SCZip`}
 #'   \item{`show_temp_dir`}{show where files are stored}
 #'   \item{`save`}{save the file}
 #'   \item{`cleanup`}{unlink the `temp_directory`}
@@ -133,24 +133,24 @@ zip_ms_from_mzml = function(in_file, out_dir){
 #'  }
 #'
 #'
-#' @section `ZipMS` Data Members:
+#' @section `SCZip` Data Members:
 #'  \describe{
 #'    \item{`zip_file`}{the zip file that was read in}
 #'    \item{`metadata`}{the actual metadata for the file}
 #'    \item{`metadata_file`}{the metadata file}
-#'    \item{`raw_ms`}{a `RawMS` holding the raw data}
+#'    \item{`sc_raw`}{a `SCRaw` holding the raw data}
 #'    \item{`peaks`}{a `Peaks` holding the peak analysis}
 #'    \item{`id`}{the sample id}
 #'    \item{`out_file`}{the file where data will be saved}
 #'  }
 #'
-#' @seealso AnalyzeMS
-#' @return ZipMS object
+#' @seealso SCCharacterizePeaks
+#' @return SCZip object
 #'
-"ZipMS"
+"SCZip"
 
 
-#' make a new ZipMS
+#' make a new SCZip
 #'
 #' @param in_file the file to use (either .zip or .mzML)
 #' @param mzml_meta_file metadata file (.json)
@@ -159,13 +159,13 @@ zip_ms_from_mzml = function(in_file, out_dir){
 #' @param load_peak_list to load the peak list if it exists
 #'
 #' @export
-#' @return ZipMS
-zip_ms = function(in_file, mzml_meta_file = NULL, out_file = NULL, load_raw = TRUE,
+#' @return SCZip
+sc_zip = function(in_file, mzml_meta_file = NULL, out_file = NULL, load_raw = TRUE,
                    load_peak_list = TRUE){
-  ZipMS$new(in_file, mzml_meta_file = mzml_meta_file, out_file = out_file, load_raw = load_raw, load_peak_list = load_peak_list)
+  SCZip$new(in_file, mzml_meta_file = mzml_meta_file, out_file = out_file, load_raw = load_raw, load_peak_list = load_peak_list)
 }
 
-#' ZipMS - save
+#' SCZip - save
 #'
 #' @name save
 #' @param out_file the file to save to
@@ -177,78 +177,78 @@ zip_ms = function(in_file, mzml_meta_file = NULL, out_file = NULL, load_raw = TR
 #'
 #' @examples
 #' \dontrun{
-#'  new_ms = zip_ms("in_file")
+#'  new_ms = sc_zip("in_file")
 #'  new_ms$save()
 #'  new_ms$save("out_file")
 #' }
 NULL
 
-#' ZipMS - show_temp_dir
+#' SCZip - show_temp_dir
 #'
-#' shows where the temp directory `ZipMS` is using is
+#' shows where the temp directory `SCZip` is using is
 #'
 #' @name show_temp_dir
-#' @usage ZipMS$show_temp_dir()
+#' @usage SCZip$show_temp_dir()
 #'
 NULL
 
-#' ZipMS - cleanup
+#' SCZip - cleanup
 #'
 #' cleans up after things are done
 #'
 #' @name cleanup
-#' @usage ZipMS$cleanup()
+#' @usage SCZip$cleanup()
 #'
 NULL
 
-#' ZipMS - add_peak_list
+#' SCZip - add_peak_list
 #'
-#' adds a peak list to the `ZipMS`
+#' adds a peak list to the `SCZip`
 #'
 #' @name add_peak_list
-#' @usage ZipMS$add_peak_list(peak_list_data)
+#' @usage SCZip$add_peak_list(peak_list_data)
 #' @param peak_list_data a [Peaks()] object
 #'
 NULL
 
 #' @export
-ZipMS = R6::R6Class("ZipMS",
+SCZip = R6::R6Class("SCZip",
   public = list(
     zip_file = NULL,
     zip_metadata = NULL,
     metadata = NULL,
     metadata_file = NULL,
-    raw_ms = NULL,
+    sc_raw = NULL,
     peaks = NULL,
-    peak_finder = NULL,
+    sc_peak_finder = NULL,
     json_summary = NULL,
     id = NULL,
     out_file = NULL,
     temp_directory = NULL,
 
     load_raw = function(){
-      self$raw_ms = RawMS$new(file.path(self$temp_directory, self$metadata$raw$raw_data),
+      self$sc_raw = SCRaw$new(file.path(self$temp_directory, self$metadata$raw$raw_data),
                 file.path(self$temp_directory, self$metadata$raw$metadata))
 
     },
 
-    load_peak_finder = function(){
-      if (file.exists(file.path(self$temp_directory, "peak_finder.rds"))) {
-        peak_finder = try(readRDS(file.path(self$temp_directory, "peak_finder.rds")))
+    load_sc_peak_finder = function(){
+      if (file.exists(file.path(self$temp_directory, "sc_peak_finder.rds"))) {
+        sc_peak_finder = try(readRDS(file.path(self$temp_directory, "sc_peak_finder.rds")))
 
-        if (inherits(peak_finder, "try-error")) {
-          peak_finder = try({
+        if (inherits(sc_peak_finder, "try-error")) {
+          sc_peak_finder = try({
             tmp_env = new.env()
-            load(file.path(self$temp_directory, "peak_finder.rds"), envir = tmp_env)
-            tmp_env$peak_finder
+            load(file.path(self$temp_directory, "sc_peak_finder.rds"), envir = tmp_env)
+            tmp_env$sc_peak_finder
           })
         }
-        if (inherits(peak_finder, "PeakRegionFinder")) {
-          self$peak_finder = peak_finder
-          rm(peak_finder)
+        if (inherits(sc_peak_finder, "PeakRegionFinder")) {
+          self$sc_peak_finder = sc_peak_finder
+          rm(sc_peak_finder)
           message("Peak Finder Binary File Loaded!")
         } else {
-          stop("peak_finder.rds is not valid!")
+          stop("sc_peak_finder.rds is not valid!")
         }
 
       }
@@ -258,28 +258,28 @@ ZipMS = R6::R6Class("ZipMS",
       lists_2_json(self$json_summary, temp_dir = self$temp_directory)
     },
 
-    save_peak_finder = function(){
-      peak_finder = self$peak_finder
-      saveRDS(peak_finder, file.path(self$temp_directory, "peak_finder.rds"))
+    save_sc_peak_finder = function(){
+      sc_peak_finder = self$sc_peak_finder
+      saveRDS(sc_peak_finder, file.path(self$temp_directory, "sc_peak_finder.rds"))
       invisible(self)
     },
 
     load_peak_list = function(){
-      if (file.exists(file.path(self$temp_directory, "peak_finder.rds"))) {
+      if (file.exists(file.path(self$temp_directory, "sc_peak_finder.rds"))) {
         tmp_env = new.env()
-        load(file.path(self$temp_directory, "peak_finder.rds"), envir = tmp_env)
-        peak_data = tmp_env$peak_finder$correspondent_peaks$master_peak_list$clone(deep = TRUE)
+        load(file.path(self$temp_directory, "sc_peak_finder.rds"), envir = tmp_env)
+        peak_data = tmp_env$sc_peak_finder$correspondent_peaks$master_peak_list$clone(deep = TRUE)
         rm(tmp_env)
       } else {
-        warning("No peak_finder.rds found, not returning peaks!")
+        warning("No sc_peak_finder.rds found, not returning peaks!")
         peak_data = NULL
       }
       peak_data
     },
 
     compare_raw_corresponded_densities = function(mz_range = c(150, 1600), window = 1, delta = 0.1){
-      if (!is.null(self$raw_ms)) {
-        raw_peak_mz = raw_peaks(self$raw_ms)
+      if (!is.null(self$sc_raw)) {
+        raw_peak_mz = raw_peaks(self$sc_raw)
         raw_peak_density = calculate_density(raw_peak_mz, use_range = mz_range, window = window, delta = delta)
         raw_peak_density$type = "raw"
       } else {
@@ -340,7 +340,7 @@ ZipMS = R6::R6Class("ZipMS",
       self$id = self$metadata$id
 
       if (load_raw && (!is.null(self$metadata$raw$raw_data))) {
-        self$raw_ms = self$load_raw()
+        self$sc_raw = self$load_raw()
       }
 
       if (load_peak_list && (!is.null(self$metadata$peakpicking_analysis$output))) {
@@ -441,7 +441,7 @@ ZipMS = R6::R6Class("ZipMS",
         private$curr_md5$metadata_file = tools::md5sum(file.path(self$temp_directory, self$metadata_file))
       }
 
-      if (!is.null(self$raw_ms)) {
+      if (!is.null(self$sc_raw)) {
         private$curr_md5$raw_metadata_file =
           tools::md5sum(file.path(self$temp_directory, self$metadata$raw$metadata))
 
@@ -496,14 +496,14 @@ get_zip_raw_metdata = function(zip_obj){
 write_zip_file_metadata = function(zip_obj){
   zip_metadata = zip_obj$zip_metadata
 
-  if (!is.null(zip_obj$raw_ms$ms_info)) {
-    raw_ms_info = zip_obj$raw_ms$ms_info
+  if (!is.null(zip_obj$sc_raw$ms_info)) {
+    sc_raw_info = zip_obj$sc_raw$ms_info
   } else {
-    raw_ms_info = NULL
+    sc_raw_info = NULL
   }
 
-  if (!is.null(zip_obj$peak_finder$peak_meta)) {
-    peak_info = zip_obj$peak_finder$peak_meta()
+  if (!is.null(zip_obj$sc_peak_finder$peak_meta)) {
+    peak_info = zip_obj$sc_peak_finder$peak_meta()
   } else {
     peak_info = NULL
   }
@@ -518,7 +518,7 @@ write_zip_file_metadata = function(zip_obj){
     json_loc = paste0(tools::file_path_sans_ext(zip_obj$out_file), ".json")
 
     zip_metadata$zip = zip_file_metadata
-    zip_metadata$raw = raw_ms_info
+    zip_metadata$raw = sc_raw_info
     zip_metadata$peak = peak_info
     cat(jsonlite::toJSON(zip_metadata, pretty = TRUE, auto_unbox = TRUE), file = json_loc)
 
@@ -529,10 +529,10 @@ write_zip_file_metadata = function(zip_obj){
 
 #' plot raw peaks
 #'
-#' Given the raw_ms object, generate a plot of the peaks that are generated from
+#' Given the sc_raw object, generate a plot of the peaks that are generated from
 #' averaging the scans in the currently set scan-range.
 #'
-#' @param raw_ms either a RawMS object, or data.frame of mz / intensity
+#' @param sc_raw either a RawMS object, or data.frame of mz / intensity
 #' @param scan_range which scans to use
 #' @param mz_range the range of M/z's to consider
 #' @param transform apply a transform to the data
@@ -540,15 +540,15 @@ write_zip_file_metadata = function(zip_obj){
 #' @return ggplot2 object
 #' @export
 #'
-plot_raw_peaks = function(raw_ms, scan_range = NULL, mz_range = NULL, transform = NULL) {
-  if (inherits(raw_ms, "RawMS")) {
+plot_raw_peaks = function(sc_raw, scan_range = NULL, mz_range = NULL, transform = NULL) {
+  if (inherits(sc_raw, "RawMS")) {
     if (is.null(scan_range)) {
-      scan_range = raw_ms$scan_range
+      scan_range = sc_raw$scan_range
     }
-    peaks = raw_peak_intensity(raw_ms, scanrange = scan_range)
+    peaks = raw_peak_intensity(sc_raw, scanrange = scan_range)
 
-  } else if (inherits(raw_ms, "data.frame")) {
-    peaks = raw_ms
+  } else if (inherits(sc_raw, "data.frame")) {
+    peaks = sc_raw
 
   }
   if (!is.null(mz_range)) {
@@ -567,16 +567,16 @@ plot_raw_peaks = function(raw_ms, scan_range = NULL, mz_range = NULL, transform 
 #'
 #' generate raw peaks from just averaging scans via xcms
 #'
-#' @param raw_ms an RawMS object
-#' @param scanrange the range of scans to use, default is derived from raw_ms
+#' @param sc_raw an RawMS object
+#' @param scanrange the range of scans to use, default is derived from sc_raw
 #'
 #' @export
 #' @importFrom xcms getSpec
 #' @importFrom pracma findpeaks
 #' @return data.frame of mz and intensity
 #'
-raw_peak_intensity = function(raw_ms, scanrange = raw_ms$scan_range) {
-  mean_scan = xcms::getSpec(raw_ms$raw_data, scanrange = scanrange)
+raw_peak_intensity = function(sc_raw, scanrange = sc_raw$scan_range) {
+  mean_scan = xcms::getSpec(sc_raw$raw_data, scanrange = scanrange)
   mean_scan = mean_scan[!is.na(mean_scan[, 2]), ]
   mean_peaks = pracma::findpeaks(mean_scan[, 2], nups = 2)
 
@@ -590,16 +590,16 @@ raw_peak_intensity = function(raw_ms, scanrange = raw_ms$scan_range) {
 #'
 #' generate raw peaks from just averaging scans via xcms
 #'
-#' @param raw_ms an RawMS object
-#' @param scanrange the range of scans to use, default is derived from raw_ms
+#' @param sc_raw an RawMS object
+#' @param scanrange the range of scans to use, default is derived from sc_raw
 #'
 #' @export
 #' @importFrom xcms getSpec
 #' @importFrom pracma findpeaks
 #' @return numeric
 #'
-raw_peaks = function(raw_ms, scanrange = raw_ms$scan_range) {
-  mean_scan = xcms::getSpec(raw_ms$raw_data, scanrange = scanrange)
+raw_peaks = function(sc_raw, scanrange = sc_raw$scan_range) {
+  mean_scan = xcms::getSpec(sc_raw$raw_data, scanrange = scanrange)
   mean_scan = mean_scan[!is.na(mean_scan[, 2]), ]
   mean_peaks = pracma::findpeaks(mean_scan[, 2], nups = 2)
 
@@ -646,22 +646,22 @@ calculate_density = function(peak_data, use_range = NULL, window = 1, delta = 0.
 #' @return data.frame with sample, start and end time
 sample_run_time = function(zip, units = "m"){
   if (inherits(zip, "character")) {
-    zip = zip_ms(zip)
+    zip = sc_zip(zip)
     cleanup = TRUE
   }
-  if (is.null(zip$raw_ms)) {
+  if (is.null(zip$sc_raw)) {
     zip$load_raw()
     cleanup = FALSE
   } else {
     cleanup = FALSE
   }
 
-  ms_data = get_ms_info(zip$raw_ms$raw_data, include_msn = TRUE, include_precursor = TRUE)
+  ms_data = get_ms_info(zip$sc_raw$raw_data, include_msn = TRUE, include_precursor = TRUE)
   ms_data = ms_data[order(ms_data$time), ]
   # assume that the last scan-scan time difference is how long the last scan should have taken as well
   last_diff = ms_data$time[nrow(ms_data)] - ms_data$time[nrow(ms_data) - 1]
   total_time = ms_data$time[nrow(ms_data)] + last_diff
-  start_time = lubridate::as_datetime(zip$raw_ms$raw_metadata$run$startTimeStamp)
+  start_time = lubridate::as_datetime(zip$sc_raw$raw_metadata$run$startTimeStamp)
   end_time = start_time + total_time
   total_time_out = switch(units,
                           s = total_time,
@@ -684,26 +684,26 @@ sample_run_time = function(zip, units = "m"){
 #' @return data.frame
 every_scan_frequency = function(zip){
   if (inherits(zip, "character")) {
-    zip = zip_ms(zip)
+    zip = sc_zip(zip)
     cleanup = TRUE
   }
 
-  if (is.null(zip$raw_ms)) {
+  if (is.null(zip$sc_raw)) {
     zip$load_raw()
     cleanup = FALSE
   } else {
     cleanup = FALSE
   }
 
-  scan_data = get_ms_info(zip$raw_ms$raw_data, include_msn = TRUE, include_precursor = TRUE)
+  scan_data = get_ms_info(zip$sc_raw$raw_data, include_msn = TRUE, include_precursor = TRUE)
   scan_data = scan_data[order(scan_data$time), ]
 
   mz_data = purrr::map(seq(1, nrow(scan_data)), function(scan_row){
     if (!is.na(scan_data[scan_row, "scan"])) {
-      tmp = as.data.frame(xcms::getScan(zip$raw_ms$raw_data, scan_data[scan_row, "scan"]),
+      tmp = as.data.frame(xcms::getScan(zip$sc_raw$raw_data, scan_data[scan_row, "scan"]),
                           strinsAsFactors = FALSE)
     }  else {
-      tmp = as.data.frame(xcms::getMsnScan(zip$raw_ms$raw_data, scan_data[scan_row, "scan_msn"]),
+      tmp = as.data.frame(xcms::getMsnScan(zip$sc_raw$raw_data, scan_data[scan_row, "scan_msn"]),
                           stringsAsFactors = FALSE)
     }
     tmp$scan = scan_data[scan_row, "acquisition"]

@@ -121,7 +121,7 @@ create_frequency_regions = function(point_spacing = 0.5, frequency_range = NULL,
 }
 
 #' @export
-PeakRegions = R6::R6Class("PeakRegions",
+SCPeakRegions = R6::R6Class("SCPeakRegions",
   public = list(
     frequency_point_regions = NULL,
     frequency_fit_description = NULL,
@@ -170,13 +170,13 @@ PeakRegions = R6::R6Class("PeakRegions",
       invisible(self)
     },
 
-    add_data = function(raw_ms){
-      if (!is.null(raw_ms)) {
-        if (inherits(raw_ms, "RawMS")) {
-          frequency_data = raw_ms$get_frequency_data()
-          self$instrument = raw_ms$get_instrument()
-        } else if (inherits(raw_ms, "list")) {
-          frequency_data = raw_ms
+    add_data = function(sc_raw){
+      if (!is.null(sc_raw)) {
+        if (inherits(sc_raw, "SCRaw")) {
+          frequency_data = sc_raw$get_frequency_data()
+          self$instrument = sc_raw$get_instrument()
+        } else if (inherits(sc_raw, "list")) {
+          frequency_data = sc_raw
         }
         self$frequency_point_regions = check_ranges_convert_to_regions(frequency_data,
                                                                       frequency_multiplier = self$frequency_multiplier)
@@ -188,7 +188,7 @@ PeakRegions = R6::R6Class("PeakRegions",
       invisible(self)
     },
 
-    initialize = function(raw_ms = NULL,
+    initialize = function(sc_raw = NULL,
                           frequency_multiplier = 400,
                           scan_perc = 0.1, max_subsets = 100){
       #browser(expr = TRUE)
@@ -196,7 +196,7 @@ PeakRegions = R6::R6Class("PeakRegions",
       self$max_subsets = max_subsets
       self$frequency_multiplier = frequency_multiplier
 
-      self$add_data(raw_ms)
+      self$add_data(sc_raw)
 
       invisible(self)
     }
@@ -205,7 +205,7 @@ PeakRegions = R6::R6Class("PeakRegions",
 
 
 #' @export
-PeakRegionFinder = R6::R6Class("PeakRegionFinder",
+SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
   public = list(
     run_time = NULL,
     start_time = NULL,
@@ -342,9 +342,9 @@ PeakRegionFinder = R6::R6Class("PeakRegionFinder",
       invisible(self)
     },
 
-    add_data = function(raw_ms) {
-      if (inherits(raw_ms, "RawMS")) {
-        self$peak_regions$add_data(raw_ms)
+    add_data = function(sc_raw) {
+      if (inherits(sc_raw, "SCRaw")) {
+        self$peak_regions$add_data(sc_raw)
       }
       invisible(self)
     },
@@ -471,7 +471,7 @@ PeakRegionFinder = R6::R6Class("PeakRegionFinder",
            ))
     },
 
-    initialize = function(raw_ms = NULL,
+    initialize = function(sc_raw = NULL,
                           sliding_region_size = 10,
                           sliding_region_delta = 1,
                           tiled_region_size = 1,
@@ -484,13 +484,13 @@ PeakRegionFinder = R6::R6Class("PeakRegionFinder",
                           peak_method = "lm_weighted",
                           min_points = 4,
                           zero_normalization = FALSE){
-      if (inherits(raw_ms, "RawMS")) {
-        self$peak_regions = PeakRegions$new(raw_ms,
+      if (inherits(sc_raw, "SCRaw")) {
+        self$peak_regions = PeakRegions$new(sc_raw,
                                             frequency_multiplier = frequency_multiplier)
-      } else if (inherits(raw_ms, "PeakRegions")) {
-        self$peak_regions = raw_ms
+      } else if (inherits(sc_raw, "SCPeakRegions")) {
+        self$peak_regions = sc_raw
       } else {
-        self$peak_regions = PeakRegions$new(raw_ms = NULL,
+        self$peak_regions = SCPeakRegions$new(sc_raw = NULL,
                                             frequency_multiplier = frequency_multiplier)
       }
 
