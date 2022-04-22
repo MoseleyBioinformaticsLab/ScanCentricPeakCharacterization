@@ -929,10 +929,11 @@ single_pass_normalization <- function(scan_peaks, intensity_measure = c("RawHeig
 
   all_scans <- data.frame(scan = unique(unlist(purrr::map(scan_peaks, function(x){unique(x$scan)}))))
 
-  peak_intensity <- suppressMessages(purrr::map_dfc(scan_peaks[normalize_peaks], function(x){
-    tmp_data <- dplyr::left_join(all_scans, as.data.frame(x[, c("scan", use_measure)]), by = "scan")
+  peak_intensity_list = lapply(scan_peaks[normalize_peaks], function(x){
+    tmp_data = dplyr::left_join(all_scans, as.data.frame(x[, c("scan", use_measure)]), by = "scan")
     log(tmp_data[, use_measure])
-  }))
+  })
+  peak_intensity = as.data.frame(do.call(cbind, peak_intensity_list))
 
   all_na = purrr::map_lgl(seq_len(nrow(peak_intensity)), ~ sum(is.na(peak_intensity[.x, ])) == ncol(peak_intensity))
 
