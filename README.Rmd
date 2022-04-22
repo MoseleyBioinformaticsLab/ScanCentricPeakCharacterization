@@ -16,14 +16,15 @@ knitr::opts_chunk$set(
 
 library(dplyr)
 library(patchwork)
+library(ggplot2)
 theme_set(cowplot::theme_cowplot())
 ```
 
 
-# FTMS.peakCharacterization
+# ScanCentricPeakCharacterization
 
 
-The goal of the FTMS.peakCharacterization package is to facilitate scan-centric peak characterization of profile level, multi-scan, direct-injection Fourier-transform mass spectrometry data.
+The goal of the ScanCentricPeakCharacterization package is to facilitate scan-centric peak characterization of profile level, multi-scan, direct-injection Fourier-transform mass spectrometry data.
 
 You can read more about the merits of this scan-centric method in:
 
@@ -40,11 +41,11 @@ Please contact us even if you aren't sure what would be required for licensing, 
 
 ## Installation
 
-You can install FTMS.peakCharacterization from [GitHub](https://github.com/) with:
+You can install ScanCentricPeakCharacterization from [GitHub](https://github.com/) with:
 
 ``` r
 # install.packages("remotes")
-remotes::install_github("MoseleyBioinformaticsLab/FTMS.peakCharacterization")
+remotes::install_github("MoseleyBioinformaticsLab/ScanCentricPeakCharacterization")
 ```
 
 ## Theory
@@ -58,7 +59,7 @@ If you acquire Orbitrap / ICR type mass spectrometry data over any decent range,
 We will load up an example direct-injection lipidomics sample acquired on a Thermo-Fisher Fusion instrument to demonstrate.
 
 ```{r example_lipidomics}
-raw_lipid = RawMS$new(system.file("extdata/lipid_example.mzML", package = "FTMS.peakCharacterization"))
+raw_lipid = RawMS$new(system.file("extdata/lipid_example.mzML", package = "ScanCentricPeakCharacterization"))
 raw_lipid$extract_raw_data()
 raw_lipid$predict_frequency()
 ```
@@ -100,11 +101,6 @@ raw_lipid$check_frequency_model()
 
 See the example of `RawMS` below to see how we can change the model being used.
 
-## Example
-
-We are lacking basic examples at the moment.
-We are hoping to get some basic example and more documentation of the functionality in here shortly.
-
 ## Basic Objects and Classes
 
 ### RawMS
@@ -133,7 +129,7 @@ This is the **default model** that `RawMS` is instantiated with.
 But every time you work with a new dataset, you should verify the model being used is appropriate.
 
 ```{r check_model}
-lipid_1 = RawMS$new(system.file("extdata", "lipid_example.mzML", package = "FTMS.peakCharacterization"))
+lipid_1 = RawMS$new(system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization"))
 lipid_1$extract_raw_data()
 lipid_1$predict_frequency()
 
@@ -149,7 +145,7 @@ $$frequency = a + x \times mz^{-1} + y \times mz^{\frac{-1}{3}}$$
 ```{r alt_model}
 alt_model = c("a.freq" = 0, "x.freq" = -1, "y.freq" = -1/3)
 
-lipid_2 = RawMS$new(system.file("extdata", "lipid_example.mzML", package = "FTMS.peakCharacterization"),
+lipid_2 = RawMS$new(system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization"),
                     frequency_fit_description = alt_model)
 lipid_2$extract_raw_data()
 lipid_2$predict_frequency()

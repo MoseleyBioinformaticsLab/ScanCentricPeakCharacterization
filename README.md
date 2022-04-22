@@ -1,9 +1,9 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# FTMS.peakCharacterization
+# ScanCentricPeakCharacterization
 
-The goal of the FTMS.peakCharacterization package is to facilitate
+The goal of the ScanCentricPeakCharacterization package is to facilitate
 scan-centric peak characterization of profile level, multi-scan,
 direct-injection Fourier-transform mass spectrometry data.
 
@@ -27,12 +27,12 @@ what would be required for licensing, we do want people to use it.
 
 ## Installation
 
-You can install FTMS.peakCharacterization from
+You can install ScanCentricPeakCharacterization from
 [GitHub](https://github.com/) with:
 
 ``` r
 # install.packages("remotes")
-remotes::install_github("MoseleyBioinformaticsLab/FTMS.peakCharacterization")
+remotes::install_github("MoseleyBioinformaticsLab/ScanCentricPeakCharacterization")
 ```
 
 ## Theory
@@ -49,7 +49,7 @@ We will load up an example direct-injection lipidomics sample acquired
 on a Thermo-Fisher Fusion instrument to demonstrate.
 
 ``` r
-raw_lipid = RawMS$new(system.file("extdata/lipid_example.mzML", package = "FTMS.peakCharacterization"))
+raw_lipid = RawMS$new(system.file("extdata/lipid_example.mzML", package = "ScanCentricPeakCharacterization"))
 raw_lipid$extract_raw_data()
 raw_lipid$predict_frequency()
 ```
@@ -102,12 +102,6 @@ raw_lipid$check_frequency_model()
 See the example of `RawMS` below to see how we can change the model
 being used.
 
-## Example
-
-We are lacking basic examples at the moment. We are hoping to get some
-basic example and more documentation of the functionality in here
-shortly.
-
 ## Basic Objects and Classes
 
 ### RawMS
@@ -146,7 +140,7 @@ every time you work with a new dataset, you should verify the model
 being used is appropriate.
 
 ``` r
-lipid_1 = RawMS$new(system.file("extdata", "lipid_example.mzML", package = "FTMS.peakCharacterization"))
+lipid_1 = RawMS$new(system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization"))
 lipid_1$extract_raw_data()
 lipid_1$predict_frequency()
 
@@ -164,7 +158,7 @@ What if we mis-define the model?
 ``` r
 alt_model = c("a.freq" = 0, "x.freq" = -1, "y.freq" = -1/3)
 
-lipid_2 = RawMS$new(system.file("extdata", "lipid_example.mzML", package = "FTMS.peakCharacterization"),
+lipid_2 = RawMS$new(system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization"),
                     frequency_fit_description = alt_model)
 lipid_2$extract_raw_data()
 lipid_2$predict_frequency()

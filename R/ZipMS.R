@@ -719,12 +719,12 @@ every_scan_frequency = function(zip){
   mz_fit_description = c(0, -1, -2, -3)
   mz_frequency = purrr::map(mz_data, function(in_scan){
     #message(scan_name)
-    out_scan = FTMS.peakCharacterization::convert_mz_frequency(in_scan, ...)
+    out_scan = ScanCentricPeakCharacterization::convert_mz_frequency(in_scan, ...)
     out_scan
   })
   frequency_fits = purrr::map(mz_frequency, function(in_freq){
     use_peaks = in_freq$convertable
-    tmp_fit = FTMS.peakCharacterization:::fit_exponentials(in_freq$mean_mz[use_peaks], in_freq$mean_frequency[use_peaks], frequency_fit_description)
+    tmp_fit = ScanCentricPeakCharacterization:::fit_exponentials(in_freq$mean_mz[use_peaks], in_freq$mean_frequency[use_peaks], frequency_fit_description)
     tmp_fit$scan = in_freq[1, "scan"]
     tmp_fit
   })
