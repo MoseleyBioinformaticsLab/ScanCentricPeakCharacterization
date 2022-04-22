@@ -10,6 +10,24 @@ Peak characterization control
 Peak characterization associates data with the \code{SCZip},
 \code{SCPeakRegionFinder}, and controls their execution.
 }
+\examples{
+\dontrun{
+  lipid_sample = system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization")
+  sc_char = SCCharacterizePeaks$new(lipid_sample)
+
+  # prep data and check model
+  library(ggplot2)
+  library(patchwork)
+  sc_char$load_file()
+  sc_char$prepare_raw_data()
+  sc_char$check_frequency_model()
+
+  # run characterization
+  save_loc = "test.zip"
+  sc_char = SCCharacterizePeaks$new(lipid_sample, out_file = save_loc)
+  sc_char$run_all()
+}
+}
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{

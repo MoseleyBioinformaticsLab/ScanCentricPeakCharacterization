@@ -527,116 +527,6 @@ write_zip_file_metadata = function(zip_obj){
   }
 }
 
-#' plot raw peaks
-#'
-#' Given the sc_raw object, generate a plot of the peaks that are generated from
-#' averaging the scans in the currently set scan-range.
-#'
-#' @param sc_raw either a RawMS object, or data.frame of mz / intensity
-#' @param scan_range which scans to use
-#' @param mz_range the range of M/z's to consider
-#' @param transform apply a transform to the data
-#'
-#' @return ggplot2 object
-#' @export
-#'
-plot_raw_peaks = function(sc_raw, scan_range = NULL, mz_range = NULL, transform = NULL) {
-  if (inherits(sc_raw, "RawMS")) {
-    if (is.null(scan_range)) {
-      scan_range = sc_raw$scan_range
-    }
-    peaks = raw_peak_intensity(sc_raw, scanrange = scan_range)
-
-  } else if (inherits(sc_raw, "data.frame")) {
-    peaks = sc_raw
-
-  }
-  if (!is.null(mz_range)) {
-    peaks = peaks[(peaks$mz >= mz_range[1]) & (peaks$mz <= mz_range[2]), ]
-  }
-
-  if (!is.null(transform)) {
-    peaks$intensity = transform(peaks$intensity + 1)
-  }
-
-  ggplot(peaks, aes(x = mz, xend = mz, y = 0, yend = intensity)) + geom_segment() +
-    labs(x = "M/Z", y = "Intensity")
-}
-
-#' raw peaks intensities
-#'
-#' generate raw peaks from just averaging scans via xcms
-#'
-#' @param sc_raw an RawMS object
-#' @param scanrange the range of scans to use, default is derived from sc_raw
-#'
-#' @export
-#' @importFrom xcms getSpec
-#' @importFrom pracma findpeaks
-#' @return data.frame of mz and intensity
-#'
-raw_peak_intensity = function(sc_raw, scanrange = sc_raw$scan_range) {
-  mean_scan = xcms::getSpec(sc_raw$raw_data, scanrange = scanrange)
-  mean_scan = mean_scan[!is.na(mean_scan[, 2]), ]
-  mean_peaks = pracma::findpeaks(mean_scan[, 2], nups = 2)
-
-  mean_peak_intensity = data.frame(mz = mean_scan[mean_peaks[, 2], 1],
-                             intensity = mean_scan[mean_peaks[, 2], 2])
-  mean_peak_intensity
-}
-
-
-#' raw peaks
-#'
-#' generate raw peaks from just averaging scans via xcms
-#'
-#' @param sc_raw an RawMS object
-#' @param scanrange the range of scans to use, default is derived from sc_raw
-#'
-#' @export
-#' @importFrom xcms getSpec
-#' @importFrom pracma findpeaks
-#' @return numeric
-#'
-raw_peaks = function(sc_raw, scanrange = sc_raw$scan_range) {
-  mean_scan = xcms::getSpec(sc_raw$raw_data, scanrange = scanrange)
-  mean_scan = mean_scan[!is.na(mean_scan[, 2]), ]
-  mean_peaks = pracma::findpeaks(mean_scan[, 2], nups = 2)
-
-  mean_peak_mz = mean_scan[mean_peaks[, 2], 1]
-  mean_peak_mz
-}
-
-#' peak density
-#'
-#' calculates peak density in a sliding window of m/z
-#'
-#' @param peak_data numeric vector of m/z values representing peaks
-#' @param use_range the range of m/z's to generate windows
-#' @param window how big an m/z window to calculate density
-#' @param delta how much to slide the window
-#'
-#' @return data.frame
-#' @export
-#'
-calculate_density = function(peak_data, use_range = NULL, window = 1, delta = 0.1){
-  peak_data = sort(peak_data, decreasing = FALSE)
-  if (is.null(use_range)) {
-    use_range = range(peak_data)
-  }
-
-  window_locs = data.frame(beg = round(seq(use_range[1], use_range[2] - window, delta), 2),
-                            end = round(seq(use_range[1] + window, use_range[2], delta), 2))
-
-  peak_density = purrr::map_df(seq(1, nrow(window_locs)), function(in_window){
-    out_val = sum((peak_data >= window_locs[in_window, "beg"]) & (peak_data <= window_locs[in_window, "end"]))
-
-    data.frame(window = (window_locs[in_window, "beg"] + window_locs[in_window, "end"]) / 2,
-               density = out_val)
-  })
-  peak_density
-}
-
 #' determine sample run time
 #'
 #' @param zip the zip object you want to use
@@ -656,7 +546,7 @@ sample_run_time = function(zip, units = "m"){
     cleanup = FALSE
   }
 
-  ms_data = get_ms_info(zip$sc_raw$raw_data, include_msn = TRUE, include_precursor = TRUE)
+  ms_data = get_scan_info(zip$sc_raw$raw_data)
   ms_data = ms_data[order(ms_data$time), ]
   # assume that the last scan-scan time difference is how long the last scan should have taken as well
   last_diff = ms_data$time[nrow(ms_data)] - ms_data$time[nrow(ms_data) - 1]
@@ -671,70 +561,4 @@ sample_run_time = function(zip, units = "m"){
     zip$cleanup()
   }
   data.frame(sample = zip$id, start = start_time, run = total_time_out, end = end_time)
-}
-
-#' get frequencies for all data
-#'
-#' Given a zip object, gets frequency conversions for *all* of the scans, not just the MS1
-#' or filtered scans.
-#'
-#' @param zip the zip object
-#'
-#' @export
-#' @return data.frame
-every_scan_frequency = function(zip){
-  if (inherits(zip, "character")) {
-    zip = sc_zip(zip)
-    cleanup = TRUE
-  }
-
-  if (is.null(zip$sc_raw)) {
-    zip$load_raw()
-    cleanup = FALSE
-  } else {
-    cleanup = FALSE
-  }
-
-  scan_data = get_ms_info(zip$sc_raw$raw_data, include_msn = TRUE, include_precursor = TRUE)
-  scan_data = scan_data[order(scan_data$time), ]
-
-  mz_data = purrr::map(seq(1, nrow(scan_data)), function(scan_row){
-    if (!is.na(scan_data[scan_row, "scan"])) {
-      tmp = as.data.frame(xcms::getScan(zip$sc_raw$raw_data, scan_data[scan_row, "scan"]),
-                          strinsAsFactors = FALSE)
-    }  else {
-      tmp = as.data.frame(xcms::getMsnScan(zip$sc_raw$raw_data, scan_data[scan_row, "scan_msn"]),
-                          stringsAsFactors = FALSE)
-    }
-    tmp$scan = scan_data[scan_row, "acquisition"]
-    tmp
-  })
-
-  if (cleanup){
-    zip$cleanup()
-  }
-
-  ... = NULL
-  frequency_fit_description = c(0, -1/2, -1/3)
-  mz_fit_description = c(0, -1, -2, -3)
-  mz_frequency = purrr::map(mz_data, function(in_scan){
-    #message(scan_name)
-    out_scan = ScanCentricPeakCharacterization::convert_mz_frequency(in_scan, ...)
-    out_scan
-  })
-  frequency_fits = purrr::map(mz_frequency, function(in_freq){
-    use_peaks = in_freq$convertable
-    tmp_fit = ScanCentricPeakCharacterization:::fit_exponentials(in_freq$mean_mz[use_peaks], in_freq$mean_frequency[use_peaks], frequency_fit_description)
-    tmp_fit$scan = in_freq[1, "scan"]
-    tmp_fit
-  })
-  frequency_coefficients = purrr::map_df(frequency_fits, function(.x){
-      tmp_df = as.data.frame(matrix(.x$coefficients, nrow = 1))
-      names(tmp_df) = c("intercept", "sqrt", "cubert")
-      tmp_df$scan = .x$scan
-      tmp_df
-  })
-
-  coefficients = dplyr::left_join(scan_data, frequency_coefficients, by = c("acquisition" = "scan"))
-  list(mz_data = mz_frequency, coefficients = coefficients)
 }

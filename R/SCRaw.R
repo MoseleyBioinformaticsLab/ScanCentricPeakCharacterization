@@ -77,45 +77,6 @@ get_ms1_scans = function(raw_data){
 }
 
 
-#' plot tic
-#'
-#' function to plot the total intensity chromatogram of the data, with information
-#' about which scans are which
-#'
-#' @param raw_data an `xcmsRaw` object (ideally from `import_mzML`)
-#' @param color_ms should scans be colored by their *ms* level and type?
-#'
-#' @importFrom ggplot2 ggplot geom_segment labs
-#' @importFrom forcats fct_relevel
-#' @return ggplot
-#' @export
-plot_tic = function(raw_data, color_ms = TRUE, log_transform = TRUE){
-  all_data = get_scan_info(raw_data)
-
-
-  if ((length(unique(all_data$ms_level)) > 1) || (length(unique(all_data$type)) > 1)) {
-    all_data$ms_type = paste0(all_data$ms_type, ".", all_data$ms_level)
-  }
-
-  if (log_transform) {
-    all_data$tic = log10(all_data$tic + 1)
-    y_lab = "Log10(TIC)"
-  } else {
-    y_lab = "TIC"
-  }
-
-  if (!is.null(all_data$ms_type)) {
-    all_data$ms_type = forcats::fct_relevel(all_data$ms_type, "normal.1", "precursor.1", "normal.2")
-    tic_plot = ggplot(all_data, aes(x = time, xend = time, y = 0, yend = tic, color = ms_type)) + geom_segment() +
-      labs(y = y_lab)
-  } else {
-    tic_plot = ggplot(all_data, aes(x = time, xend = time, y = 0, yend = tic)) + geom_segment() +
-      labs(y = y_lab)
-  }
-  tic_plot
-}
-
-
 #' get scan level info
 #'
 #' @param raw_data the MSnbase raw data object

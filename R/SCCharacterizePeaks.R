@@ -7,7 +7,7 @@
 #' Peak characterization associates data with the `SCZip`,
 #'   `SCPeakRegionFinder`, and controls their execution.
 #'
-#' @example
+#' @examples
 #' \dontrun{
 #'   lipid_sample = system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization")
 #'   sc_char = SCCharacterizePeaks$new(lipid_sample)
