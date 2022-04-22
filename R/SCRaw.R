@@ -116,18 +116,32 @@ plot_tic = function(raw_data, color_ms = TRUE, log_transform = TRUE){
 }
 
 
-#' get MS info
+#' get scan level info
 #'
 #' @param raw_data the MSnbase raw data object
-#' @param include_msn should information from MSn scans be included?
-#' @param include_precursor should the precursor scans be included?
 #'
-#' @return data.frame with scan, time, acquisition, tic, ms_level and ms_type
+#' @details returns a data.frame with:
+#'  * `scanIndex`: the indices of the scans
+#'  * `scan`: the number of the scan by number. This will be used to name scans.
+#'  * `polarity`: +1 or -1 depending on if the scan is positive or negative
+#'  * `rtime`: the retention time or injection time of the scan for for direct-injection data
+#'  * `tic`: the total intensity of the scan
+#'  * `rtime_lag`: how long between this scan and previous scan
+#'  * `rtime_lead`: how long between this scan and next scan
+#'
+#'  After running `predict_frequency()`, the following fields are added
+#'  from the information returned from frequency conversion:
+#'  * `mad`: mean absolute deviation of residuals
+#'  * `frequency model coefficients`: the coefficients from the
+#'  fit frequency, named whatever you named them
+#'  * `mz model coefficients`: similar, but for the m/z model
+#'
+#' @return data.frame, see **Details**
 #' @export
 get_scan_info = function(raw_data){
   ms_scan_info = data.frame(scanIndex = MSnbase::scanIndex(raw_data),
                             scan = seq(1, length(raw_data)),
-                            polarty = MSnbase::polarity(raw_data),
+                            polarity = MSnbase::polarity(raw_data),
                             rtime = MSnbase::rtime(raw_data),
                             tic = MSnbase::tic(raw_data))
   ms_scan_info = ms_scan_info %>%
@@ -235,42 +249,8 @@ SCRaw = R6::R6Class("SCRaw",
      frequency_coefficients = NULL,
      mz_coefficients = NULL,
 
-     plot_tic = function(color_ms = TRUE, log_transform = TRUE){
-       plot_tic(self$raw_data, color_ms = color_ms, log_transform = log_transform)
-     },
-     set_scans = function(scan_range = NULL, rt_range = NULL){
-
-       ms_scan_info = get_scan_info(self$raw_data)
-       scan_info = ms_scan_info
-       if (is.null(scan_range) && is.null(rt_range)) {
-         #message("Setting scans to be MS1 scans!")
-         self$scan_range = ms_scan_info$scan
-         self$rt_range = range(ms_scan_info$rtime)
-       } else {
-         if (!is.null(scan_range)) {
-           if ((length(scan_range) == 2) && ((scan_range[2] - scan_range[1]) != 1)) {
-             scan_range = seq(scan_range[1], scan_range[2])
-           }
-           ms_scan_info = ms_scan_info[(ms_scan_info$scan %in% scan_range),]
-         } else if (!is.null(rt_range)) {
-           assert_that(length(rt_range) == 2)
-
-           rt_call = paste0("(time >= ", rt_range[1], ") & (time <= ", rt_range[2], ")")
-
-           ms_scan_info = filter_(ms_scan_info, rt_call)
-         }
-
-         self$scan_range = ms_scan_info$scan
-         self$rt_range = range(ms_scan_info$rtime)
-
-       }
-     },
      extract_raw_data = function(remove_zero = self$remove_zero){
        all_scan_data = MSnbase::extractSpectraData(self$raw_data)
-
-       scan_range = self$scan_range
-       keep_scans = self$scan_info$scanIndex %in% scan_range
-       all_scan_data = all_scan_data[keep_scans, ]
 
        raw_scan_data = internal_map$map_function(seq(1, nrow(all_scan_data)), function(in_scan){
          tmp_data = data.frame(mz = all_scan_data$mz[[in_scan]],
