@@ -1,22 +1,16 @@
-#' mz points to frequency regions
+#' frequency points to frequency regions
 #'
 #' Given M/Z point data in a data.frame, create IRanges based point "regions" of
 #' width 1, using the `frequency_multiplier` argument to convert from the floating
 #' point double to an `integer`.
 #'
-#' @param mz_data_list a list of `data.frame` containing `mz`
-#' @param frequency_fit_description the description for frequency ~ mz
-#' @param mz_fit_description the description for mz ~ frequency
+#' @param frequency_list a list of with a `data.frame` containing `frequency`
 #' @param frequency_multiplier a value used to convert to integers.
 #'
 #' @importFrom IRanges IRanges
 #' @importFrom S4Vectors mcols
 #' @export
-mz_points_to_frequency_regions = function(mz_data_list, frequency_fit_description = c(0, -1/2, -1/3),
-                                           mz_fit_description = c(0, -1, -2, -3), frequency_multiplier = 400){
-  log_message("Converting scans to frequency")
-  frequency_list = mz_scans_to_frequency(mz_data_list, frequency_fit_description, mz_fit_description)
-  log_message("Done converting to frequency")
+check_ranges_convert_to_regions = function(frequency_list, frequency_multiplier = 400){
 
   # this is a check to make sure we will be able to convert
   # to multiply and still get integers out
@@ -61,7 +55,7 @@ mz_points_to_frequency_regions = function(mz_data_list, frequency_fit_descriptio
 #' frequency points to frequency_regions
 #'
 #' Given a set of frequency points in a data.frame, create IRanges based point "regions"
-#' of width 1, useing the `multiplier` to convert from a floating point double
+#' of width 1, using the `multiplier` to convert from a floating point double
 #' to an `integer`
 #'
 #' @param frequency_data a `data.frame`
@@ -179,14 +173,12 @@ PeakRegions = R6::R6Class("PeakRegions",
     add_data = function(raw_ms){
       if (!is.null(raw_ms)) {
         if (inherits(raw_ms, "RawMS")) {
-          raw_mz_data = raw_ms$extract_raw_data()
+          frequency_data = raw_ms$get_frequency_data()
           self$instrument = raw_ms$get_instrument()
         } else if (inherits(raw_ms, "list")) {
-          raw_mz_data = raw_ms
+          frequency_data = raw_ms
         }
-        self$frequency_point_regions = mz_points_to_frequency_regions(mz_data = raw_mz_data,
-                                                                      frequency_fit_description = self$frequency_fit_description,
-                                                                      mz_fit_description = self$mz_fit_description,
+        self$frequency_point_regions = check_ranges_convert_to_regions(frequency_data,
                                                                       frequency_multiplier = self$frequency_multiplier)
         self$frequency_multiplier = self$frequency_point_regions$metadata$frequency_multiplier
         self$frequency_range = purrr::map(self$frequency_point_regions$frequency, ~ range(S4Vectors::mcols(.x)$frequency)) %>% do.call(c, .) %>% range(.)
@@ -197,16 +189,12 @@ PeakRegions = R6::R6Class("PeakRegions",
     },
 
     initialize = function(raw_ms = NULL,
-                          frequency_fit_description = c(0, -1/2, -1/3),
-                          mz_fit_description = c(0, -1, -2, -3),
                           frequency_multiplier = 400,
                           scan_perc = 0.1, max_subsets = 100){
       #browser(expr = TRUE)
-      self$frequency_multiplier = frequency_multiplier
-      self$frequency_fit_description = frequency_fit_description
-      self$mz_fit_description = mz_fit_description
       self$scan_perc = scan_perc
       self$max_subsets = max_subsets
+      self$frequency_multiplier = frequency_multiplier
 
       self$add_data(raw_ms)
 
@@ -495,17 +483,15 @@ PeakRegionFinder = R6::R6Class("PeakRegionFinder",
                           n_point_region = 2000,
                           peak_method = "lm_weighted",
                           min_points = 4,
-                          zero_normalization = FALSE,
-                          frequency_fit_description = c(0, -1/2, -1/3),
-                          mz_fit_description = c(0, -1, -2, -3)){
+                          zero_normalization = FALSE){
       if (inherits(raw_ms, "RawMS")) {
-        self$peak_regions = PeakRegions$new(raw_ms = raw_ms$extract_raw_data(), frequency_fit_description = frequency_fit_description,
-                                             mz_fit_description = mz_fit_description, frequency_multiplier = frequency_multiplier)
+        self$peak_regions = PeakRegions$new(raw_ms,
+                                            frequency_multiplier = frequency_multiplier)
       } else if (inherits(raw_ms, "PeakRegions")) {
         self$peak_regions = raw_ms
       } else {
-        self$peak_regions = PeakRegions$new(raw_ms = NULL, frequency_fit_description = frequency_fit_description,
-                                             mz_fit_description = mz_fit_description, frequency_multiplier = frequency_multiplier)
+        self$peak_regions = PeakRegions$new(raw_ms = NULL,
+                                            frequency_multiplier = frequency_multiplier)
       }
 
       self$sliding_region_size = sliding_region_size
@@ -929,10 +915,11 @@ single_pass_normalization = function(scan_peaks, intensity_measure = c("RawHeigh
 
   all_scans = data.frame(scan = unique(unlist(purrr::map(scan_peaks, function(x){unique(x$scan)}))))
 
-  peak_intensity = suppressMessages(purrr::map_dfc(scan_peaks[normalize_peaks], function(x){
+  peak_intensity_list = lapply(scan_peaks[normalize_peaks], function(x){
     tmp_data = dplyr::left_join(all_scans, as.data.frame(x[, c("scan", use_measure)]), by = "scan")
     log(tmp_data[, use_measure])
-  }))
+  })
+  peak_intensity = as.data.frame(do.call(cbind, peak_intensity_list))
 
   all_na = purrr::map_lgl(seq_len(nrow(peak_intensity)), ~ sum(is.na(peak_intensity[.x, ])) == ncol(peak_intensity))
 

@@ -229,6 +229,7 @@ mz_scans_to_frequency = function(mz_df_list, frequency_fit_description, mz_fit_d
     use_mz$mean_predicted = use_mz$mean_frequency - use_mz$predicted_frequency
     use_mz
   })
+  names(mz_frequency) = names(mz_df_list)
 
   list(frequency_list = mz_frequency,
        frequency_coefficients = frequency_coefficients,
