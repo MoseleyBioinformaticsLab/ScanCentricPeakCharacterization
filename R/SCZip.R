@@ -220,7 +220,7 @@ SCZip = R6::R6Class("SCZip",
     metadata_file = NULL,
     sc_raw = NULL,
     peaks = NULL,
-    sc_peak_finder = NULL,
+    sc_peak_region_finder = NULL,
     json_summary = NULL,
     id = NULL,
     out_file = NULL,
@@ -232,23 +232,23 @@ SCZip = R6::R6Class("SCZip",
 
     },
 
-    load_sc_peak_finder = function(){
+    load_sc_peak_region_finder = function(){
       if (file.exists(file.path(self$temp_directory, "sc_peak_finder.rds"))) {
-        sc_peak_finder = try(readRDS(file.path(self$temp_directory, "sc_peak_finder.rds")))
+        sc_peak_region_finder = try(readRDS(file.path(self$temp_directory, "sc_peak_region_finder.rds")))
 
-        if (inherits(sc_peak_finder, "try-error")) {
-          sc_peak_finder = try({
+        if (inherits(sc_peak_region_finder, "try-error")) {
+          sc_peak_region_finder = try({
             tmp_env = new.env()
-            load(file.path(self$temp_directory, "sc_peak_finder.rds"), envir = tmp_env)
+            load(file.path(self$temp_directory, "sc_peak_region_finder.rds"), envir = tmp_env)
             tmp_env$sc_peak_finder
           })
         }
-        if (inherits(sc_peak_finder, "PeakRegionFinder")) {
-          self$sc_peak_finder = sc_peak_finder
+        if (inherits(sc_peak_region_finder, "SCPeakRegionFinder")) {
+          self$sc_peak_region_finder = sc_peak_region_finder
           rm(sc_peak_finder)
-          message("Peak Finder Binary File Loaded!")
+          message("SCPeakRegionFinder Binary File Loaded!")
         } else {
-          stop("sc_peak_finder.rds is not valid!")
+          stop("sc_peak_region_finder.rds is not valid!")
         }
 
       }
@@ -258,20 +258,20 @@ SCZip = R6::R6Class("SCZip",
       lists_2_json(self$json_summary, temp_dir = self$temp_directory)
     },
 
-    save_sc_peak_finder = function(){
-      sc_peak_finder = self$sc_peak_finder
-      saveRDS(sc_peak_finder, file.path(self$temp_directory, "sc_peak_finder.rds"))
+    save_sc_peak_region_finder = function(){
+      sc_peak_region_finder = self$sc_peak_region_finder
+      saveRDS(sc_peak_region_finder, file.path(self$temp_directory, "sc_peak_region_finder.rds"))
       invisible(self)
     },
 
     load_peak_list = function(){
-      if (file.exists(file.path(self$temp_directory, "sc_peak_finder.rds"))) {
+      if (file.exists(file.path(self$temp_directory, "sc_peak_region_finder.rds"))) {
         tmp_env = new.env()
-        load(file.path(self$temp_directory, "sc_peak_finder.rds"), envir = tmp_env)
-        peak_data = tmp_env$sc_peak_finder$correspondent_peaks$master_peak_list$clone(deep = TRUE)
+        load(file.path(self$temp_directory, "sc_peak_region_finder.rds"), envir = tmp_env)
+        peak_data = tmp_env$sc_peak_region_finder$correspondent_peaks$master_peak_list$clone(deep = TRUE)
         rm(tmp_env)
       } else {
-        warning("No sc_peak_finder.rds found, not returning peaks!")
+        warning("No sc_peak_region_finder.rds found, not returning peaks!")
         peak_data = NULL
       }
       peak_data
