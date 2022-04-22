@@ -32,13 +32,13 @@ log_memory = function(){
     if ((active_to_total >= 0.95) || (swapfree_to_swap <= 0.95)) {
       memory_string2 = paste0("HIGH MEMORY USAGE!!! ", memory_string)
       if (get("logger", envir = has_logger)) {
-        logger::log_warn(memory_string2, namespace = "FTMS.peakCharacterization")
+        logger::log_warn(memory_string2, namespace = "ScanCentricPeakCharacterization")
       } else {
         warning(memory_string2)
       }
     } else {
       if (get("logger", envir = has_logger)) {
-        logger::log_info(memory_string, namespace = "FTMS.peakCharacterization")
+        logger::log_info(memory_string, namespace = "ScanCentricPeakCharacterization")
       }
     }
   }
@@ -55,7 +55,7 @@ log_memory = function(){
 #' @return NULL
 log_message = function(message_string){
   if (get("logger", envir = has_logger)) {
-    logger::log_info(message_string, namespace = "FTMS.peakCharacterization")
+    logger::log_info(message_string, namespace = "ScanCentricPeakCharacterization")
   }
   if (get("status", envir = pc_progress)) {
     message(message_string)

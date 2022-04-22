@@ -4,7 +4,7 @@
 #'
 #' @param zip_file the zip file
 #' @export
-zip_list_contents <- function(zip_file){
+zip_list_contents = function(zip_file){
   unzip(zip_file, list = TRUE)
 }
 
@@ -20,10 +20,10 @@ zip_list_contents <- function(zip_file){
 #' @details a directory created by `tempdir` is used to hold the file,
 #' which is then added to the zip file.
 #' @export
-add_to_zip <- function(object, filename, zip_file){
+add_to_zip = function(object, filename, zip_file){
   stopifnot(file.exists(zip_file))
-  use_dir <- tempdir()
-  use_file <- file.path(use_dir, filename)
+  use_dir = tempdir()
+  use_file = file.path(use_dir, filename)
 
   try(
     {
@@ -45,27 +45,27 @@ add_to_zip <- function(object, filename, zip_file){
 #' @param mzml_file the mzML file to zip up
 #' @param out_dir the directory to save the zip file
 #' @export
-mzml_to_zip <- function(mzml_file, out_file){
-  mzml_file <- path.expand(mzml_file)
+mzml_to_zip = function(mzml_file, out_file){
+  mzml_file = path.expand(mzml_file)
   stopifnot(file.exists(mzml_file))
 
-  raw_meta <- get_mzml_metadata(mzml_file)
+  raw_meta = get_mzml_metadata(mzml_file)
 
-  zip_meta <- list(id = raw_meta$mzML$id,
+  zip_meta = list(id = raw_meta$mzML$id,
                    raw = list(data = basename(mzml_file),
                               metadata = "raw_metadata.json"))
-  zip_meta_json <- meta_export_json(zip_meta)
+  zip_meta_json = meta_export_json(zip_meta)
 
-  raw_meta_json <- meta_export_json(raw_meta)
+  raw_meta_json = meta_export_json(raw_meta)
 
-  zip_file_out <- file.path(out_dir, paste0(raw_meta$mzML$id, ".zip"))
+  zip_file_out = file.path(out_dir, paste0(raw_meta$mzML$id, ".zip"))
 
-  temp_dir <- tempdir()
+  temp_dir = tempdir()
 
-  raw_meta_file <- file.path(temp_dir, "raw_metadata.json")
+  raw_meta_file = file.path(temp_dir, "raw_metadata.json")
   cat(raw_meta_json, file = raw_meta_file)
 
-  zip_meta_file <- file.path(temp_dir, "metadata.json")
+  zip_meta_file = file.path(temp_dir, "metadata.json")
   cat(zip_meta_json, file = zip_meta_file)
 
   try(
@@ -77,9 +77,9 @@ mzml_to_zip <- function(mzml_file, out_file){
   unlink(temp_dir)
 
   if (file.exists(zip_file_out)) {
-    out_file <- zip_file_out
+    out_file = zip_file_out
   } else {
-    out_file <- NULL
+    out_file = NULL
   }
   out_file
 }
@@ -94,12 +94,12 @@ mzml_to_zip <- function(mzml_file, out_file){
 #' @export
 #' @importFrom jsonlite fromJSON
 #' @return list
-load_metadata <- function(zip_dir, metadata_file){
+load_metadata = function(zip_dir, metadata_file){
 
-  zip_contents <- list.files(zip_dir)
+  zip_contents = list.files(zip_dir)
   assert_that(metadata_file %in% zip_contents)
 
-  metadata <- jsonlite::fromJSON(file.path(zip_dir, metadata_file))
+  metadata = jsonlite::fromJSON(file.path(zip_dir, metadata_file))
   metadata
 }
 
@@ -112,9 +112,9 @@ load_metadata <- function(zip_dir, metadata_file){
 #'
 #' @export
 #' @importFrom assertthat assert_that
-check_zip_file <- function(zip_dir){
-  zip_metadata <- load_metadata(zip_dir, "metadata.json")
-  zip_contents <- list.files(zip_dir)
+check_zip_file = function(zip_dir){
+  zip_metadata = load_metadata(zip_dir, "metadata.json")
+  zip_contents = list.files(zip_dir)
 
   assert_that(!is.null(zip_metadata$raw$raw_data))
   assert_that(zip_metadata$raw$raw_data %in% zip_contents)
@@ -129,39 +129,39 @@ check_zip_file <- function(zip_dir){
 #' @param zip_dir
 #'
 #' @export
-initialize_zip_metadata <- function(zip_dir){
-  mzml_file <- dir(zip_dir, pattern = "mzML", full.names = TRUE)
-  json_file <- dir(zip_dir, pattern = "json", full.names = TRUE)
+initialize_zip_metadata = function(zip_dir){
+  mzml_file = dir(zip_dir, pattern = "mzML", full.names = TRUE)
+  json_file = dir(zip_dir, pattern = "json", full.names = TRUE)
 
   if (length(mzml_file) == 1) {
-    mzml_base <- tools::file_path_sans_ext(basename(mzml_file))
+    mzml_base = tools::file_path_sans_ext(basename(mzml_file))
   } else {
     stop("there should only be one mzML file passed!", call. = TRUE)
   }
 
   if (length(json_file) == 1) {
-    json_base <- tools::file_path_sans_ext(basename(json_file))
+    json_base = tools::file_path_sans_ext(basename(json_file))
 
     if (json_base == mzml_base) {
-      raw_meta <- jsonlite::fromJSON(json_file, simplifyVector = FALSE)
+      raw_meta = jsonlite::fromJSON(json_file, simplifyVector = FALSE)
       file.rename(json_file, file.path(zip_dir, "raw_metadata.json"))
     } else {
       warning("JSON meta-data file does not match mzML file name!")
-      raw_meta <- get_mzml_metadata(mzml_file)
+      raw_meta = get_mzml_metadata(mzml_file)
       cat(meta_export_json(raw_meta), file = file.path(zip_dir, "raw_metadata.json"))
     }
   } else {
-    raw_meta <- get_mzml_metadata(mzml_file)
+    raw_meta = get_mzml_metadata(mzml_file)
     cat(meta_export_json(raw_meta), file = file.path(zip_dir, "raw_metadata.json"))
   }
 
-  zip_meta <- list(id = mzml_base,
+  zip_meta = list(id = mzml_base,
                    mzml_id = raw_meta$mzML$id,
                    raw = list(raw_data = basename(mzml_file),
                               metadata = "raw_metadata.json"))
-  zip_meta_json <- meta_export_json(zip_meta)
+  zip_meta_json = meta_export_json(zip_meta)
 
-  zip_meta_file <- file.path(zip_dir, "metadata.json")
+  zip_meta_file = file.path(zip_dir, "metadata.json")
   cat(zip_meta_json, file = zip_meta_file)
 
 }
@@ -172,20 +172,20 @@ initialize_zip_metadata <- function(zip_dir){
 #' @param mzml_file the mzML file to extract metadata from
 #'
 #' @export
-initialize_metadata_from_mzml <- function(zip_dir, mzml_file){
-  raw_meta <- get_mzml_metadata(file.path(zip_dir, mzml_file))
+initialize_metadata_from_mzml = function(zip_dir, mzml_file){
+  raw_meta = get_mzml_metadata(file.path(zip_dir, mzml_file))
 
-  zip_meta <- list(id = raw_meta$mzML$id,
+  zip_meta = list(id = raw_meta$mzML$id,
                    raw = list(raw_data = basename(mzml_file),
                               metadata = "raw_metadata.json"))
-  zip_meta_json <- meta_export_json(zip_meta)
+  zip_meta_json = meta_export_json(zip_meta)
 
-  raw_meta_json <- meta_export_json(raw_meta)
+  raw_meta_json = meta_export_json(raw_meta)
 
-  raw_meta_file <- file.path(zip_dir, "raw_metadata.json")
+  raw_meta_file = file.path(zip_dir, "raw_metadata.json")
   cat(raw_meta_json, file = raw_meta_file)
 
-  zip_meta_file <- file.path(zip_dir, "metadata.json")
+  zip_meta_file = file.path(zip_dir, "metadata.json")
   cat(zip_meta_json, file = zip_meta_file)
 }
 

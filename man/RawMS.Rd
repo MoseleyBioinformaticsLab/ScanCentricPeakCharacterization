@@ -37,10 +37,10 @@ below for how to generate these functions.
 
 \dontrun{
 # setting different files
-rms <- raw_ms("mzmlFile.mzML")
-rms <- raw_ms("mzmlFile.mzML", "someDirectoryForZip")
+rms = raw_ms("mzmlFile.mzML")
+rms = raw_ms("mzmlFile.mzML", "someDirectoryForZip")
 
-rms <- raw_ms("mzmlZipFile.zip")
+rms = raw_ms("mzmlZipFile.zip")
 
 # Plot the total-ion-chromatogram
 rms$plot_tic()
@@ -49,7 +49,7 @@ rms$set_scans(scan_range = c(1, 2, 3))
 rms$set_scans(rt_range = c(0, 50.1)) # uses seconds
 
 # set the find_peaks method
-rms$find_peaks <- function(){
+rms$find_peaks = function(){
 
 }
 

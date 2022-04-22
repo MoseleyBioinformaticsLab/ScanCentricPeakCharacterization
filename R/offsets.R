@@ -1,7 +1,7 @@
-default_offset_fit_function <- function(x, y){
-  loess_frame <- data.frame(x = x, y = y)
-  loess_frame <- loess_frame[!(is.na(x) | is.na(y)), ]
-  loess_fit <- stats::loess(y ~ x, data = loess_frame, span = 1.5, control = stats::loess.control(surface = "direct"))
+default_offset_fit_function = function(x, y){
+  loess_frame = data.frame(x = x, y = y)
+  loess_frame = loess_frame[!(is.na(x) | is.na(y)), ]
+  loess_fit = stats::loess(y ~ x, data = loess_frame, span = 1.5, control = stats::loess.control(surface = "direct"))
   loess_fit
 }
 
@@ -16,20 +16,20 @@ default_offset_fit_function <- function(x, y){
 #' @export
 #'
 #' @return numeric
-default_offset_predict_function <- function(model, x){
+default_offset_predict_function = function(model, x){
   stats:::predict.loess(model, newdata = x)
 }
 
-correctly_round_numbers <- function(number_of_things, fraction){
+correctly_round_numbers = function(number_of_things, fraction){
   assertthat::assert_that(number_of_things > 0)
   assertthat::assert_that(fraction > 0)
   if (fraction < 1) {
-    floor_value <- floor(number_of_things * fraction)
+    floor_value = floor(number_of_things * fraction)
   } else {
-    floor_value <- fraction
+    floor_value = fraction
   }
   if (floor_value < 1) {
-    floor_value <- 1
+    floor_value = 1
   }
   floor_value
 }
@@ -45,32 +45,32 @@ correctly_round_numbers <- function(number_of_things, fraction){
 #'
 #' @return list
 #' @export
-default_correct_offset_function <- function(master_peak_list, multi_scan_peaklist, min_scan = 0.1){
+default_correct_offset_function = function(master_peak_list, multi_scan_peaklist, min_scan = 0.1){
 
-  n_col <- ncol(master_peak_list$scan_mz)
-  n_min_scan <- correctly_round_numbers(n_col, min_scan)
-  correspond_peaks <- master_peak_list$count_notna() >= n_min_scan
+  n_col = ncol(master_peak_list$scan_mz)
+  n_min_scan = correctly_round_numbers(n_col, min_scan)
+  correspond_peaks = master_peak_list$count_notna() >= n_min_scan
 
-  scan_indices <- master_peak_list$scan_indices
+  scan_indices = master_peak_list$scan_indices
 
-  multi_scan_peaklist_corrected <- multi_scan_peaklist$clone(deep = TRUE)
+  multi_scan_peaklist_corrected = multi_scan_peaklist$clone(deep = TRUE)
 
-  offset_models <- vector(mode = "list", length = length(scan_indices))
+  offset_models = vector(mode = "list", length = length(scan_indices))
 
   for (iscan in seq(1, n_col)) {
-    scan_offset <- master_peak_list$scan_mz[correspond_peaks, iscan] -
+    scan_offset = master_peak_list$scan_mz[correspond_peaks, iscan] -
       master_peak_list$master[correspond_peaks]
-    offset_model <- master_peak_list$offset_fit_function(master_peak_list$master[correspond_peaks], scan_offset)
+    offset_model = master_peak_list$offset_fit_function(master_peak_list$master[correspond_peaks], scan_offset)
 
-    use_scan <- scan_indices[iscan]
-    tmp_peaks <- multi_scan_peaklist_corrected$peak_list_by_scans[[use_scan]]$peak_list
-    use_mz <- tmp_peaks$ObservedMZ
-    offset_predict <- master_peak_list$offset_predict_function(offset_model, use_mz)
-    corrected_mz <- use_mz - offset_predict
-    tmp_peaks$ObservedMZ <- corrected_mz
-    multi_scan_peaklist_corrected$peak_list_by_scans[[use_scan]]$peak_list <- tmp_peaks
-    offset_model$scan_index <- scan_indices[iscan]
-    offset_models[[iscan]] <- offset_model
+    use_scan = scan_indices[iscan]
+    tmp_peaks = multi_scan_peaklist_corrected$peak_list_by_scans[[use_scan]]$peak_list
+    use_mz = tmp_peaks$ObservedMZ
+    offset_predict = master_peak_list$offset_predict_function(offset_model, use_mz)
+    corrected_mz = use_mz - offset_predict
+    tmp_peaks$ObservedMZ = corrected_mz
+    multi_scan_peaklist_corrected$peak_list_by_scans[[use_scan]]$peak_list = tmp_peaks
+    offset_model$scan_index = scan_indices[iscan]
+    offset_models[[iscan]] = offset_model
   }
 
   list(multi_scan_peaklist = multi_scan_peaklist_corrected,
@@ -85,13 +85,13 @@ default_correct_offset_function <- function(master_peak_list, multi_scan_peaklis
 #'
 #' @return data.frame
 #' @export
-loess_to_df <- function(loess_model){
-  out_frame <- data.frame(x = rep(loess_model$x[,1], 2),
+loess_to_df = function(loess_model){
+  out_frame = data.frame(x = rep(loess_model$x[,1], 2),
                           y = c(loess_model$y, loess_model$fitted),
                           which = rep(c("original", "fitted"), each = loess_model$n),
                           stringsAsFactors = FALSE)
   if (!is.null(loess_model$scan_index)) {
-    out_frame$scan_index <- loess_model$scan_index
+    out_frame$scan_index = loess_model$scan_index
   }
   out_frame
 }

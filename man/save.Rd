@@ -17,7 +17,7 @@ If not \code{NULL}, then it is checked that the \code{id} is part of the
 }
 \examples{
 \dontrun{
- new_ms <- zip_ms("in_file")
+ new_ms = zip_ms("in_file")
  new_ms$save()
  new_ms$save("out_file")
 }

@@ -7,11 +7,11 @@
 #'
 #' @export
 #' @return list
-get_raw_ms_metadata <- function(in_file){
-  is_mzml <- regexpr("*.mzML", in_file)
+get_raw_ms_metadata = function(in_file){
+  is_mzml = regexpr("*.mzML", in_file)
 
   if (is_mzml != -1) {
-    raw_metadata <- get_mzml_metadata(in_file)
+    raw_metadata = get_mzml_metadata(in_file)
   } else {
     stop("Unsupported format for extracting metadata!")
   }
@@ -52,47 +52,47 @@ get_mzml_header = function(mzml_file){
 #'
 #' @importFrom XML xmlTreeParse xmlNamespaceDefinitions xmlRoot getNodeSet xmlAttrs xmlChildren xmlToList
 #' @export
-get_mzml_metadata <- function(mzml_file){
+get_mzml_metadata = function(mzml_file){
   mzml_header = get_mzml_header(mzml_file)
-  xml_doc <- XML::xmlTreeParse(mzml_header, useInternalNodes = TRUE)
-  ns <- XML::xmlNamespaceDefinitions(XML::xmlRoot(xml_doc), recursive = TRUE, simplify = TRUE)
+  xml_doc = XML::xmlTreeParse(mzml_header, useInternalNodes = TRUE)
+  ns = XML::xmlNamespaceDefinitions(XML::xmlRoot(xml_doc), recursive = TRUE, simplify = TRUE)
   missing_name = which(names(ns) %in% "")
-  names(ns)[missing_name] <- "d1"
+  names(ns)[missing_name] = "d1"
 
-  mz_metanodes <- XML::getNodeSet(xml_doc, "/d1:mzML", ns)
+  mz_metanodes = XML::getNodeSet(xml_doc, "/d1:mzML", ns)
 
   if (length(mz_metanodes) == 0) {
-    mz_metanodes <- XML::getNodeSet(xml_doc, "/d1:indexedmzML/d1:mzML", ns)
+    mz_metanodes = XML::getNodeSet(xml_doc, "/d1:indexedmzML/d1:mzML", ns)
   }
 
-  mz_meta <- list()
-  tmp_attr <- unclass(XML::xmlAttrs(mz_metanodes[[1]]))
+  mz_meta = list()
+  tmp_attr = unclass(XML::xmlAttrs(mz_metanodes[[1]]))
 
-  attr(tmp_attr, "namespaces") <- NULL
-  mz_meta[["mzML"]][[".attrs"]] <- tmp_attr
+  attr(tmp_attr, "namespaces") = NULL
+  mz_meta[["mzML"]][[".attrs"]] = tmp_attr
 
-  other_nodes_2_get <- c("cvList", "fileDescription",
+  other_nodes_2_get = c("cvList", "fileDescription",
                          "referenceableParamGroupList",
                          "softwareList",
                          "instrumentConfigurationList",
                          "dataProcessingList")
 
-  other_nodes <- XML::xmlChildren(mz_metanodes[[1]])
-  other_list <- lapply(other_nodes, XML::xmlToList)
+  other_nodes = XML::xmlChildren(mz_metanodes[[1]])
+  other_list = lapply(other_nodes, XML::xmlToList)
 
-  mz_meta <- c(mz_meta, other_list[other_nodes_2_get])
+  mz_meta = c(mz_meta, other_list[other_nodes_2_get])
   null_meta = purrr::map_lgl(mz_meta, is.null)
   mz_meta = mz_meta[!null_meta]
 
-  mz_meta[["run"]][[".attrs"]] <- XML::xmlAttrs(mz_metanodes[[1]][["run"]])
+  mz_meta[["run"]][[".attrs"]] = XML::xmlAttrs(mz_metanodes[[1]][["run"]])
 
-  mz_meta <- .remove_attrs(mz_meta)
+  mz_meta = .remove_attrs(mz_meta)
 
-  mz_meta_frame <- .to_data_frame(mz_meta)
+  mz_meta_frame = .to_data_frame(mz_meta)
 
-  #mz_meta_frame$run$scanPolarity <- .get_scan_polarity(other_list$run$spectrumList)
+  #mz_meta_frame$run$scanPolarity = .get_scan_polarity(other_list$run$spectrumList)
 
-  mz_meta_frame$run$startTimeStamp <- gsub("T", " ", mz_meta_frame$run$startTimeStamp)
+  mz_meta_frame$run$startTimeStamp = gsub("T", " ", mz_meta_frame$run$startTimeStamp)
 
   mz_meta_frame
 }
@@ -105,7 +105,7 @@ get_mzml_metadata <- function(mzml_file){
 #'
 #' @importFrom jsonlite toJSON
 #' @export
-meta_export_json <- function(meta_list){
+meta_export_json = function(meta_list){
   jsonlite::toJSON(meta_list, pretty = TRUE, auto_unbox = TRUE)
 }
 
@@ -113,14 +113,14 @@ meta_export_json <- function(meta_list){
 #'
 #' @param in_list the list of xml nodes to work on
 #'
-.to_data_frame <- function(in_list){
+.to_data_frame = function(in_list){
   if (class(in_list) == "list") {
-    out_list <- lapply(in_list, .to_data_frame)
+    out_list = lapply(in_list, .to_data_frame)
   } else if (class(in_list) == "character") {
     if (!is.null(names(in_list))) {
-      out_list <- as.data.frame(t(as.matrix(in_list)))
+      out_list = as.data.frame(t(as.matrix(in_list)))
     } else {
-      out_list <- in_list
+      out_list = in_list
     }
 
   }
@@ -135,29 +135,29 @@ meta_export_json <- function(meta_list){
 #'
 #' @param in_list the list to work on
 #'
-.remove_attrs <- function(in_list){
+.remove_attrs = function(in_list){
   if (class(in_list) == "list") {
-    out_list <- in_list
-    list_names <- names(out_list)
+    out_list = in_list
+    list_names = names(out_list)
 
     if (".attrs" %in% list_names) {
-      tmp_attrs <- out_list[[".attrs"]]
+      tmp_attrs = out_list[[".attrs"]]
 
-      name_attrs <- names(tmp_attrs)
+      name_attrs = names(tmp_attrs)
 
       if (sum(name_attrs %in% list_names) == 0) {
         for (i_name in name_attrs) {
-          out_list[[i_name]] <- tmp_attrs[[i_name]]
+          out_list[[i_name]] = tmp_attrs[[i_name]]
         }
-        out_list[[".attrs"]] <- NULL
+        out_list[[".attrs"]] = NULL
       }
     } else {
-      out_list <- lapply(out_list, .remove_attrs)
+      out_list = lapply(out_list, .remove_attrs)
     }
     # still need to check the rest of the pieces of the list!
-    out_list <- lapply(out_list, .remove_attrs)
+    out_list = lapply(out_list, .remove_attrs)
   } else {
-    out_list <- in_list
+    out_list = in_list
   }
   out_list
 }
@@ -168,24 +168,24 @@ meta_export_json <- function(meta_list){
 #'
 #' @param spectrum_list the list of spectra
 #'
-.get_scan_polarity <- function(spectrum_list){
-  spectrum_list[[".attrs"]] <- NULL
-  scan_data <- lapply(spectrum_list, function(in_spectrum){
-    cv_loc <- which(names(in_spectrum) %in% "cvParam")
-    cv_data <- unlist(in_spectrum[cv_loc])
-    scan_polarity <- grep("scan", cv_data, value = TRUE)
+.get_scan_polarity = function(spectrum_list){
+  spectrum_list[[".attrs"]] = NULL
+  scan_data = lapply(spectrum_list, function(in_spectrum){
+    cv_loc = which(names(in_spectrum) %in% "cvParam")
+    cv_data = unlist(in_spectrum[cv_loc])
+    scan_polarity = grep("scan", cv_data, value = TRUE)
 
     scan_polarity
   })
 
-  scan_polarity <- as.character(unique(scan_data))
+  scan_polarity = as.character(unique(scan_data))
 
   if ((length(scan_polarity) == 1) && (grepl("positive", scan_polarity))) {
-    out_polarity <- "positive"
+    out_polarity = "positive"
   } else if ((length(scan_polarity) == 1) && (grepl("negative", scan_polarity))) {
-    out_polarity <- "negative"
+    out_polarity = "negative"
   } else {
-    out_polarity <- "mixed"
+    out_polarity = "mixed"
   }
   out_polarity
 }
@@ -203,14 +203,14 @@ meta_export_json <- function(meta_list){
 #'
 #' @return data.frame
 #'
-json_mzML_2_df <- function(in_file) {
+json_mzML_2_df = function(in_file) {
   if (inherits(in_file, "character") && file.exists(in_file)) {
-    in_list <- jsonlite::fromJSON(in_file, simplifyVector = FALSE)
+    in_list = jsonlite::fromJSON(in_file, simplifyVector = FALSE)
   } else if (inherits(in_file, "list")) {
-    in_list <- in_file
+    in_list = in_file
   }
 
-  out_df <- purrr::map_df(in_list, function(list_entry){
+  out_df = purrr::map_df(in_list, function(list_entry){
     data.frame(mzml_id = list_entry$mzML$id,
                sample_id = gsub(".raw", "", basename(list_entry$file$raw$file)),
                instrument_serial = list_entry$run$instrument$serial,

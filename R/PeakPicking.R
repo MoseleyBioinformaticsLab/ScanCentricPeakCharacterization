@@ -6,29 +6,29 @@
 
 #' @export
 #' @importFrom tibble as_tibble
-PeakPickingAnalysis <- R6::R6Class("PeakPickingAnalysis",
+PeakPickingAnalysis = R6::R6Class("PeakPickingAnalysis",
   public = list(
     peak_list = NULL,
     peakpicking_parameters = NULL,
     initialize = function(in_peaks, in_parameters) {
       # make this flexible enough to handle either file names or objects themselves
       if (is.character(in_peaks)) {
-        peak_list <- json_2_peak_list(in_peaks)
+        peak_list = json_2_peak_list(in_peaks)
       } else {
-        peak_list <- in_peaks
+        peak_list = in_peaks
       }
 
       if (is.character(in_parameters)) {
-        peakpicking_parameters <- jsonlite::fromJSON(in_parameters)
+        peakpicking_parameters = jsonlite::fromJSON(in_parameters)
       } else {
-        peakpicking_parameters <- in_parameters
+        peakpicking_parameters = in_parameters
       }
       assertthat::assert_that(all(c("ObservedMZ", "Height", "Area") %in% names(peak_list[[1]])))
 
       assertthat::assert_that(all(c("Package", "Version", "Sha", "FunctionCalled","Parameters") %in% names(peakpicking_parameters)))
 
-      self$peak_list <- peak_list
-      self$peakpicking_parameters <- peakpicking_parameters
+      self$peak_list = peak_list
+      self$peakpicking_parameters = peakpicking_parameters
 
     }
   )
@@ -43,10 +43,10 @@ PeakPickingAnalysis <- R6::R6Class("PeakPickingAnalysis",
 #' @export
 #' @return json_string
 #'
-peak_list_2_json <- function(peak_list){
+peak_list_2_json = function(peak_list){
   #assert_that(is.data.frame(peak_list))
 
-  peak_list2 <- list(Peaks = peak_list)
+  peak_list2 = list(Peaks = peak_list)
   jsonlite::toJSON(peak_list2, auto_unbox = TRUE, pretty = TRUE, digits = 8)
 
 }
@@ -61,8 +61,8 @@ peak_list_2_json <- function(peak_list){
 #' @export
 #' @return tbl_df
 #'
-json_2_peak_list <- function(json_string, in_var = "Peaks"){
+json_2_peak_list = function(json_string, in_var = "Peaks"){
 
-  peak_list <- jsonlite::fromJSON(json_string)[[in_var]]
+  peak_list = jsonlite::fromJSON(json_string)[[in_var]]
 
 }

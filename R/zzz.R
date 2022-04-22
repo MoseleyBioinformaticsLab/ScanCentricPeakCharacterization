@@ -6,7 +6,7 @@
 #'
 #' @export
 #' @return NULL
-set_internal_map <- function(map_function = NULL){
+set_internal_map = function(map_function = NULL){
   if (is.null(map_function)) {
     assign("map_function", purrr::map, envir = internal_map)
   } else {
@@ -23,12 +23,12 @@ set_internal_map <- function(map_function = NULL){
 #'
 #' @export
 #' @return NULL
-show_progress <- function(progress = TRUE){
+show_progress = function(progress = TRUE){
   assign("status", progress, envir = pc_progress)
 }
 
 
-internal_map <- new.env(hash = TRUE)
+internal_map = new.env(hash = TRUE)
 assign("map_function", purrr::map, envir = internal_map)
 
 has_logger = new.env(hash = TRUE)
@@ -40,7 +40,7 @@ assign("status", FALSE, envir = pc_progress)
 
 #' check for zip
 #'
-#' FTMS.peakCharacterization uses zip files to gather all the pieces of results together,
+#' ScanCentricPeakCharacterization uses zip files to gather all the pieces of results together,
 #' including the original mzML, binary data file, and JSON files. R can be compiled
 #' on systems where there is no zip function installed.
 #' When it is not installed, it generally creates a permission issue when `system2`
@@ -57,7 +57,7 @@ check_for_zip = function(){
   }
 }
 
-.onLoad <- function(libname, pkgname) {
+.onLoad = function(libname, pkgname) {
   tmp_packages = installed.packages()
   if ("logger" %in% rownames(tmp_packages)) {
     assign("logger", TRUE, envir = has_logger)
@@ -65,7 +65,7 @@ check_for_zip = function(){
     if (grepl("linux", sys_info["sysname"], ignore.case = TRUE)) {
       assign("memory", TRUE, envir = has_logger)
     }
-    logger::log_appender(logger::appender_file(paste0("FTMS.peakCharacterization_run_", substring(make.names(Sys.time()), 2), ".log")), namespace = "FTMS.peakCharacterization")
+    logger::log_appender(logger::appender_file(paste0("FTMS.peakCharacterization_run_", substring(make.names(Sys.time()), 2), ".log")), namespace = "ScanCentricPeakCharacterization")
   }
   check_for_zip()
   debugme::debugme()
