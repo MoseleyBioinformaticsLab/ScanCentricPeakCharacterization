@@ -7,6 +7,6 @@
 disable_logging()
 }
 \description{
-There may be good reasons to turn the logging off (running tests, etc). This
-basically tells the package that the logger isn't available
+There may be good reasons to turn the logging off after it's been turned on. This
+basically tells the package that the logger isn't available.
 }

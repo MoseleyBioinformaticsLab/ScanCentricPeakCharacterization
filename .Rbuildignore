@@ -9,5 +9,4 @@
 ^.*\.*.log$
 ^.*.mzML$
 ^integration_test$
-^README\.Rmd$
-^example_data$
+^\.github$
