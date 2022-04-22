@@ -19,6 +19,6 @@ frequency_points_to_frequency_regions(
 }
 \description{
 Given a set of frequency points in a data.frame, create IRanges based point "regions"
-of width 1, useing the \code{multiplier} to convert from a floating point double
+of width 1, using the \code{multiplier} to convert from a floating point double
 to an \code{integer}
 }
