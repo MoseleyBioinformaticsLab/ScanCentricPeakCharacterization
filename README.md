@@ -49,7 +49,7 @@ We will load up an example direct-injection lipidomics sample acquired
 on a Thermo-Fisher Fusion instrument to demonstrate.
 
 ``` r
-raw_lipid = RawMS$new(system.file("extdata/lipid_example.mzML", package = "ScanCentricPeakCharacterization"))
+raw_lipid = SCRaw$new(system.file("extdata/lipid_example.mzML", package = "ScanCentricPeakCharacterization"))
 raw_lipid$extract_raw_data()
 raw_lipid$predict_frequency()
 ```
@@ -99,20 +99,20 @@ raw_lipid$check_frequency_model()
 
 <img src="man/figures/README-show_predictions-1.png" width="100%" />
 
-See the example of `RawMS` below to see how we can change the model
+See the example of `SCRaw` below to see how we can change the model
 being used.
 
 ## Basic Objects and Classes
 
-### RawMS
+### SCRaw
 
-`RawMS` is responsible for loading the raw data, holding per-scan
+`SCRaw` is responsible for loading the raw data, holding per-scan
 metadata, extracting the scan-level m/z and intensity, converting them
 to frequency, and filtering any scans out. Although the user should not
 have to interact with it much, and **normally** it is controlled by
-`CharacterizeMS`, we cover it first here b/c it is useful to instantiate
-it at least once per experiment and verify the scan filtering conditions
-and the model for converting m/z to frequency.
+`SCCharacterizePeaks`, we cover it first here b/c it is useful to
+instantiate it at least once per experiment and verify the scan
+filtering conditions and the model for converting m/z to frequency.
 
 The default frequency \~ mz model is defined as:
 
@@ -135,12 +135,12 @@ the equation to be like this:
 Here we use the **-** to define that it should be a fraction, and the
 **1/2** exponent corresponds to the square root.
 
-This is the **default model** that `RawMS` is instantiated with. But
+This is the **default model** that `SCRaw` is instantiated with. But
 every time you work with a new dataset, you should verify the model
 being used is appropriate.
 
 ``` r
-lipid_1 = RawMS$new(system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization"))
+lipid_1 = SCRaw$new(system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization"))
 lipid_1$extract_raw_data()
 lipid_1$predict_frequency()
 
@@ -158,7 +158,7 @@ What if we mis-define the model?
 ``` r
 alt_model = c("a.freq" = 0, "x.freq" = -1, "y.freq" = -1/3)
 
-lipid_2 = RawMS$new(system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization"),
+lipid_2 = SCRaw$new(system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization"),
                     frequency_fit_description = alt_model)
 lipid_2$extract_raw_data()
 lipid_2$predict_frequency()
