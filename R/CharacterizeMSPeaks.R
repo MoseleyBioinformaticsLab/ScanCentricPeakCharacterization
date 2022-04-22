@@ -183,3 +183,35 @@ scan_time_filter <- function(raw_ms, min_time_difference = 4){
   raw_ms$set_scans(scan_range = scan_times$scan[keep_scans])
   raw_ms
 }
+
+#' default sd fit
+#'
+#' The default fit function for differences and RMSD
+#'
+#' @param x the x values, often M/Z
+#' @param y the y values, normally differences or RMSD
+#'
+#' @export
+#'
+#' @return list
+default_sd_fit_function <- function(x, y){
+  loess_frame <- data.frame(x = x, y = y)
+  loess_fit <- stats::loess(y ~ x, data = loess_frame, control = stats::loess.control(surface = "direct"))
+  loess_fit
+}
+
+
+#' default sd predict
+#'
+#' The default predict function for difference and RMSD
+#'
+#' @param model the previously generated model
+#' @param x the new data
+#'
+#' @export
+#'
+#' @return numeric
+default_sd_predict_function <- function(model, x){
+  stats:::predict.loess(model, newdata = x)
+}
+
