@@ -2,7 +2,6 @@
 
 export("%>%")
 export(PeakPickingAnalysis)
-export(SCCharacterizePeaks)
 export(SCPeakRegionFinder)
 export(SCPeakRegions)
 export(SCRaw)

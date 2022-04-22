@@ -2,20 +2,37 @@
 % Please edit documentation in R/SCRaw.R
 \name{get_scan_info}
 \alias{get_scan_info}
-\title{get MS info}
+\title{get scan level info}
 \usage{
 get_scan_info(raw_data)
 }
 \arguments{
 \item{raw_data}{the MSnbase raw data object}
-
-\item{include_msn}{should information from MSn scans be included?}
-
-\item{include_precursor}{should the precursor scans be included?}
 }
 \value{
-data.frame with scan, time, acquisition, tic, ms_level and ms_type
+data.frame, see \strong{Details}
 }
 \description{
-get MS info
+get scan level info
+}
+\details{
+returns a data.frame with:
+\itemize{
+\item \code{scanIndex}: the indices of the scans
+\item \code{scan}: the number of the scan by number. This will be used to name scans.
+\item \code{polarity}: +1 or -1 depending on if the scan is positive or negative
+\item \code{rtime}: the retention time or injection time of the scan for for direct-injection data
+\item \code{tic}: the total intensity of the scan
+\item \code{rtime_lag}: how long between this scan and previous scan
+\item \code{rtime_lead}: how long between this scan and next scan
+}
+
+After running \code{predict_frequency()}, the following fields are added
+from the information returned from frequency conversion:
+\itemize{
+\item \code{mad}: mean absolute deviation of residuals
+\item \verb{frequency model coefficients}: the coefficients from the
+fit frequency, named whatever you named them
+\item \verb{mz model coefficients}: similar, but for the m/z model
+}
 }

@@ -2,10 +2,47 @@
 % Please edit documentation in R/SCCharacterizePeaks.R
 \name{SCCharacterizePeaks}
 \alias{SCCharacterizePeaks}
-\title{analyze scan-centric mass-spec data}
+\title{R6 Class Controlling Peak Characterization}
 \description{
-This class allows you to analyze mass spec data, and controls the execution
-of reading in the mass
+Peak characterization control
+}
+\details{
+Peak characterization associates data with the \code{SCZip},
+\code{SCPeakRegionFinder}, and controls their execution.
+}
+\section{Public fields}{
+\if{html}{\out{<div class="r6-fields">}}
+\describe{
+\item{\code{found_peaks}}{peaks found by a function}
+
+\item{\code{filter_remove_outlier_scans}}{function to be used for filtering scans, see \link{filter_remove_outlier_scans_default} as an example}
+
+\item{\code{choose_single_frequency_model}}{function to be used to choose a single model for frequency conversion, see \link{choose_single_frequency_model_default} as an example}
+
+\item{\code{frequency_fit_description}}{the model for conversion to frequency}
+
+\item{\code{mz_fit_description}}{the model for converting back to m/z}
+
+\item{\code{sc_peak_region_finder}}{the peak finder object}
+
+\item{\code{sc_zip}}{the \code{SCZip} that represents the final file}
+
+\item{\code{in_file}}{the input file}
+
+\item{\code{metdata_file}}{the metadata file}
+
+\item{\code{out_file}}{where everything gets saved}
+
+\item{\code{temp_loc}}{where intermediates get saved}
+}
+\if{html}{\out{</div>}}
+}
+\section{Active bindings}{
+\if{html}{\out{<div class="r6-active-bindings">}}
+\describe{
+\item{\code{metdata_file}}{the metadata file}
+}
+\if{html}{\out{</div>}}
 }
 \section{Methods}{
 \subsection{Public methods}{
@@ -19,7 +56,6 @@ of reading in the mass
 \item \href{#method-summarize}{\code{SCCharacterizePeaks$summarize()}}
 \item \href{#method-save_peaks}{\code{SCCharacterizePeaks$save_peaks()}}
 \item \href{#method-write_zip}{\code{SCCharacterizePeaks$write_zip()}}
-\item \href{#method-set_peak_finder}{\code{SCCharacterizePeaks$set_peak_finder()}}
 \item \href{#method-run_all}{\code{SCCharacterizePeaks$run_all()}}
 \item \href{#method-prep_data}{\code{SCCharacterizePeaks$prep_data()}}
 \item \href{#method-add_regions}{\code{SCCharacterizePeaks$add_regions()}}
@@ -32,6 +68,7 @@ of reading in the mass
 \if{html}{\out{<a id="method-load_file"></a>}}
 \if{latex}{\out{\hypertarget{method-load_file}{}}}
 \subsection{Method \code{load_file()}}{
+Loads the raw data into the \code{SCZip}
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$load_file()}\if{html}{\out{</div>}}
 }
@@ -41,6 +78,7 @@ of reading in the mass
 \if{html}{\out{<a id="method-prepare_raw_data"></a>}}
 \if{latex}{\out{\hypertarget{method-prepare_raw_data}{}}}
 \subsection{Method \code{prepare_raw_data()}}{
+Prepare the raw data.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$prepare_raw_data()}\if{html}{\out{</div>}}
 }
@@ -50,6 +88,7 @@ of reading in the mass
 \if{html}{\out{<a id="method-check_frequency_model"></a>}}
 \if{latex}{\out{\hypertarget{method-check_frequency_model}{}}}
 \subsection{Method \code{check_frequency_model()}}{
+Check the frequency model
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$check_frequency_model()}\if{html}{\out{</div>}}
 }
@@ -59,6 +98,7 @@ of reading in the mass
 \if{html}{\out{<a id="method-get_frequency_data"></a>}}
 \if{latex}{\out{\hypertarget{method-get_frequency_data}{}}}
 \subsection{Method \code{get_frequency_data()}}{
+Get the frequency data from the \code{SCRaw} bits
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$get_frequency_data()}\if{html}{\out{</div>}}
 }
@@ -68,6 +108,7 @@ of reading in the mass
 \if{html}{\out{<a id="method-scan_info"></a>}}
 \if{latex}{\out{\hypertarget{method-scan_info}{}}}
 \subsection{Method \code{scan_info()}}{
+Get the \code{SCRaw$scan_info} out
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$scan_info()}\if{html}{\out{</div>}}
 }
@@ -77,8 +118,9 @@ of reading in the mass
 \if{html}{\out{<a id="method-find_peaks"></a>}}
 \if{latex}{\out{\hypertarget{method-find_peaks}{}}}
 \subsection{Method \code{find_peaks()}}{
+Do the peak characterization without saving
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$find_peaks(...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$find_peaks()}\if{html}{\out{</div>}}
 }
 
 }
@@ -86,6 +128,7 @@ of reading in the mass
 \if{html}{\out{<a id="method-summarize"></a>}}
 \if{latex}{\out{\hypertarget{method-summarize}{}}}
 \subsection{Method \code{summarize()}}{
+Generates the JSON output summary
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$summarize()}\if{html}{\out{</div>}}
 }
@@ -95,6 +138,7 @@ of reading in the mass
 \if{html}{\out{<a id="method-save_peaks"></a>}}
 \if{latex}{\out{\hypertarget{method-save_peaks}{}}}
 \subsection{Method \code{save_peaks()}}{
+Saves the peaks and JSON to the temp file
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$save_peaks()}\if{html}{\out{</div>}}
 }
@@ -104,17 +148,9 @@ of reading in the mass
 \if{html}{\out{<a id="method-write_zip"></a>}}
 \if{latex}{\out{\hypertarget{method-write_zip}{}}}
 \subsection{Method \code{write_zip()}}{
+Write the zip file
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$write_zip()}\if{html}{\out{</div>}}
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-set_peak_finder"></a>}}
-\if{latex}{\out{\hypertarget{method-set_peak_finder}{}}}
-\subsection{Method \code{set_peak_finder()}}{
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$set_peak_finder(in_function)}\if{html}{\out{</div>}}
 }
 
 }
@@ -122,6 +158,7 @@ of reading in the mass
 \if{html}{\out{<a id="method-run_all"></a>}}
 \if{latex}{\out{\hypertarget{method-run_all}{}}}
 \subsection{Method \code{run_all()}}{
+Runs all of the pieces for peak characterization in order
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$run_all()}\if{html}{\out{</div>}}
 }
@@ -131,6 +168,7 @@ of reading in the mass
 \if{html}{\out{<a id="method-prep_data"></a>}}
 \if{latex}{\out{\hypertarget{method-prep_data}{}}}
 \subsection{Method \code{prep_data()}}{
+Loads and preps the data for characterization
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$prep_data()}\if{html}{\out{</div>}}
 }
@@ -140,6 +178,7 @@ of reading in the mass
 \if{html}{\out{<a id="method-add_regions"></a>}}
 \if{latex}{\out{\hypertarget{method-add_regions}{}}}
 \subsection{Method \code{add_regions()}}{
+Adds initial regions for finding real peak containing regions
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$add_regions()}\if{html}{\out{</div>}}
 }
@@ -149,6 +188,7 @@ of reading in the mass
 \if{html}{\out{<a id="method-run_splitting"></a>}}
 \if{latex}{\out{\hypertarget{method-run_splitting}{}}}
 \subsection{Method \code{run_splitting()}}{
+Does initial region splitting and peak finding in scans
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$run_splitting()}\if{html}{\out{</div>}}
 }
@@ -158,6 +198,7 @@ of reading in the mass
 \if{html}{\out{<a id="method-new"></a>}}
 \if{latex}{\out{\hypertarget{method-new}{}}}
 \subsection{Method \code{new()}}{
+Creates a new \code{SCCharacterizePeaks} class
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$new(
   in_file,
@@ -172,6 +213,29 @@ of reading in the mass
 )}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{in_file}}{the mass spec data file to use (required)}
+
+\item{\code{metadata_file}}{a json metadata file (optional)}
+
+\item{\code{out_file}}{where to save the final zip container}
+
+\item{\code{temp_loc}}{a specified temporary location}
+
+\item{\code{frequency_fit_description}}{mz -> frequency model}
+
+\item{\code{mz_fit_description}}{frequency -> mz model}
+
+\item{\code{filter_remove_outlier_scans}}{function for scan filtering}
+
+\item{\code{choose_single_frequency_model}}{function to choose a single frequency model}
+
+\item{\code{sc_peak_region_finder}}{a blank \code{SCPeakRegionFinder} to use instead of the default}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-clone"></a>}}
