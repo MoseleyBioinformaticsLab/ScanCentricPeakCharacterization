@@ -24,7 +24,7 @@
 #'   sc_char = SCCharacterizePeaks$new(lipid_sample, out_file = save_loc)
 #'   sc_char$run_all()
 #' }
-
+#' @export
 SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
   public = list(
 
@@ -92,7 +92,7 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
       if (inherits(self$sc_peak_region_finder, "R6")) {
 
         self$sc_zip$sc_raw$convert_to_frequency()
-        self$sc_zip$sc_peak_region_finder = self$peak_region_finder
+        self$sc_zip$sc_peak_region_finder = self$sc_peak_region_finder
         self$sc_zip$sc_peak_region_finder$add_data(self$sc_zip$sc_raw)
         if (!is.null(self$sc_zip$id)) {
           self$sc_zip$sc_peak_region_finder$sample_id = self$sc_zip$id
@@ -136,7 +136,7 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
     #' @field in_file the input file
     in_file = NULL,
 
-    #' @field metdata_file the metadata file
+    #' @field metadata_file the metadata file
     metadata_file = NULL,
 
     #' @field out_file where everything gets saved

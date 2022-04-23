@@ -47,18 +47,11 @@ Peak characterization associates data with the \code{SCZip},
 
 \item{\code{in_file}}{the input file}
 
-\item{\code{metdata_file}}{the metadata file}
+\item{\code{metadata_file}}{the metadata file}
 
 \item{\code{out_file}}{where everything gets saved}
 
 \item{\code{temp_loc}}{where intermediates get saved}
-}
-\if{html}{\out{</div>}}
-}
-\section{Active bindings}{
-\if{html}{\out{<div class="r6-active-bindings">}}
-\describe{
-\item{\code{metdata_file}}{the metadata file}
 }
 \if{html}{\out{</div>}}
 }
