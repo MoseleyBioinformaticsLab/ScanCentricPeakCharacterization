@@ -35,7 +35,7 @@ run_mzml_list = function(mzml_files, json_files = NULL, progress = TRUE, save_lo
     }
   }
 
-  tictoc::tic()
+  start_time = Sys.time()
   n_files = length(mzml_files)
   zip_files = purrr::map_chr(seq(1, n_files), function(i_file){
 
@@ -67,10 +67,12 @@ run_mzml_list = function(mzml_files, json_files = NULL, progress = TRUE, save_lo
     out_result
   })
   names(zip_files) = mzml_files
-  tmp = tictoc::toc()
+  end_time = Sys.time()
   saveRDS(zip_files, file = file.path(save_loc, "mzml_files_processed.rds"))
 
   message(paste0("processed: ", sum(!grepl("Error", zip_files))))
   message(paste0("errors: ", sum(grepl("Error", zip_files))))
-  list(time = tmp, zip_files = zip_files)
+  time_taken = difftime(end_time, start_time, units = "s")
+
+  list(time = as.numeric(time_taken), zip_files = zip_files)
 }
