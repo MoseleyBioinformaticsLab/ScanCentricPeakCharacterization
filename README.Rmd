@@ -125,7 +125,7 @@ Let's give an example using an example lipid file.
 
 ```{r example_char}
 lipid_sample = system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization")
-sc_char = SCCharacterizePeaks$new(lipid_sample)
+sc_char = SCCharacterizePeaks$new(lipid_sample, out_file = here::here("lipid_sample.zip"))
 
 sc_char$load_file()
 sc_char$prepare_raw_data()
@@ -161,6 +161,7 @@ We can also check which peaks were excluded by examining the `scan_info` data.fr
 
 ```{r check_scans}
 scan_info = sc_char$scan_info()
+head(scan_info)
 
 scan_info %>%
   ggplot(aes(x = rtime, xend = rtime, y = 0, yend = tic, color = keep)) +
@@ -169,7 +170,7 @@ scan_info %>%
 
 We can see that several scans were excluded by being too high in their retention time (rtime), and then two were outliers based on the statistics of the frequency square root coefficient.
 
-If this isn't doing what we want, we can define a different scan-filtering function that does more along the lines of what we want.
+If this isn't doing what we want, we can define a different scan-filtering function that does more along the lines of what we want. See the documentation about `get_scan_info()` using `?get_scan_info` to see what is generally available.
 
 #### Run Peak Characterization
 
@@ -178,6 +179,16 @@ Once we are happy with how we have set up the `SCCharacterizePeaks` object, we c
 ```{r run_characterization, eval = FALSE}
 # not run
 sc_char$find_peaks()
+```
+
+#### Run Everything
+
+If you've already examined the model, and have your function for filtering scans all set up, then you can run everything on your sample rather quickly using this simple command:
+
+```{r run_everything, eval = FALSE}
+# not run
+sc_char = SCCharacterizePeaks$new("file.mzML", out_file = "file.zip")
+sc_char$run_all()
 ```
 
 ### SCRaw
