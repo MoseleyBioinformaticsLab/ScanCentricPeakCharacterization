@@ -100,7 +100,7 @@ enable_logging = function(log_file = NULL, memory = FALSE){
     stop("logger package is not available. Please install it to enable logging!\ninstall.packages('logger')")
   } else {
     if (is.null(log_file)) {
-      log_file = paste0("FTMS.peakCharacterization_run_", substring(make.names(Sys.time()), 2), ".log")
+      log_file = paste0("ScanCentricPeakCharacterization_run_", substring(make.names(Sys.time()), 2), ".log")
     }
     if (memory) {
       sys_info = Sys.info()
@@ -110,7 +110,7 @@ enable_logging = function(log_file = NULL, memory = FALSE){
         message("Memory logging is not available on Windows!\nMemory use will not be logged.")
       }
     }
-    logger::log_appender(logger::appender_file(log_file), namespace = "FTMS.peakCharacterization")
+    logger::log_appender(logger::appender_file(log_file), namespace = "ScanCentricPeakCharacterization")
   }
   NULL
 }
