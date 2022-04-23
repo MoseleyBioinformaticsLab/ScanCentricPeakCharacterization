@@ -237,9 +237,27 @@ SCRaw = R6::R6Class("SCRaw",
         mean_predicted_mad = internal_map$map_function(self$raw_df_data, function(in_df){
           data.frame(scan = in_df$scan[1], mad = mad(in_df$mean_predicted[in_df$convertable], na.rm = TRUE))
         })
+
+        if ("mad" %in% names(self$scan_info)) {
+          self$scan_info$mad = NULL
+        }
         mad_df = purrr::map_dfr(mean_predicted_mad, ~ .x)
         self$scan_info = dplyr::left_join(self$scan_info, mad_df, by = "scan")
+        # check if they already existed, and if so, remove them before
+        # merging them again.
+        if (any(names(frequency_fit_description) %in% names(scan_info))) {
+          for (ifreq in names(frequency_fit_description)) {
+            self$scan_info[[ifreq]] = NULL
+          }
+        }
         self$scan_info = dplyr::left_join(self$scan_info, freq_list$frequency_coefficients, by = "scan")
+
+        if (any(names(mz_fit_description) %in% names(scan_info))) {
+          for (imz in names(mz_fit_description)) {
+            self$scan_info[[imz]] = NULL
+          }
+        }
+
         self$scan_info = dplyr::left_join(self$scan_info, freq_list$mz_coefficients, by = "scan")
         invisible(self)
      },
