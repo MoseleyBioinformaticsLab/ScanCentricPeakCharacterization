@@ -31,8 +31,11 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
     #' @description
     #' Loads the raw data into the `SCZip`
     load_file = function(){
-      log_message("Loading raw data ...")
+
       self$sc_zip = SCZip$new(self$in_file, self$metadata_file, self$out_file, temp_loc = self$temp_loc)
+      self$id = self$sc_zip$id
+      log_message(paste0("Starting sample ", self$id))
+      log_message("Loading raw data ...")
       self$sc_zip$sc_raw$frequency_fit_description = self$frequency_fit_description
       self$sc_zip$sc_raw$mz_fit_description = self$mz_fit_description
       self$sc_zip$sc_raw$filter_remove_outlier_scans = self$filter_remove_outlier_scans
@@ -41,6 +44,9 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
 
     #' @field found_peaks peaks found by a function
     found_peaks = NULL,
+
+    #' @field id a holder for the ID of the sample
+    id = NULL,
 
     #' @field filter_remove_outlier_scans function to be used for filtering scans, see [filter_remove_outlier_scans_default] as an example
     filter_remove_outlier_scans = NULL,
@@ -128,6 +134,7 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
       } else {
         self$sc_zip$write_zip()
       }
+      self$sc_zip$cleanup()
     },
 
     #' @field sc_zip the `SCZip` that represents the final file
@@ -155,7 +162,7 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
       self$summarize()
       self$save_peaks()
       self$write_zip()
-      self$sc_zip$cleanup()
+      log_message(paste0("All done with sample ", self$id))
     },
 
     #' @description

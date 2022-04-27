@@ -56,6 +56,9 @@ out_models = purrr::map(list_models, function(.x){
   tmp_out = list(scans = sc_raw$raw_df_data,
        freq_data = sc_raw$scan_info,
        diag_plots = sc_raw$check_frequency_model(as_list = TRUE))
+  for (iname in names(.x)) {
+    sc_raw$scan_info[[iname]] = NULL
+  }
   tmp_out
 })
 ```
@@ -163,3 +166,35 @@ mad_plot | median_plot
 So this concludes again, we should be using **model 3** from above.
 
 Another document checks this again for our Amino Acid sample.
+
+## Coefficients
+
+Hunter was asking about the coefficients for each of these models wondering if one of them has smaller coefficients that lets an alternative one "bend" enough on it.
+
+```{r show_coefficients}
+all_coef = names(list_models$mod3)
+coef_df = as.data.frame(matrix(NA, nrow = 1, ncol = length(all_coef)))
+names(coef_df) = all_coef
+
+get_coef = function(curr_coef, coef_df){
+  match_coef = names(coef_df)[names(coef_df) %in% names(curr_coef)]
+  tmp_coef = coef_df
+  for (icoef in match_coef) {
+    tmp_coef[[icoef]] = curr_coef[[icoef]][1]
+  }
+    tmp_coef
+}
+
+model_coefficients = purrr::imap_dfr(out_models, function(in_model, id){
+  out_coef = get_coef(in_model$freq_data, coef_df)
+  out_coef$model = id
+  out_coef
+})
+
+model_coefficients %>%
+  flextable() %>%
+  colformat_double(digits = 0) %>%
+  autofit()
+```
+
+Based on this table, I don't think that's what is going on.
