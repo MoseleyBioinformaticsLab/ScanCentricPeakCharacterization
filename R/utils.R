@@ -6,10 +6,9 @@
 #' @param mzml_files the list of mzML files to use
 #' @param json_files the list of corresponding json meta-data files
 #' @param save_loc where should the file files be saved
-#' @param ... other parameters for `CharacterizeMS`
+#' @param ... other parameters for `SCCharacterizePeaks`
 #'
 #' @importFrom purrr map
-#' @importFrom tictoc tic toc
 #' @export
 #'
 #' @return list
@@ -54,10 +53,10 @@ run_mzml_list = function(mzml_files, json_files = NULL, progress = TRUE, save_lo
     }
 
     if (!file.exists(zip_file)) {
-      char_ms = CharacterizeMSPeaks$new(in_mzml, metadata_file = in_json, out_file = zip_file, ...)
+      char_ms = SCCharacterizePeaks$new(in_mzml, metadata_file = in_json, out_file = zip_file, ...)
       result = try({char_ms$run_all()})
     } else {
-      print("file alreay exists!")
+      message("file alreay exists!")
     }
     if (class(result) %in% "try-error") {
       out_result = result
@@ -75,4 +74,14 @@ run_mzml_list = function(mzml_files, json_files = NULL, progress = TRUE, save_lo
   time_taken = difftime(end_time, start_time, units = "s")
 
   list(time = as.numeric(time_taken), zip_files = zip_files)
+}
+
+
+numeric_to_char = function(numbers, pre_letter = "s."){
+  all_char = as.character(numbers)
+  max_char = max(nchar(all_char))
+  padded = purrr::map_chr(all_char, function(in_value){
+    paste0(paste(rep(0, max_char - nchar(in_value)), collapse = ""), in_value)
+  })
+  paste0(pre_letter, padded)
 }

@@ -1,0 +1,5 @@
+URL: https://moseleybioinformaticslab.github.io/ScanCentricPeakCharacterization https://github.com/moseleybioinformaticslab/ScanCentricPeakCharacterization
+template:
+  bootstrap: 5
+  bootswatch: cyborg
+  theme: breeze-dark

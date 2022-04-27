@@ -10,3 +10,6 @@
 ^.*.mzML$
 ^integration_test$
 ^\.github$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$

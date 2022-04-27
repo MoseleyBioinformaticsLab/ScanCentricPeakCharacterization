@@ -1,0 +1,165 @@
+---
+title: "Exploring Frequency Models, Lipid Sample"
+author: "Robert M Flight"
+output:
+  word_document:
+    keep_md: true
+editor_options: 
+  chunk_output_type: console
+---
+
+## Purpose
+
+Explore the definition of the model relating frequency to m/z and try to make sure we have it right, because getting it wrong is just not cool.
+
+```{r setup}
+library(ScanCentricPeakCharacterization)
+library(ggplot2)
+library(ggforce)
+library(patchwork)
+library(flextable)
+knitr::opts_chunk$set(dpi = 600)
+```
+
+## M/Z to Frequency Models
+
+We will explore four different models relating frequency to m/z:
+
+$$frequency = a + \frac{y}{\sqrt{mz}} (1)$$
+
+$$frequency = a + \frac{x}{mz} + \frac{y}{\sqrt{mz}} (2)$$
+
+$$frequency = a + \frac{x}{mz} + \frac{y}{\sqrt{mz}} + \frac{z}{\sqrt[3]{mz}} (3)$$
+
+$$frequency = a + \frac{y}{\sqrt{mz}} + \frac{z}{\sqrt[3]{mz}} (4)$$
+
+```{r model_definitions}
+mod_1 = c("a.freq" = 0, "y.freq" = -1/2)
+mod_2 = c("a.freq" = 0, "x.freq" = -1, "y.freq" = -1/2)
+mod_3 = c("a.freq" = 0, "x.freq" = -1, "y.freq" = -1/2, "z.freq" = -1/3)
+mod_4 = c("a.freq" = 0, "y.freq" = -1/2, "z.freq" = -1/3)
+
+list_models = list(mod1 = mod_1,
+                   mod2 = mod_2,
+                   mod3 = mod_3,
+                   mod4 = mod_4)
+```
+
+```{r apply_each_one}
+
+sc_raw = SCRaw$new("example_data/97Cpos.mzML")
+sc_raw$extract_raw_data()
+
+out_models = purrr::map(list_models, function(.x){
+  sc_raw$frequency_fit_description = .x
+  sc_raw$predict_frequency()
+  tmp_out = list(scans = sc_raw$raw_df_data,
+       freq_data = sc_raw$scan_info,
+       diag_plots = sc_raw$check_frequency_model(as_list = TRUE))
+  tmp_out
+})
+```
+
+```{r extract_diagnostic_plot, fig.width = 20, fig.height = 20}
+all_plots = purrr::map(out_models, function(in_model){
+  tmp_plot = wrap_plots(in_model$diag_plots, nrow = 1)
+  tmp_plot
+})
+
+all_together = wrap_plots(all_plots, ncol = 1)
+
+all_together
+```
+
+Looking at this, models 1 and 3 look like the best actual candidates.
+Of course, neither of those are the models we actually used for the Scan-Centric Peak Characterization manuscript. 
+
+We will try looking at these a little finer, especially at the distributions of the residuals and their QQ-Plots.
+
+```{r just_residuals, fig.width = 20, fig.height = 5}
+residual_ylim = c(-1.5, 1.8)
+
+just_residuals = purrr::map(out_models, function(.x){
+  tmp_plot = .x$diag_plots$residuals_as_mz
+  tmp_plot + coord_cartesian(ylim = residual_ylim)
+})
+
+wrap_plots(just_residuals, nrow = 1)
+```
+
+```{r just_qq, fig.width = 20, fig.height = 5}
+just_qq = purrr::map(out_models, function(.x){
+  tmp_plot = .x$diag_plots$qq_residuals
+  tmp_plot + coord_cartesian(ylim = residual_ylim)
+})
+wrap_plots(just_qq, nrow = 1)
+```
+
+Hmmm. after these two plots, I suspect it has something to do with how flat some of the residual patterns are instead of being curved. 
+
+One question we could ask is what are the distributions of those residuals like as a density or sina plot?
+
+```{r get_residuals_each, fig.width = 8, fig.height = 5}
+scan_1_residuals = purrr::imap_dfr(out_models, function(.x, .y){
+  tmp_scan = .x$scans[[1]] %>%
+    dplyr::filter(convertable) %>%
+    dplyr::mutate(residuals = mean_predicted,
+                  model = .y)
+  tmp_scan
+})
+
+scan_1_residuals %>%
+  ggplot(aes(x = model, y = residuals)) +
+  geom_sina(alpha = 0.05)
+```
+
+Aha!
+A cautionary tale!
+The better QQ plot isn't really **better** per se, because the bumps in the residuals actually make the distribution **fit** the normality assumption better.
+Lets look at the **MAD** for each of these.
+
+```{r get_mads_scan1}
+scan_1_mads = purrr::imap_dfr(out_models, function(.x, .y){
+  #message(.y)
+  tmp_info = .x$freq_data %>%
+    dplyr::filter(scan %in% 1) %>%
+    dplyr::select(scan, median, mad) %>%
+    dplyr::mutate(model = .y)
+  tmp_info
+})
+
+mad_table = scan_1_mads %>%
+  flextable() %>%
+  colformat_double(digits = 4)
+autofit(mad_table)
+```
+
+OK, based on scan 1, it's all about **model 3**.
+Which again, is not the one we used, but it's definitely one I understand we maybe should use.
+
+Let's double check these using plots of the medians and mad's across all scans for each of the models.
+
+```{r all_mad_medians, fig.width = 10, fig.height = 5}
+all_mads = purrr::imap_dfr(out_models, function(.x, .y){
+  tmp_info = .x$freq_data %>%
+    dplyr::select(scan, median, mad) %>%
+    dplyr::mutate(model = .y)
+  tmp_info
+})
+
+mad_plot = all_mads %>%
+  dplyr::select(mad, model) %>%
+  ggplot(aes(x = model, y = mad)) +
+  geom_sina() +
+  labs(subtitle = "MADs")
+median_plot = all_mads %>%
+  dplyr::select(median, model) %>%
+  ggplot(aes(x = model, y = median)) +
+  geom_sina() +
+  labs(subtitle = "Medians")
+mad_plot | median_plot
+```
+
+So this concludes again, we should be using **model 3** from above.
+
+Another document checks this again for our Amino Acid sample.

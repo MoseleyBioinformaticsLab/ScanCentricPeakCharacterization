@@ -1,0 +1,124 @@
+library(ScanCentricPeakCharacterization)
+library(ggplot2)
+library(ggforce)
+library(patchwork)
+
+mod_1 = c("a.freq" = 0, "x.freq" = -1, "y.freq" = -1/2)
+mod_2 = c("a.freq" = 0, "x.freq" = -1, "y.freq" = -1/2, "z.freq" = -1/3)
+mod_3 = c("a.freq" = 0, "y.freq" = -1/2)
+mod_4 = c("a.freq" = 0, "y.freq" = -1/2, "z.freq" = -1/3)
+
+sc_raw = SCRaw$new("inst/extdata/lipid_example.mzML")
+
+sc_raw$extract_raw_data()
+
+sc_raw$frequency_fit_description = mod_1
+sc_raw$predict_frequency()
+
+sc_mod1 = list(scans = sc_raw$raw_df_data, freq_data = sc_raw$scan_info, diag_plots = sc_raw$check_frequency_model(as_list = TRUE))
+
+sc_raw$frequency_fit_description = mod_2
+sc_raw$predict_frequency()
+sc_mod2 = list(scans = sc_raw$raw_df_data, freq_data = sc_raw$scan_info, diag_plots = sc_raw$check_frequency_model(as_list = TRUE))
+
+
+sc_raw$frequency_fit_description = mod_3
+sc_raw$predict_frequency()
+sc_mod3 = list(scans = sc_raw$raw_df_data, freq_data = sc_raw$scan_info, diag_plots = sc_raw$check_frequency_model(as_list = TRUE))
+
+sc_raw$frequency_fit_description = mod_4
+sc_raw$predict_frequency()
+sc_mod4 = list(scans = sc_raw$raw_df_data, freq_data = sc_raw$scan_info, diag_plots = sc_raw$check_frequency_model(as_list = TRUE))
+
+all_plots = purrr::map()
+
+
+all_models = list(mod1 = sc_mod1,
+                  mod2 = sc_mod2,
+                  mod3 = sc_mod3,
+                  mod4 = sc_mod4)
+all_scans = purrr::imap_dfr(all_models, function(in_data, model_id){
+  tmp_df = purrr::map_df(in_data$scans, ~ .x)
+  tmp_df$model = model_id
+  tmp_df
+})
+
+scan_plot = all_scans %>%
+  dplyr::filter(convertable, scan %in% 2) %>%
+  ggplot(aes(x = predicted_frequency, y = mean_predicted)) +
+  geom_point() +
+  facet_wrap(~ model, nrow = 1)
+scan_plot
+
+mad_dist = purrr::imap_dfr(all_models, function(in_data, model_id){
+  tmp_df = in_data$freq_data %>%
+    dplyr::select(y.freq, scan, mad) %>%
+    dplyr::mutate(model = model_id)
+  tmp_df
+})
+
+ggplot(mad_dist, aes(x = model, y = mad)) +
+  geom_sina()
+
+ggplot(mad_dist, aes(x = model, y = y.freq)) +
+  geom_sina()
+
+ggplot(mad_dist, aes(x = y.freq)) +
+  geom_histogram() +
+  facet_wrap(~ model, ncol = 1)
+
+mad_dist %>%
+  dplyr::filter(model %in% "mod2") %>%
+  ggplot(aes(x = y.freq)) +
+  geom_histogram()
+
+qq_data = all_scans %>%
+  dplyr::filter(convertable, scan %in% 1, model %in% "mod4") %>%
+  ggplot(aes(sample = mean_frequency)) +
+  geom_qq()
+qq_data
+
+test_scan = all_scans %>%
+  dplyr::filter(convertable, scan %in% 1, model %in% "mod2")
+
+library(performance)
+test_model = lm(mean_frequency ~ 0 + I(mean_mz^-1) + I(mean_mz^(-1/2)), data = test_scan)
+
+model_df = check_model(test_model)
+
+calc_ecdf = function(data){
+  data = sort(data, decreasing = FALSE)
+
+  n_data = length(data)
+  frac = seq(0, 1, 1 / (n_data - 1))
+  data.frame(data = data, frac = frac, stringsAsFactors = FALSE)
+}
+
+create_qq_df = function(residual_vector, fitted_vector){
+  # residual_vector = test_scan$mean_predicted
+  # fitted_vector = test_scan$predicted_frequency
+  # in .diag_qq x = fitted, y = residuals
+  out_df = data.frame(fitted = sort(fitted_vector),
+                      residuals = sort(residual_vector))
+
+}
+calc_quantiles = function(data_vector){
+  # data_vector = test_scan$mean_predicted
+  sorted_vector = sort(data_vector)
+
+  prob_divide = 1 / length(sorted_vector)
+  probs = seq(prob_divide, 1, prob_divide)
+  q_data = quantile(sorted_vector, probs = probs)
+  q_data
+}
+
+norm_quantiles = function(data_vector){
+  data_mean = mean(data_vector)
+  data_sd = sd(data_vector)
+  n_data = length(data_vector)
+  q_norm = qnorm(seq(0, 1, length.out = n_data), mean = data_mean, sd = data_sd)
+  q_norm
+}
+
+q_mean_predict = data.frame(q_data = calc_quantiles(test_scan$mean_predicted),
+                            q_norm = norm_quantiles(test_scan$mean_predicted))

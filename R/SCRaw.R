@@ -101,7 +101,7 @@ get_ms1_scans = function(raw_data){
 #' @export
 get_scan_info = function(raw_data){
   ms_scan_info = data.frame(scanIndex = MSnbase::scanIndex(raw_data),
-                            scan = seq(1, length(raw_data)),
+                            scan = numeric_to_char(seq(1, length(raw_data)), "s."),
                             polarity = MSnbase::polarity(raw_data),
                             rtime = MSnbase::rtime(raw_data),
                             tic = MSnbase::tic(raw_data))
@@ -213,18 +213,30 @@ SCRaw = R6::R6Class("SCRaw",
      extract_raw_data = function(remove_zero = self$remove_zero){
        all_scan_data = MSnbase::extractSpectraData(self$raw_data)
 
-       raw_scan_data = internal_map$map_function(seq(1, nrow(all_scan_data)), function(in_scan){
-         tmp_data = data.frame(mz = all_scan_data$mz[[in_scan]],
-                    intensity = all_scan_data$intensity[[in_scan]],
-                    scan = all_scan_data$spectrum[[in_scan]])
-         if (remove_zero) {
-           tmp_data = dplyr::filter(tmp_data, !(intensity == 0))
-         }
-         tmp_data
-       })
+       if (length(all_scan_data$spectrum) == nrow(self$scan_info)) {
+          if (all.equal(all_scan_data$spectrum, self$scan_info$scanIndex)) {
 
-       self$raw_df_data = raw_scan_data
-       invisible(self)
+
+            scan_names = self$scan_info$scan
+            raw_scan_data = internal_map$map_function(seq(1, nrow(all_scan_data)), function(in_scan){
+              tmp_data = data.frame(mz = all_scan_data$mz[[in_scan]],
+                                   intensity = all_scan_data$intensity[[in_scan]],
+                                   scan = scan_names[in_scan])
+              if (remove_zero) {
+                tmp_data = dplyr::filter(tmp_data, !(intensity == 0))
+              }
+              tmp_data
+            })
+          } else {
+            stop("scan_info$scanIndex and spectrum info are different!")
+          }
+       } else {
+         stop("Number of scans to extract is not the same as the number of scans in scan_info!")
+       }
+
+
+        self$raw_df_data = raw_scan_data
+        invisible(self)
      },
 
      predict_frequency = function(frequency_fit_description = self$frequency_fit_description,

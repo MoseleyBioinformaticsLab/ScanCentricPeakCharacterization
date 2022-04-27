@@ -225,7 +225,7 @@ mz_scans_to_frequency = function(mz_df_list, frequency_fit_description, mz_fit_d
       dplyr::select(-scan) %>%
       as.matrix()
     use_mz = mz_frequency[[in_scan]]
-    use_mz$predicted_frequency = predict_exponentials(use_mz$mz, use_coefficients, frequency_fit_description)
+    use_mz$predicted_frequency = predict_exponentials(use_mz$mean_mz, use_coefficients, frequency_fit_description)
     use_mz$mean_predicted = use_mz$mean_frequency - use_mz$predicted_frequency
     use_mz
   })
