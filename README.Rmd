@@ -198,18 +198,18 @@ Although the user should not have to interact with it much, and **normally** it 
 
 The default frequency ~ mz model is defined as:
 
-$$frequency = a + \frac{y}{\sqrt{mz}} + \frac{z}{\sqrt[3]{mz}}$$
+$$frequency = a + \frac{x}{mz} + \frac{y}{\sqrt{mz}} + \frac{z}{\sqrt[3]{mz}}$$
 
 We encode this using the vector: 
 
 ```{r freq_vector}
-freq_vector = c("a.freq" = 0, "y.freq" = -1/2, "z.freq" = -1/3)
+freq_vector = c("a.freq" = 0, "x.freq" = -1, "y.freq" = -1/2, "z.freq" = -1/3)
 freq_vector
 ```
 
 We can see how this corresponds to the equation above if we transform the equation to be like this:
 
-$$frequency = a + y \times mz^{\frac{-1}{2}} + z \times mz^{\frac{-1}{3}}$$
+$$frequency = a + x \times mz^{-1} + y \times mz^{\frac{-1}{2}} + z \times mz^{\frac{-1}{3}}$$
 
 Here we use the **-** to define that it should be a fraction, and the **1/2** exponent corresponds to the square root.
 

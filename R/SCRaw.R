@@ -373,7 +373,7 @@ SCRaw = R6::R6Class("SCRaw",
 
 
    initialize = function(raw_file,
-                         frequency_fit_description = c("a.freq" = 0, "y.freq" = -1/2, "z.freq" = -1/3),
+                         frequency_fit_description = c("a.freq" = 0, "x.freq" = -1, "y.freq" = -1/2, "z.freq" = -1/3),
                          mz_fit_description = c("a.mz" = 0, "x.mz" = -1, "y.mz" = -2, "z.mz" = -3),
                          metadata_file = NULL,
                          scan_range = NULL,

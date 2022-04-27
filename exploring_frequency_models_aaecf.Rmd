@@ -154,7 +154,7 @@ autofit(mad_table)
 OK, based on scan "s.157", it's all about **model 3**.
 Which again, is not the one we used, but it's definitely one I understand we maybe should use.
 
-Let's double check these using plots of the medians and mad's across all scans for each of the models.
+Let's double check these using plots of the medians and mad's of the residuals in frequency across all scans for each of the models.
 
 ```{r all_mad_medians, fig.width = 10, fig.height = 5}
 all_mads = purrr::imap_dfr(out_models, function(.x, .y){
