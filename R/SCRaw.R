@@ -214,8 +214,6 @@ SCRaw = R6::R6Class("SCRaw",
        all_scan_data = MSnbase::extractSpectraData(self$raw_data)
 
        if (length(all_scan_data$spectrum) == nrow(self$scan_info)) {
-          if (all.equal(all_scan_data$spectrum, self$scan_info$scanIndex)) {
-
 
             scan_names = self$scan_info$scan
             raw_scan_data = internal_map$map_function(seq(1, nrow(all_scan_data)), function(in_scan){
@@ -227,12 +225,10 @@ SCRaw = R6::R6Class("SCRaw",
               }
               tmp_data
             })
-          } else {
-            stop("scan_info$scanIndex and spectrum info are different!")
-          }
-       } else {
-         stop("Number of scans to extract is not the same as the number of scans in scan_info!")
-       }
+
+        } else {
+          stop("Number of scans to extract is not the same as the number of scans in scan_info!")
+        }
 
 
         self$raw_df_data = raw_scan_data
