@@ -247,24 +247,28 @@ SCRaw = R6::R6Class("SCRaw",
 
         self$raw_df_data = freq_list$frequency_list
         mean_predicted_mad = internal_map$map_function(self$raw_df_data, function(in_df){
-          data.frame(scan = in_df$scan[1], mad = mad(in_df$mean_predicted[in_df$convertable], na.rm = TRUE))
+          convertable = in_df$convertable
+          residuals = in_df$mean_predicted[convertable]
+
+          data.frame(scan = in_df$scan[1], mad = mad(residuals, na.rm = TRUE), median = median(residuals, na.rm = TRUE))
         })
 
         if ("mad" %in% names(self$scan_info)) {
           self$scan_info$mad = NULL
+          self$scan_info$median = NULL
         }
         mad_df = purrr::map_dfr(mean_predicted_mad, ~ .x)
         self$scan_info = dplyr::left_join(self$scan_info, mad_df, by = "scan")
         # check if they already existed, and if so, remove them before
         # merging them again.
-        if (any(names(frequency_fit_description) %in% names(scan_info))) {
+        if (any(names(frequency_fit_description) %in% names(self$scan_info))) {
           for (ifreq in names(frequency_fit_description)) {
             self$scan_info[[ifreq]] = NULL
           }
         }
         self$scan_info = dplyr::left_join(self$scan_info, freq_list$frequency_coefficients, by = "scan")
 
-        if (any(names(mz_fit_description) %in% names(scan_info))) {
+        if (any(names(mz_fit_description) %in% names(self$scan_info))) {
           for (imz in names(mz_fit_description)) {
             self$scan_info[[imz]] = NULL
           }
@@ -298,7 +302,7 @@ SCRaw = R6::R6Class("SCRaw",
      filter_remove_outlier_scans = NULL,
      choose_single_frequency_model = NULL,
 
-     check_frequency_model = function(scan = 1){
+     check_frequency_model = function(scan = 1, as_list = FALSE){
        if (is.null(self$raw_df_data)) {
          stop("Have you extracted the raw data to scans yet?\nPlease do sc_raw$extract_raw_data() first!")
        }
@@ -310,19 +314,42 @@ SCRaw = R6::R6Class("SCRaw",
 
        use_scan = use_scan %>%
          dplyr::filter(convertable)
+       has_patchwork = requireNamespace("patchwork", quiety = TRUE)
 
-       p1 = use_scan %>%
+       if (!has_patchwork) {
+         message("patchwork enables easy arrangement of diagnostic plots alongside each other, we suggest you install it with\ninstall.packages('patchwork')")
+       }
+       frequency_as_mz = use_scan %>%
          ggplot(aes(x = mz, y = mean_frequency)) +
          geom_point() +
-         geom_line(aes(x = mz, y = predicted_frequency), color = "red")
-       p2 = use_scan %>%
+         geom_line(aes(x = mz, y = predicted_frequency), color = "red") +
+         labs(x = "MZ", y = "Frequency", subtitle = "Frequency as a Function of M/Z")
+       predicted_original = use_scan %>%
          ggplot(aes(x = mean_frequency, y = predicted_frequency)) +
          geom_point() +
-         geom_abline(slope = 1, color = "red")
-       p3 = use_scan %>%
+         geom_abline(slope = 1, color = "red") +
+         labs(x = "Original Frequency", y = "Predicted Frequency", subtitle = "Original vs Predicted Frequency")
+       residuals_as_mz = use_scan %>%
          ggplot(aes(x = mz, y = mean_predicted)) +
-         geom_point()
-       (p1 | p2 | p3)
+         geom_point() +
+         geom_hline(yintercept = 0, color = "red") +
+         labs(x = "MZ", y = "Residuals of Predicted - Original Frequency", subtitle = "Residuals as a Function of M/Z")
+       qq_residuals = use_scan %>%
+         ggplot(aes(sample = mean_predicted)) +
+         geom_qq() +
+         geom_qq_line(color = "red") +
+         labs(x = "Theoretical Quantiles",
+              y = "Predicted - Original Quantiles",
+              subtitle = "QQ-Plot of Predicted - Original")
+       if (has_patchwork && !as_list) {
+         out_plot = (frequency_as_mz | predicted_original | residuals_as_mz | qq_residuals)
+       } else {
+         out_plot = list(frequency_as_mz = frequency_as_mz,
+                         predicted_original = predicted_original,
+                         residuals_as_mz = residuals_as_mz,
+                         qq_residuals = qq_residuals)
+       }
+       out_plot
      },
 
      get_instrument = function(){
