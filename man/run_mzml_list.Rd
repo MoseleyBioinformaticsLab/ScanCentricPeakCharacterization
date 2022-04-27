@@ -19,7 +19,7 @@ run_mzml_list(
 
 \item{save_loc}{where should the file files be saved}
 
-\item{...}{other parameters for \code{CharacterizeMS}}
+\item{...}{other parameters for \code{SCCharacterizePeaks}}
 }
 \value{
 list

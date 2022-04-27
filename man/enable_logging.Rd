@@ -23,5 +23,5 @@ useful if you are getting errors, but can't really see them, then you can add
 
 Default log file has the pattern:
 
-FTMS.peakCharacterization_run_YYYY.MM.DD.HH.MM.SS.log
+YYYY.MM.DD.HH.MM.SS_ScanCentricPeakCharacterization_run.log
 }

@@ -33,6 +33,8 @@ Peak characterization associates data with the \code{SCZip},
 \describe{
 \item{\code{found_peaks}}{peaks found by a function}
 
+\item{\code{id}}{a holder for the ID of the sample}
+
 \item{\code{filter_remove_outlier_scans}}{function to be used for filtering scans, see \link{filter_remove_outlier_scans_default} as an example}
 
 \item{\code{choose_single_frequency_model}}{function to be used to choose a single model for frequency conversion, see \link{choose_single_frequency_model_default} as an example}
