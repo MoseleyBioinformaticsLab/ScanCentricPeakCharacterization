@@ -745,7 +745,7 @@ split_regions = function(signal_regions, frequency_point_regions, tiled_regions,
   point_regions_list = vector("list", length(all_points))
   names(point_regions_list) = all_points
 
-  if (get("status", envir = pc_progress)) {
+  if (get("status", envir = scpc_progress)) {
     pb = knitrProgressBar::progress_estimated(length(point_regions_list))
   } else {
     pb = NULL
