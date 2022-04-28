@@ -216,10 +216,12 @@ SCRaw = R6::R6Class("SCRaw",
        if (length(all_scan_data$spectrum) == nrow(self$scan_info)) {
 
             scan_names = self$scan_info$scan
+            scan_index = self$scan_info$scanIndex
             raw_scan_data = internal_map$map_function(seq(1, nrow(all_scan_data)), function(in_scan){
               tmp_data = data.frame(mz = all_scan_data$mz[[in_scan]],
                                    intensity = all_scan_data$intensity[[in_scan]],
-                                   scan = scan_names[in_scan])
+                                   scan = scan_names[in_scan],
+                                   scan_index = scan_index[in_scan])
               if (remove_zero) {
                 tmp_data = dplyr::filter(tmp_data, !(intensity == 0))
               }

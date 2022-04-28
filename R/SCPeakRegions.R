@@ -485,7 +485,7 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
                           min_points = 4,
                           zero_normalization = FALSE){
       if (inherits(sc_raw, "SCRaw")) {
-        self$peak_regions = PeakRegions$new(sc_raw,
+        self$peak_regions = SCPeakRegions$new(sc_raw,
                                             frequency_multiplier = frequency_multiplier)
       } else if (inherits(sc_raw, "SCPeakRegions")) {
         self$peak_regions = sc_raw
@@ -591,6 +591,7 @@ get_reduced_peaks = function(in_range, peak_method = "lm_weighted", min_points =
       #out_peak = get_peak_info(range_data[peak_loc, ], peak_method = peak_method, min_points = min_points)
       out_peak$points = I(list(IRanges::start(in_range)[peak_loc]))
       out_peak$scan = range_point_data[peak_loc[1], "scan"]
+      out_peak$scan_index = range_point_data[peak_loc[1], "scan_index"]
       out_peak
     })
   } else {
@@ -601,6 +602,7 @@ get_reduced_peaks = function(in_range, peak_method = "lm_weighted", min_points =
     })
     peaks$points = NA
     peaks$scan = range_point_data$scan[1]
+    peaks$scan_index = range_point_data$scan_index[1]
   }
   peaks
 }
@@ -846,7 +848,7 @@ intensity_scan_correlation = function(scan_peak){
   if (nrow(scan_peak) < 3) {
     return(NA)
   }
-  cor(scan_peak$Height, scan_peak$scan, method = "spearman", use = "complete.obs")
+  cor(scan_peak$Height, scan_peak$scan_index, method = "spearman", use = "complete.obs")
 }
 
 zero_normalization = function(peak_regions, intensity_measure = c("RawHeight", "Height"), summary_function = median, normalize_peaks = "both"){
