@@ -29,7 +29,7 @@ run_mzml_list = function(mzml_files, json_files = NULL, progress = TRUE, save_lo
     mzml_strip = gsub("mzML$", "", basename(mzml_files))
     json_strip = gsub("json$", "", basename(json_files))
 
-    if (!all(all.equal(mzml_strip, json_strip))) {
+    if (!identical(mzml_strip, json_strip)) {
       warning("Some of the mzML and json files don't match, are you sure they are all correct?")
     }
   }
