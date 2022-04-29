@@ -120,7 +120,11 @@ correct_peak_sd_height <- function(original_height, list_of_heights, n_observed,
 
   corrected_sd <- sd_estimates / sd_correction_factor
 
-  corrected_height <- correct_mean(original_height, corrected_sd, peak_fractions$fraction)
+  corrected_height <- purrr::map_dbl(seq(1, length(original_height)), function(which_in){
+    correct_mean(original_height[which_in], corrected_sd[which_in], peak_fractions$fraction[which_in])
+  })
+
+  #corrected_height <- correct_mean(original_height, corrected_sd, peak_fractions$fraction)
 
   data.frame(OriginalHeight = original_height,
              OriginalSD = sd_estimates,
