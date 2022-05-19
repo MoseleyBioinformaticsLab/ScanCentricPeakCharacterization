@@ -502,7 +502,7 @@ write_zip_file_metadata = function(zip_obj){
     sc_raw_info = NULL
   }
 
-  if (!is.null(zip_obj$sc_peak_finder$peak_meta)) {
+  if (!is.null(zip_obj$sc_peak_region_finder$peak_meta)) {
     peak_info = zip_obj$sc_peak_region_finder$peak_meta()
   } else {
     peak_info = NULL
