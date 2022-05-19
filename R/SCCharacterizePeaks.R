@@ -234,7 +234,7 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
       if (!is.null(frequency_fit_description)) {
         self$frequency_fit_description = frequency_fit_description
       } else {
-        self$frequency_fit_description = c("a.freq" = 0, "y.freq" = -1/2, "z.freq" = -1/3)
+        self$frequency_fit_description = c("a.freq" = 0, "x.freq" = -1, "y.freq" = -1/2, "z.freq" = -1/3)
       }
 
       if (!is.null(mz_fit_description)) {
