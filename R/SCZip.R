@@ -496,14 +496,14 @@ get_zip_raw_metdata = function(zip_obj){
 write_zip_file_metadata = function(zip_obj){
   zip_metadata = zip_obj$zip_metadata
 
-  if (!is.null(zip_obj$sc_raw$ms_info)) {
-    sc_raw_info = zip_obj$sc_raw$ms_info
+  if (!is.null(zip_obj$sc_raw$scan_info)) {
+    sc_raw_info = zip_obj$sc_raw$scan_info
   } else {
     sc_raw_info = NULL
   }
 
   if (!is.null(zip_obj$sc_peak_finder$peak_meta)) {
-    peak_info = zip_obj$sc_peak_finder$peak_meta()
+    peak_info = zip_obj$sc_peak_region_finder$peak_meta()
   } else {
     peak_info = NULL
   }
