@@ -19,7 +19,7 @@ Peak characterization associates data with the \code{SCZip},
   library(ggplot2)
   library(patchwork)
   sc_char$load_file()
-  sc_char$prepare_raw_data()
+  sc_char$prepare_mzml_data()
   sc_char$check_frequency_model()
 
   # run characterization
@@ -61,7 +61,7 @@ Peak characterization associates data with the \code{SCZip},
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-load_file}{\code{SCCharacterizePeaks$load_file()}}
-\item \href{#method-prepare_raw_data}{\code{SCCharacterizePeaks$prepare_raw_data()}}
+\item \href{#method-prepare_mzml_data}{\code{SCCharacterizePeaks$prepare_mzml_data()}}
 \item \href{#method-check_frequency_model}{\code{SCCharacterizePeaks$check_frequency_model()}}
 \item \href{#method-get_frequency_data}{\code{SCCharacterizePeaks$get_frequency_data()}}
 \item \href{#method-scan_info}{\code{SCCharacterizePeaks$scan_info()}}
@@ -81,19 +81,19 @@ Peak characterization associates data with the \code{SCZip},
 \if{html}{\out{<a id="method-load_file"></a>}}
 \if{latex}{\out{\hypertarget{method-load_file}{}}}
 \subsection{Method \code{load_file()}}{
-Loads the raw data into the \code{SCZip}
+Loads the mzml data into the \code{SCZip}
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$load_file()}\if{html}{\out{</div>}}
 }
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-prepare_raw_data"></a>}}
-\if{latex}{\out{\hypertarget{method-prepare_raw_data}{}}}
-\subsection{Method \code{prepare_raw_data()}}{
-Prepare the raw data.
+\if{html}{\out{<a id="method-prepare_mzml_data"></a>}}
+\if{latex}{\out{\hypertarget{method-prepare_mzml_data}{}}}
+\subsection{Method \code{prepare_mzml_data()}}{
+Prepare the mzml data.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$prepare_raw_data()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$prepare_mzml_data()}\if{html}{\out{</div>}}
 }
 
 }
@@ -111,7 +111,7 @@ Check the frequency model
 \if{html}{\out{<a id="method-get_frequency_data"></a>}}
 \if{latex}{\out{\hypertarget{method-get_frequency_data}{}}}
 \subsection{Method \code{get_frequency_data()}}{
-Get the frequency data from the \code{SCRaw} bits
+Get the frequency data from the \code{SCMzml} bits
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$get_frequency_data()}\if{html}{\out{</div>}}
 }
@@ -121,7 +121,7 @@ Get the frequency data from the \code{SCRaw} bits
 \if{html}{\out{<a id="method-scan_info"></a>}}
 \if{latex}{\out{\hypertarget{method-scan_info}{}}}
 \subsection{Method \code{scan_info()}}{
-Get the \code{SCRaw$scan_info} out
+Get the \code{SCMzml$scan_info} out
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$scan_info()}\if{html}{\out{</div>}}
 }

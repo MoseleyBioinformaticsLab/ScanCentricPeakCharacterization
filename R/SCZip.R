@@ -111,42 +111,7 @@ sc_zip_from_mzml = function(in_file, out_dir){
   }
 }
 
-#' Represents the zip mass spec file
-#'
-#' This reference class represents the zip mass spec file. It does this by
-#' providing objects for the zip file, the metadata, as well as various bits
-#' underneath such as the mzml data and peak lists, and their
-#' associated metadata. Although it is possible to work with the SCZip object directly, it
-#' is heavily recommended to use the SCCharacterizePeaks object
-#' for carrying out the various steps of an analysis, including peak finding.
-#'
-#' @section `SCZip` Methods:
-#'
-#'  use `?method-name` to see more details about each individual method
-#'
-#'  \describe{
-#'   \item{`sc_zip`}{make a new `SCZip`}
-#'   \item{`show_temp_dir`}{show where files are stored}
-#'   \item{`save`}{save the file}
-#'   \item{`cleanup`}{unlink the `temp_directory`}
-#'   \item{`add_peak_list`}{add a `Peaks` to the data}
-#'  }
-#'
-#'
-#' @section `SCZip` Data Members:
-#'  \describe{
-#'    \item{`zip_file`}{the zip file that was read in}
-#'    \item{`metadata`}{the actual metadata for the file}
-#'    \item{`metadata_file`}{the metadata file}
-#'    \item{`sc_mzml`}{a `SCMzml` holding the raw data}
-#'    \item{`peaks`}{a `Peaks` holding the peak analysis}
-#'    \item{`id`}{the sample id}
-#'    \item{`out_file`}{the file where data will be saved}
-#'  }
-#'
-#' @seealso SCCharacterizePeaks
-#' @return SCZip object
-#'
+
 "SCZip"
 
 
@@ -211,29 +176,66 @@ NULL
 #'
 NULL
 
+#' Represents the zip mass spec file
+#'
+#' This reference class represents the zip mass spec file. It does this by
+#' providing objects for the zip file, the metadata, as well as various bits
+#' underneath such as the mzml data and peak lists, and their
+#' associated metadata. Although it is possible to work with the SCZip object directly, it
+#' is heavily recommended to use the SCCharacterizePeaks object
+#' for carrying out the various steps of an analysis, including peak finding.
+#'
 #' @export
 SCZip = R6::R6Class("SCZip",
   public = list(
+
+    #' @field zip_file the actual zip file
     zip_file = NULL,
+
+    #' @field zip_metadata the metadata about the zip file
     zip_metadata = NULL,
+
+    #' @field metadata the metadata itself
     metadata = NULL,
+
+    #' @field metadata_file the metadata file
     metadata_file = NULL,
-    sc_raw = NULL,
+
+    #' @field sc_mzml the mzML data object.
+    #' @seealso [SCMzml]
+    sc_mzml = NULL,
+
+    #' @field peaks ??
     peaks = NULL,
+
+    #' @field sc_peak_region_finder the peak finder object
+    #' @seealso SCPeakRegionFinder
     sc_peak_region_finder = NULL,
+
+    #' @field json_summary jsonized summary of the peak characterization
     json_summary = NULL,
+
+    #' @field id the identifier of the sample
     id = NULL,
+
+    #' @field out_file where to put the final file
     out_file = NULL,
+
+    #' @field temp_directory where we keep everything until peak characterization is done
     temp_directory = NULL,
 
+    #' @description
+    #' Loads the mzML file
     load_mzml = function(){
       self$sc_mzml = SCMzml$new(file.path(self$temp_directory, self$metadata$mzml$mzml_data),
                 file.path(self$temp_directory, self$metadata$mzml$metadata))
 
     },
 
+    #' @description
+    #' Loads the SCPeakRegionFinder object
     load_sc_peak_region_finder = function(){
-      if (file.exists(file.path(self$temp_directory, "sc_peak_finder.rds"))) {
+      if (file.exists(file.path(self$temp_directory, "sc_peak_region_finder.rds"))) {
         sc_peak_region_finder = try(readRDS(file.path(self$temp_directory, "sc_peak_region_finder.rds")))
 
         if (inherits(sc_peak_region_finder, "try-error")) {
@@ -245,7 +247,7 @@ SCZip = R6::R6Class("SCZip",
         }
         if (inherits(sc_peak_region_finder, "SCPeakRegionFinder")) {
           self$sc_peak_region_finder = sc_peak_region_finder
-          rm(sc_peak_finder)
+          rm(sc_peak_region_finder)
           message("SCPeakRegionFinder Binary File Loaded!")
         } else {
           stop("sc_peak_region_finder.rds is not valid!")
@@ -254,22 +256,27 @@ SCZip = R6::R6Class("SCZip",
       }
     },
 
+    #' @description
+    #' Save the jsonized summary out to actual json files
     save_json = function(){
       lists_2_json(self$json_summary, temp_dir = self$temp_directory)
     },
 
+    #' @description
+    #' Saves the SCPeakRegionFinder binary object
     save_sc_peak_region_finder = function(){
       sc_peak_region_finder = self$sc_peak_region_finder
       saveRDS(sc_peak_region_finder, file.path(self$temp_directory, "sc_peak_region_finder.rds"))
       invisible(self)
     },
 
+
+    #' @description
+    #' loads just the peak list data-frame instead of peak region finder
     load_peak_list = function(){
       if (file.exists(file.path(self$temp_directory, "sc_peak_region_finder.rds"))) {
-        tmp_env = new.env()
-        load(file.path(self$temp_directory, "sc_peak_region_finder.rds"), envir = tmp_env)
-        peak_data = tmp_env$sc_peak_region_finder$correspondent_peaks$master_peak_list$clone(deep = TRUE)
-        rm(tmp_env)
+        tmp_scprf = readRDS(file.path(self$temp_directory, "sc_peak_region_finder.rds"))
+        peak_data = tmp_scprf$peak_regions$peak_data
       } else {
         warning("No sc_peak_region_finder.rds found, not returning peaks!")
         peak_data = NULL
@@ -277,6 +284,11 @@ SCZip = R6::R6Class("SCZip",
       peak_data
     },
 
+    #' @description
+    #' compare peak densities
+    #' @param mz_range the mz range to work over
+    #' @param window the window size in m/z
+    #' @param delta how much to move the window
     compare_mzml_corresponded_densities = function(mz_range = c(150, 1600), window = 1, delta = 0.1){
       if (!is.null(self$sc_mzml)) {
         mzml_peak_mz = mzml_peaks(self$sc_mzml)
@@ -300,6 +312,14 @@ SCZip = R6::R6Class("SCZip",
       peak_densities
     },
 
+    #' @description
+    #' Create a new SCZip object.
+    #' @param in_file the mzML file to load
+    #' @param mzml_meta_file an optional metadata file
+    #' @param out_file where to save the final file
+    #' @param load_mzml should the mzML file actually be loaded into an SCMzml object?
+    #' @param load_peak_list should the peak list be loaded if this is previously characterized?
+    #' @param temp_loc where to make the temp file while working with the data
     initialize = function(in_file, mzml_meta_file = NULL, out_file = NULL, load_mzml = TRUE,
                           load_peak_list = TRUE,
                           temp_loc = NULL){
@@ -354,10 +374,15 @@ SCZip = R6::R6Class("SCZip",
       invisible(self)
     },
 
+    #' @description
+    #' Show the temp directory where everything is being worked with
     show_temp_dir = function(){
       print(self$temp_directory)
     },
 
+    #' @description
+    #' Write the zip file
+    #' @param out_file where to save the zip file
     write_zip = function(out_file = NULL){
       if (is.null(out_file)) {
         out_file = self$out_file
@@ -369,15 +394,22 @@ SCZip = R6::R6Class("SCZip",
       write_zip_file_metadata(self)
     },
 
+    #' @description
+    #' delete the temp directory
     cleanup = function(){
       unlink(self$temp_directory, recursive = TRUE, force = TRUE)
       #file.remove(self$temp_directory)
     },
 
+    #' @description
+    #' delete when things are done
     finalize = function(){
       unlink(self$temp_directory, recursive = TRUE)
     },
 
+    #' @description
+    #' Add peak list data to the temp directory
+    #' @param peak_list_data the peak list data
     add_peak_list = function(peak_list_data){
       json_peak_meta = jsonlite::toJSON(peak_list_data$peakpicking_parameters,
                                          pretty = TRUE, auto_unbox = TRUE)
@@ -455,6 +487,7 @@ SCZip = R6::R6Class("SCZip",
 
   )
 )
+
 
 get_zip_mzml_metdata = function(zip_obj){
   zip_file_path = dirname(zip_obj$zip_file)
@@ -546,11 +579,11 @@ sample_run_time = function(zip, units = "m"){
     cleanup = FALSE
   }
 
-  ms_data = get_scan_info(zip$sc_mzml$mzml_data)
-  ms_data = ms_data[order(ms_data$time), ]
+  ms_data = zip$sc_mzml$get_scan_info()
+  ms_data = ms_data[order(ms_data$rtime), ]
   # assume that the last scan-scan time difference is how long the last scan should have taken as well
-  last_diff = ms_data$time[nrow(ms_data)] - ms_data$time[nrow(ms_data) - 1]
-  total_time = ms_data$time[nrow(ms_data)] + last_diff
+  last_diff = ms_data$rtime[nrow(ms_data)] - ms_data$rtime[nrow(ms_data) - 1]
+  total_time = ms_data$rtime[nrow(ms_data)] + last_diff
   start_time = lubridate::as_datetime(zip$sc_mzml$mzml_metadata$run$startTimeStamp)
   end_time = start_time + total_time
   total_time_out = switch(units,

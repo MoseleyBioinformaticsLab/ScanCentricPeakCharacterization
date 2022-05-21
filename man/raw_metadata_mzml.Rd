@@ -2,7 +2,7 @@
 % Please edit documentation in R/SCZip.R
 \name{raw_metadata_mzml}
 \alias{raw_metadata_mzml}
-\title{get raw metadata}
+\title{get mzml metadata}
 \usage{
 raw_metadata_mzml(mzml_files, raw_file_loc, recursive = TRUE)
 }
