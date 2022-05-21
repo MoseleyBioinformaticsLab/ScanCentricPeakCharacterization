@@ -1,8 +1,8 @@
 Package: ScanCentricPeakCharacterization
 Title: Functionality for Characterizing Peaks in Mass Spectrometry in a
         Scan-Centric Manner
-Version: 0.2.33
-Date: 2022-05-19
+Version: 0.2.34
+Date: 2022-05-21
 Authors@R: person(given = c("Robert", "M"), family = c("Flight"), email
         = "rflight79@gmail.com", role = c("aut", "cre"))
 Description: Provides a functions and classes for detecting,
@@ -15,7 +15,8 @@ Imports: cowplot, dplyr, ggplot2, readxl, MSnbase, debugme, assertthat,
 License: file LICENSE
 LazyData: true
 RoxygenNote: 7.1.2
-Suggests: knitr, rmarkdown, testthat, furrr, ggplot2, patchwork
+Suggests: knitr, rmarkdown, testthat, furrr, ggplot2, patchwork,
+        ggforce
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
 biocViews:
