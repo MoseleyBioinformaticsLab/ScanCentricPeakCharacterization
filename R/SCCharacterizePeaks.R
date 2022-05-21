@@ -16,7 +16,7 @@
 #'   library(ggplot2)
 #'   library(patchwork)
 #'   sc_char$load_file()
-#'   sc_char$prepare_raw_data()
+#'   sc_char$prepare_mzml_data()
 #'   sc_char$check_frequency_model()
 #'
 #'   # run characterization
@@ -29,17 +29,17 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
   public = list(
 
     #' @description
-    #' Loads the raw data into the `SCZip`
+    #' Loads the mzml data into the `SCZip`
     load_file = function(){
 
       self$sc_zip = SCZip$new(self$in_file, self$metadata_file, self$out_file, temp_loc = self$temp_loc)
       self$id = self$sc_zip$id
       log_message(paste0("Starting sample ", self$id))
-      log_message("Loading raw data ...")
-      self$sc_zip$sc_raw$frequency_fit_description = self$frequency_fit_description
-      self$sc_zip$sc_raw$mz_fit_description = self$mz_fit_description
-      self$sc_zip$sc_raw$filter_remove_outlier_scans = self$filter_remove_outlier_scans
-      self$sc_zip$sc_raw$choose_single_frequency_model = self$choose_single_frequency_model
+      log_message("Loading mzml data ...")
+      self$sc_zip$sc_mzml$frequency_fit_description = self$frequency_fit_description
+      self$sc_zip$sc_mzml$mz_fit_description = self$mz_fit_description
+      self$sc_zip$sc_mzml$filter_remove_outlier_scans = self$filter_remove_outlier_scans
+      self$sc_zip$sc_mzml$choose_single_frequency_model = self$choose_single_frequency_model
     },
 
     #' @field found_peaks peaks found by a function
@@ -64,31 +64,31 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
     sc_peak_region_finder = NULL,
 
     #' @description
-    #' Prepare the raw data.
+    #' Prepare the mzml data.
     #'
-    prepare_raw_data = function(){
-      self$sc_zip$sc_raw$extract_raw_data()
-      self$sc_zip$sc_raw$predict_frequency()
-      self$sc_zip$sc_raw = self$sc_zip$sc_raw$filter_remove_outlier_scans(self$sc_zip$sc_raw)
-      self$sc_zip$sc_raw = self$sc_zip$sc_raw$choose_single_frequency_model(self$sc_zip$sc_raw)
+    prepare_mzml_data = function(){
+      self$sc_zip$sc_mzml$extract_mzml_data()
+      self$sc_zip$sc_mzml$predict_frequency()
+      self$sc_zip$sc_mzml = self$sc_zip$sc_mzml$filter_remove_outlier_scans(self$sc_zip$sc_mzml)
+      self$sc_zip$sc_mzml = self$sc_zip$sc_mzml$choose_single_frequency_model(self$sc_zip$sc_mzml)
     },
 
     #' @description
     #' Check the frequency model
     check_frequency_model = function(){
-      self$sc_zip$sc_raw$check_frequency_model()
+      self$sc_zip$sc_mzml$check_frequency_model()
     },
 
     #' @description
-    #' Get the frequency data from the `SCRaw` bits
+    #' Get the frequency data from the `SCMzml` bits
     get_frequency_data = function(){
-      self$sc_zip$sc_raw$get_frequency_data()
+      self$sc_zip$sc_mzml$get_frequency_data()
     },
 
     #' @description
-    #' Get the `SCRaw$scan_info` out
+    #' Get the `SCMzml$scan_info` out
     scan_info = function(){
-      self$sc_zip$sc_raw$scan_info
+      self$sc_zip$sc_mzml$scan_info
     },
 
     #' @description
@@ -97,18 +97,18 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
       log_message("Characterizing peaks ...")
       if (inherits(self$sc_peak_region_finder, "R6")) {
 
-        self$sc_zip$sc_raw$convert_to_frequency()
+        self$sc_zip$sc_mzml$convert_to_frequency()
         self$sc_zip$sc_peak_region_finder = self$sc_peak_region_finder
-        self$sc_zip$sc_peak_region_finder$add_data(self$sc_zip$sc_raw)
+        self$sc_zip$sc_peak_region_finder$add_data(self$sc_zip$sc_mzml)
         if (!is.null(self$sc_zip$id)) {
           self$sc_zip$sc_peak_region_finder$sample_id = self$sc_zip$id
         } else {
           self$sc_zip$sc_peak_region_finder$sample_id = basename_no_file_ext(self$in_file)
         }
         self$sc_zip$sc_peak_region_finder$characterize_peaks()
-        self$sc_zip$sc_peak_region_finder$raw_data = NULL
+        self$sc_zip$sc_peak_region_finder$mzml_data = NULL
       } else if ("function" %in% class(self$sc_peak_region_finder)) {
-        self$found_peaks = self$sc_peak_region_finder(self$sc_zip$sc_raw, ...)
+        self$found_peaks = self$sc_peak_region_finder(self$sc_zip$sc_mzml, ...)
      }
     },
 
@@ -157,7 +157,7 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
     run_all = function(){
       self$load_file()
       self$sc_peak_region_finder$start_time = Sys.time()
-      self$prepare_raw_data()
+      self$prepare_mzml_data()
       self$find_peaks()
       self$summarize()
       self$save_peaks()
@@ -170,17 +170,17 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
     prep_data = function(){
       self$load_file()
       self$sc_peak_region_finder$start_time = Sys.time()
-      self$prepare_raw_data()
+      self$prepare_mzml_data()
 
-      self$sc_zip$sc_raw$convert_to_frequency()
+      self$sc_zip$sc_mzml$convert_to_frequency()
       self$sc_zip$sc_peak_region_finder = self$sc_peak_region_finder
-      self$sc_zip$sc_peak_region_finder$add_data(self$sc_zip$sc_raw)
+      self$sc_zip$sc_peak_region_finder$add_data(self$sc_zip$sc_mzml)
       if (!is.null(self$sc_zip$id)) {
         self$sc_zip$sc_peak_region_finder$sample_id = self$sc_zip$id
       } else {
         self$sc_zip$sc_peak_region_finder$sample_id = basename_no_file_ext(self$in_file)
       }
-      self$sc_zip$sc_peak_region_finder$raw_data = NULL
+      self$sc_zip$sc_peak_region_finder$mzml_data = NULL
     },
 
     #' @description

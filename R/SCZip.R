@@ -16,7 +16,7 @@ import_json = function(json_file){
 }
 
 
-#' get raw metadata
+#' get mzml metadata
 #'
 #' When raw files are copied, we also generated metadata about their original locations
 #' and new locations, and some other useful info. We would like to capture it, and
@@ -115,8 +115,8 @@ sc_zip_from_mzml = function(in_file, out_dir){
 #'
 #' This reference class represents the zip mass spec file. It does this by
 #' providing objects for the zip file, the metadata, as well as various bits
-#' underneath such as the raw data and peak lists, and their
-#' associated metadata. Although it is possible to work with the SCSCZip object directly, it
+#' underneath such as the mzml data and peak lists, and their
+#' associated metadata. Although it is possible to work with the SCZip object directly, it
 #' is heavily recommended to use the SCCharacterizePeaks object
 #' for carrying out the various steps of an analysis, including peak finding.
 #'
@@ -138,7 +138,7 @@ sc_zip_from_mzml = function(in_file, out_dir){
 #'    \item{`zip_file`}{the zip file that was read in}
 #'    \item{`metadata`}{the actual metadata for the file}
 #'    \item{`metadata_file`}{the metadata file}
-#'    \item{`sc_raw`}{a `SCRaw` holding the raw data}
+#'    \item{`sc_mzml`}{a `SCMzml` holding the raw data}
 #'    \item{`peaks`}{a `Peaks` holding the peak analysis}
 #'    \item{`id`}{the sample id}
 #'    \item{`out_file`}{the file where data will be saved}
@@ -226,9 +226,9 @@ SCZip = R6::R6Class("SCZip",
     out_file = NULL,
     temp_directory = NULL,
 
-    load_raw = function(){
-      self$sc_raw = SCRaw$new(file.path(self$temp_directory, self$metadata$raw$raw_data),
-                file.path(self$temp_directory, self$metadata$raw$metadata))
+    load_mzml = function(){
+      self$sc_mzml = SCMzml$new(file.path(self$temp_directory, self$metadata$mzml$mzml_data),
+                file.path(self$temp_directory, self$metadata$mzml$metadata))
 
     },
 
@@ -277,14 +277,14 @@ SCZip = R6::R6Class("SCZip",
       peak_data
     },
 
-    compare_raw_corresponded_densities = function(mz_range = c(150, 1600), window = 1, delta = 0.1){
-      if (!is.null(self$sc_raw)) {
-        raw_peak_mz = raw_peaks(self$sc_raw)
-        raw_peak_density = calculate_density(raw_peak_mz, use_range = mz_range, window = window, delta = delta)
-        raw_peak_density$type = "raw"
+    compare_mzml_corresponded_densities = function(mz_range = c(150, 1600), window = 1, delta = 0.1){
+      if (!is.null(self$sc_mzml)) {
+        mzml_peak_mz = mzml_peaks(self$sc_mzml)
+        mzml_peak_density = calculate_density(mzml_peak_mz, use_range = mz_range, window = window, delta = delta)
+        mzml_peak_density$type = "mzml"
       } else {
-        warning("No raw data to get peaks from!")
-        raw_peak_density = data.frame(window = NA, density = NA, type = "raw", stringsAsFactors = FALSE)
+        warning("No mzml data to get peaks from!")
+        mzml_peak_density = data.frame(window = NA, density = NA, type = "mzml", stringsAsFactors = FALSE)
       }
       if (!is.null(self$peaks)) {
         correspondent_peak_mz = self$peaks$master
@@ -294,16 +294,16 @@ SCZip = R6::R6Class("SCZip",
         warning("No correspondent peaks to get peaks from!")
         correspondent_peak_density = data.frame(window = NA, density = NA, type = "correspondent", stringsAsFactors = FALSE)
       }
-      peak_densities = rbind(raw_peak_density, correspondent_peak_density)
-      peak_densities$type = forcats::fct_relevel(peak_densities$type, "raw", "correspondent")
+      peak_densities = rbind(mzml_peak_density, correspondent_peak_density)
+      peak_densities$type = forcats::fct_relevel(peak_densities$type, "mzml", "correspondent")
 
       peak_densities
     },
 
-    initialize = function(in_file, mzml_meta_file = NULL, out_file = NULL, load_raw = TRUE,
+    initialize = function(in_file, mzml_meta_file = NULL, out_file = NULL, load_mzml = TRUE,
                           load_peak_list = TRUE,
                           temp_loc = NULL){
-      private$do_load_raw = load_raw
+      private$do_load_mzml = load_mzml
       private$do_load_peak_list = load_peak_list
 
       if (is.null(temp_loc)) {
@@ -331,7 +331,7 @@ SCZip = R6::R6Class("SCZip",
         self$zip_file = in_file
       }
 
-      get_zip_raw_metdata(self)
+      get_zip_mzml_metdata(self)
 
       check_zip_file(self$temp_directory)
 
@@ -339,8 +339,8 @@ SCZip = R6::R6Class("SCZip",
       self$metadata = load_metadata(self$temp_directory, self$metadata_file)
       self$id = self$metadata$id
 
-      if (load_raw && (!is.null(self$metadata$raw$raw_data))) {
-        self$sc_raw = self$load_raw()
+      if (load_mzml && (!is.null(self$metadata$mzml$mzml_data))) {
+        self$sc_mzml = self$load_mzml()
       }
 
       if (load_peak_list && (!is.null(self$metadata$peakpicking_analysis$output))) {
@@ -385,7 +385,7 @@ SCZip = R6::R6Class("SCZip",
                                       "peakpicking_parameters.json"))
       self$metadata$peakpicking_analysis = list(parameters =
                                                    "peakpicking_parameters.json",
-                                                 output = "raw_peaklist.json")
+                                                 output = "mzml_peaklist.json")
 
       json_meta = jsonlite::toJSON(self$metadata, pretty = TRUE, auto_unbox = TRUE)
       cat(json_meta, file = file.path(self$temp_directory,
@@ -393,7 +393,7 @@ SCZip = R6::R6Class("SCZip",
 
       json_peaklist = peak_list_2_json(peak_list_data$peak_list)
       cat(json_peaklist, file = file.path(self$temp_directory,
-                                          "raw_peaklist.json"))
+                                          "mzml_peaklist.json"))
 
       self$peaks = peak_list_data
     }
@@ -425,12 +425,12 @@ SCZip = R6::R6Class("SCZip",
 
 
 
-    do_load_raw = NULL,
+    do_load_mzml = NULL,
     do_load_peak_list = NULL,
 
     curr_md5 = list(metadata_file = numeric(0),
-                           raw_metadata_file = numeric(0),
-                           raw_data_file = numeric(0),
+                           mzml_metadata_file = numeric(0),
+                           mzml_data_file = numeric(0),
                            peaks_metadata_file = numeric(0),
                            peaks_data_file = numeric(0)),
     old_md5 = NULL,
@@ -441,12 +441,12 @@ SCZip = R6::R6Class("SCZip",
         private$curr_md5$metadata_file = tools::md5sum(file.path(self$temp_directory, self$metadata_file))
       }
 
-      if (!is.null(self$sc_raw)) {
-        private$curr_md5$raw_metadata_file =
-          tools::md5sum(file.path(self$temp_directory, self$metadata$raw$metadata))
+      if (!is.null(self$sc_mzml)) {
+        private$curr_md5$mzml_metadata_file =
+          tools::md5sum(file.path(self$temp_directory, self$metadata$mzml$metadata))
 
-        private$curr_md5$raw_data_file =
-          tools::md5sum(file.path(self$temp_directory, self$metadata$raw$raw_data))
+        private$curr_md5$mzml_data_file =
+          tools::md5sum(file.path(self$temp_directory, self$metadata$mzml$mzml_data))
       }
 
       private$old_md5 = private$curr_md5
@@ -456,22 +456,22 @@ SCZip = R6::R6Class("SCZip",
   )
 )
 
-get_zip_raw_metdata = function(zip_obj){
+get_zip_mzml_metdata = function(zip_obj){
   zip_file_path = dirname(zip_obj$zip_file)
   zip_file = basename_no_file_ext(zip_obj$zip_file)
   json_file = file.path(zip_file_path, paste0(zip_file, ".json"))
 
   # this first case should actually happen *almost* all the time, as the instantiation
-  # of the zip container entails copying the meta-data (if present) into the raw
+  # of the zip container entails copying the meta-data (if present) into the mzml
   # _metadata file and putting it into the temp directory that is the proxy of
   # our zip file
-  if (file.exists(file.path(zip_obj$temp_directory, "raw_metadata.json"))) {
-    file.path(zip_obj$temp_directory, "raw_metadata.json")
-    raw_metadata = import_json(file.path(zip_obj$temp_directory, "raw_metadata.json"))
+  if (file.exists(file.path(zip_obj$temp_directory, "mzml_metadata.json"))) {
+    file.path(zip_obj$temp_directory, "mzml_metadata.json")
+    mzml_metadata = import_json(file.path(zip_obj$temp_directory, "mzml_metadata.json"))
 
 
-    if (!is.null(raw_metadata$file)) {
-      file_metadata = raw_metadata$file
+    if (!is.null(mzml_metadata$file)) {
+      file_metadata = mzml_metadata$file
     } else {
       file_metadata = list()
     }
@@ -496,10 +496,10 @@ get_zip_raw_metdata = function(zip_obj){
 write_zip_file_metadata = function(zip_obj){
   zip_metadata = zip_obj$zip_metadata
 
-  if (!is.null(zip_obj$sc_raw$scan_info)) {
-    sc_raw_info = zip_obj$sc_raw$scan_info
+  if (!is.null(zip_obj$sc_mzml$scan_info)) {
+    sc_mzml_info = zip_obj$sc_mzml$scan_info
   } else {
-    sc_raw_info = NULL
+    sc_mzml_info = NULL
   }
 
   if (!is.null(zip_obj$sc_peak_region_finder$peak_meta)) {
@@ -518,7 +518,7 @@ write_zip_file_metadata = function(zip_obj){
     json_loc = paste0(tools::file_path_sans_ext(zip_obj$out_file), ".json")
 
     zip_metadata$zip = zip_file_metadata
-    zip_metadata$raw = sc_raw_info
+    zip_metadata$mzml = sc_mzml_info
     zip_metadata$peak = peak_info
     cat(jsonlite::toJSON(zip_metadata, pretty = TRUE, auto_unbox = TRUE), file = json_loc)
 
@@ -539,19 +539,19 @@ sample_run_time = function(zip, units = "m"){
     zip = sc_zip(zip)
     cleanup = TRUE
   }
-  if (is.null(zip$sc_raw)) {
-    zip$load_raw()
+  if (is.null(zip$sc_mzml)) {
+    zip$load_mzml()
     cleanup = FALSE
   } else {
     cleanup = FALSE
   }
 
-  ms_data = get_scan_info(zip$sc_raw$raw_data)
+  ms_data = get_scan_info(zip$sc_mzml$mzml_data)
   ms_data = ms_data[order(ms_data$time), ]
   # assume that the last scan-scan time difference is how long the last scan should have taken as well
   last_diff = ms_data$time[nrow(ms_data)] - ms_data$time[nrow(ms_data) - 1]
   total_time = ms_data$time[nrow(ms_data)] + last_diff
-  start_time = lubridate::as_datetime(zip$sc_raw$raw_metadata$run$startTimeStamp)
+  start_time = lubridate::as_datetime(zip$sc_mzml$mzml_metadata$run$startTimeStamp)
   end_time = start_time + total_time
   total_time_out = switch(units,
                           s = total_time,

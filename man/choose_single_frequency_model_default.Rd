@@ -4,13 +4,13 @@
 \alias{choose_single_frequency_model_default}
 \title{default single model}
 \usage{
-choose_single_frequency_model_default(sc_raw)
+choose_single_frequency_model_default(sc_mzml)
 }
 \arguments{
-\item{sc_raw}{the sc_raw object}
+\item{sc_mzml}{the sc_mzml object}
 }
 \value{
-SCRaw
+SCmzml
 }
 \description{
 default single model
@@ -20,5 +20,5 @@ This is the default function to choose a single frequency and mz model.
 It takes the scan_info after filtering scans, and calculates the median of the
 square root terms, and chooses the one closest to the median value.
 
-Please examine this function and write your own if needed.
+Please examine this function and write your own if needed. You can view the function definition using \code{choose_single_frequency_model_default}
 }

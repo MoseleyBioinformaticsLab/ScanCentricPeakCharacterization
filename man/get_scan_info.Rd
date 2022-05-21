@@ -4,10 +4,10 @@
 \alias{get_scan_info}
 \title{get scan level info}
 \usage{
-get_scan_info(raw_data)
+get_scan_info(mzml_data)
 }
 \arguments{
-\item{raw_data}{the MSnbase raw data object}
+\item{mzml_data}{the MSnbase mzml data object}
 }
 \value{
 data.frame, see \strong{Details}

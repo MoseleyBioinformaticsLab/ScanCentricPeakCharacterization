@@ -4,13 +4,13 @@
 \alias{filter_remove_outlier_scans_default}
 \title{default outlier scan function}
 \usage{
-filter_remove_outlier_scans_default(sc_raw)
+filter_remove_outlier_scans_default(sc_mzml)
 }
 \arguments{
-\item{sc_raw}{the sc_raw object}
+\item{sc_mzml}{the sc_mzml object}
 }
 \value{
-SCRaw
+SCmzml
 }
 \description{
 default outlier scan function
@@ -23,6 +23,7 @@ We expect that others have different use cases and needs, and therefore
 they should create their own function and use it appropriately.
 
 Please examine this function and write your own as needed.
-It should at the very least take a SCRaw object, work on the scan_info slot,
+It should at the very least take a SCmzml object, work on the scan_info slot,
 and then create a column with the name "keep" denoting which scans to keep.
+To view the current definition, you can do \code{filter_remove_outlier_scans_default}
 }
