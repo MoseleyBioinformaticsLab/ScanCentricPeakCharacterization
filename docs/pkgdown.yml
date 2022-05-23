@@ -1,0 +1,7 @@
+pandoc: 2.11.4
+pkgdown: 2.0.2
+pkgdown_sha: ~
+articles:
+  Quick_Start: Quick_Start.html
+last_built: 2022-05-23T17:28Z
+
