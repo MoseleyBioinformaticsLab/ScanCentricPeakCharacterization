@@ -38,7 +38,7 @@ add_to_zip = function(object, filename, zip_file){
 #' create initial zip from mzML
 #'
 #' given an mzML file, create the initial zip file containing the
-#' zipped *mzML*, *metadata.json*, and *raw_metadata.json*.
+#' zipped *mzML*, *metadata.json*, and *mzml_metadata.json*.
 #' This zip file is what will be operated on by anything that accesses files,
 #' so that our interface is consistent.
 #'
@@ -49,21 +49,21 @@ mzml_to_zip = function(mzml_file, out_file){
   mzml_file = path.expand(mzml_file)
   stopifnot(file.exists(mzml_file))
 
-  raw_meta = get_mzml_metadata(mzml_file)
+  mzml_meta = get_mzml_metadata(mzml_file)
 
-  zip_meta = list(id = raw_meta$mzML$id,
-                   raw = list(data = basename(mzml_file),
-                              metadata = "raw_metadata.json"))
+  zip_meta = list(id = mzml_meta$mzML$id,
+                   mzml = list(data = basename(mzml_file),
+                              metadata = "mzml_metadata.json"))
   zip_meta_json = meta_export_json(zip_meta)
 
-  raw_meta_json = meta_export_json(raw_meta)
+  mzml_meta_json = meta_export_json(mzml_meta)
 
-  zip_file_out = file.path(out_dir, paste0(raw_meta$mzML$id, ".zip"))
+  zip_file_out = file.path(out_dir, paste0(mzml_meta$mzML$id, ".zip"))
 
   temp_dir = tempdir()
 
-  raw_meta_file = file.path(temp_dir, "raw_metadata.json")
-  cat(raw_meta_json, file = raw_meta_file)
+  mzml_meta_file = file.path(temp_dir, "mzml_metadata.json")
+  cat(mzml_meta_json, file = mzml_meta_file)
 
   zip_meta_file = file.path(temp_dir, "metadata.json")
   cat(zip_meta_json, file = zip_meta_file)
@@ -71,7 +71,7 @@ mzml_to_zip = function(mzml_file, out_file){
   try(
     zip(zip_file_out, files = c(zip_meta_file,
                                 mzml_file,
-                                raw_meta_file),
+                                mzml_meta_file),
         flags = "-j")
   )
   unlink(temp_dir)
@@ -116,11 +116,11 @@ check_zip_file = function(zip_dir){
   zip_metadata = load_metadata(zip_dir, "metadata.json")
   zip_contents = list.files(zip_dir)
 
-  assert_that(!is.null(zip_metadata$raw$raw_data))
-  assert_that(zip_metadata$raw$raw_data %in% zip_contents)
+  assert_that(!is.null(zip_metadata$mzml$mzml_data))
+  assert_that(zip_metadata$mzml$mzml_data %in% zip_contents)
 
-  assert_that(!is.null(zip_metadata$raw$metadata))
-  assert_that(zip_metadata$raw$metadata %in% zip_contents)
+  assert_that(!is.null(zip_metadata$mzml$metadata))
+  assert_that(zip_metadata$mzml$metadata %in% zip_contents)
 
 }
 
@@ -143,22 +143,22 @@ initialize_zip_metadata = function(zip_dir){
     json_base = tools::file_path_sans_ext(basename(json_file))
 
     if (json_base == mzml_base) {
-      raw_meta = jsonlite::fromJSON(json_file, simplifyVector = FALSE)
-      file.rename(json_file, file.path(zip_dir, "raw_metadata.json"))
+      mzml_meta = jsonlite::fromJSON(json_file, simplifyVector = FALSE)
+      file.rename(json_file, file.path(zip_dir, "mzml_metadata.json"))
     } else {
       warning("JSON meta-data file does not match mzML file name!")
-      raw_meta = get_mzml_metadata(mzml_file)
-      cat(meta_export_json(raw_meta), file = file.path(zip_dir, "raw_metadata.json"))
+      mzml_meta = get_mzml_metadata(mzml_file)
+      cat(meta_export_json(mzml_meta), file = file.path(zip_dir, "mzml_metadata.json"))
     }
   } else {
-    raw_meta = get_mzml_metadata(mzml_file)
-    cat(meta_export_json(raw_meta), file = file.path(zip_dir, "raw_metadata.json"))
+    mzml_meta = get_mzml_metadata(mzml_file)
+    cat(meta_export_json(mzml_meta), file = file.path(zip_dir, "mzml_metadata.json"))
   }
 
   zip_meta = list(id = mzml_base,
-                   mzml_id = raw_meta$mzML$id,
-                   raw = list(raw_data = basename(mzml_file),
-                              metadata = "raw_metadata.json"))
+                   mzml_id = mzml_meta$mzML$id,
+                   mzml = list(mzml_data = basename(mzml_file),
+                              metadata = "mzml_metadata.json"))
   zip_meta_json = meta_export_json(zip_meta)
 
   zip_meta_file = file.path(zip_dir, "metadata.json")
@@ -173,17 +173,17 @@ initialize_zip_metadata = function(zip_dir){
 #'
 #' @export
 initialize_metadata_from_mzml = function(zip_dir, mzml_file){
-  raw_meta = get_mzml_metadata(file.path(zip_dir, mzml_file))
+  mzml_meta = get_mzml_metadata(file.path(zip_dir, mzml_file))
 
-  zip_meta = list(id = raw_meta$mzML$id,
-                   raw = list(raw_data = basename(mzml_file),
-                              metadata = "raw_metadata.json"))
+  zip_meta = list(id = mzml_meta$mzML$id,
+                   mzml = list(mzml_data = basename(mzml_file),
+                              metadata = "mzml_metadata.json"))
   zip_meta_json = meta_export_json(zip_meta)
 
-  raw_meta_json = meta_export_json(raw_meta)
+  mzml_meta_json = meta_export_json(mzml_meta)
 
-  raw_meta_file = file.path(zip_dir, "raw_metadata.json")
-  cat(raw_meta_json, file = raw_meta_file)
+  mzml_meta_file = file.path(zip_dir, "mzml_metadata.json")
+  cat(mzml_meta_json, file = mzml_meta_file)
 
   zip_meta_file = file.path(zip_dir, "metadata.json")
   cat(zip_meta_json, file = zip_meta_file)

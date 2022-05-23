@@ -184,7 +184,7 @@ get the frequency data to go into the next steps of analysis.
   mz_fit_description = c(a.mz = 0, x.mz = -1, y.mz = -2, z.mz = -3),
   metadata_file = NULL,
   scan_range = NULL,
-  rt_range = NULL,
+  rtime_range = NULL,
   mz_range = NULL,
   remove_zero = FALSE,
   filter_remove_outlier_scans = NULL,
@@ -205,7 +205,7 @@ get the frequency data to go into the next steps of analysis.
 
 \item{\code{scan_range}}{which scans can be used for analysis}
 
-\item{\code{rt_range}}{the retention time to use for scans}
+\item{\code{rtime_range}}{the retention time to use for scans}
 
 \item{\code{mz_range}}{what m/z range to use}
 

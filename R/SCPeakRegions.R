@@ -616,7 +616,7 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
                           peak_method = "lm_weighted",
                           min_points = 4,
                           zero_normalization = FALSE){
-      if (inherits(sc_raw, "SCMzml")) {
+      if (inherits(sc_mzml, "SCMzml")) {
         self$peak_regions = SCPeakRegions$new(sc_mzml,
                                             frequency_multiplier = frequency_multiplier)
       } else if (inherits(sc_mzml, "SCPeakRegions")) {
