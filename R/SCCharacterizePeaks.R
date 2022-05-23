@@ -74,6 +74,20 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
     },
 
     #' @description
+    #' Set the frequency fit description
+    #' @param frequency_fit_description the frequency model description
+    set_frequency_fit_description = function(frequency_fit_description){
+      self$sc_zip$sc_mzml$frequency_fit_description = frequency_fit_description
+      invisible(self)
+    },
+
+    #' @description
+    #' Run frequency prediction
+    predict_frequency = function(){
+      self$sc_zip$sc_mzml$predict_frequency()
+    },
+
+    #' @description
     #' Check the frequency model
     check_frequency_model = function(){
       self$sc_zip$sc_mzml$check_frequency_model()
@@ -113,7 +127,9 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
     },
 
     #' @description
-    #' Generates the JSON output summary
+    #' Generates the JSON output summary.
+    #'
+    #' @seealso [SCPeakRegionFinder$summarize()]
     summarize = function(){
       self$sc_zip$json_summary = self$sc_zip$sc_peak_region_finder$summarize()
     },

@@ -13,7 +13,7 @@ mzml_to_zip(mzml_file, out_file)
 }
 \description{
 given an mzML file, create the initial zip file containing the
-zipped \emph{mzML}, \emph{metadata.json}, and \emph{raw_metadata.json}.
+zipped \emph{mzML}, \emph{metadata.json}, and \emph{mzml_metadata.json}.
 This zip file is what will be operated on by anything that accesses files,
 so that our interface is consistent.
 }

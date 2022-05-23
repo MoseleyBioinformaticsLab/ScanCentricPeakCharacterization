@@ -28,6 +28,9 @@ Peak characterization associates data with the \code{SCZip},
   sc_char$run_all()
 }
 }
+\seealso{
+\code{\link[=SCPeakRegionFinder$summarize]{SCPeakRegionFinder$summarize()}}
+}
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
@@ -62,6 +65,8 @@ Peak characterization associates data with the \code{SCZip},
 \itemize{
 \item \href{#method-load_file}{\code{SCCharacterizePeaks$load_file()}}
 \item \href{#method-prepare_mzml_data}{\code{SCCharacterizePeaks$prepare_mzml_data()}}
+\item \href{#method-set_frequency_fit_description}{\code{SCCharacterizePeaks$set_frequency_fit_description()}}
+\item \href{#method-predict_frequency}{\code{SCCharacterizePeaks$predict_frequency()}}
 \item \href{#method-check_frequency_model}{\code{SCCharacterizePeaks$check_frequency_model()}}
 \item \href{#method-get_frequency_data}{\code{SCCharacterizePeaks$get_frequency_data()}}
 \item \href{#method-scan_info}{\code{SCCharacterizePeaks$scan_info()}}
@@ -94,6 +99,33 @@ Loads the mzml data into the \code{SCZip}
 Prepare the mzml data.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$prepare_mzml_data()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-set_frequency_fit_description"></a>}}
+\if{latex}{\out{\hypertarget{method-set_frequency_fit_description}{}}}
+\subsection{Method \code{set_frequency_fit_description()}}{
+Set the frequency fit description
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$set_frequency_fit_description(frequency_fit_description)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{frequency_fit_description}}{the frequency model description}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-predict_frequency"></a>}}
+\if{latex}{\out{\hypertarget{method-predict_frequency}{}}}
+\subsection{Method \code{predict_frequency()}}{
+Run frequency prediction
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$predict_frequency()}\if{html}{\out{</div>}}
 }
 
 }
@@ -141,7 +173,7 @@ Do the peak characterization without saving
 \if{html}{\out{<a id="method-summarize"></a>}}
 \if{latex}{\out{\hypertarget{method-summarize}{}}}
 \subsection{Method \code{summarize()}}{
-Generates the JSON output summary
+Generates the JSON output summary.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$summarize()}\if{html}{\out{</div>}}
 }
