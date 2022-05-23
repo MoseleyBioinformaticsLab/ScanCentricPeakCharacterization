@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">ScanCentricPeakCharacterization</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.3</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -120,6 +120,9 @@
 <ul><li><p><a href="#method-load_file"><code>SCCharacterizePeaks$load_file()</code></a></p></li>
 <li><p><a href="#method-prepare_mzml_data"><code>SCCharacterizePeaks$prepare_mzml_data()</code></a></p></li>
 <li><p><a href="#method-set_frequency_fit_description"><code>SCCharacterizePeaks$set_frequency_fit_description()</code></a></p></li>
+<li><p><a href="#method-set_mz_fit_description"><code>SCCharacterizePeaks$set_mz_fit_description()</code></a></p></li>
+<li><p><a href="#method-set_filter_remove_outlier_scans"><code>SCCharacterizePeaks$set_filter_remove_outlier_scans()</code></a></p></li>
+<li><p><a href="#method-set_choose_single_frequency_model"><code>SCCharacterizePeaks$set_choose_single_frequency_model()</code></a></p></li>
 <li><p><a href="#method-predict_frequency"><code>SCCharacterizePeaks$predict_frequency()</code></a></p></li>
 <li><p><a href="#method-check_frequency_model"><code>SCCharacterizePeaks$check_frequency_model()</code></a></p></li>
 <li><p><a href="#method-get_frequency_data"><code>SCCharacterizePeaks$get_frequency_data()</code></a></p></li>
@@ -166,10 +169,62 @@
 </dl><p></p></div>
 </div>
 
+</div><p></p><hr><a id="method-set_mz_fit_description"></a><div class="section">
+<h3 id="method-set-mz-fit-description-">Method <code>set_mz_fit_description()</code><a class="anchor" aria-label="anchor" href="#method-set-mz-fit-description-"></a></h3>
+<p>Set the mz fit description</p><div class="section">
+<h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span class="va">SCCharacterizePeaks</span><span class="op">$</span><span class="fu">set_mz_fit_description</span><span class="op">(</span><span class="va">mz_fit_description</span><span class="op">)</span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="arguments-1">Arguments<a class="anchor" aria-label="anchor" href="#arguments-1"></a></h4>
+<p></p><div class="arguments"><dl><dt><code>mz_fit_description</code></dt>
+<dd><p>the m/z model description</p></dd>
+
+
+</dl><p></p></div>
+</div>
+
+</div><p></p><hr><a id="method-set_filter_remove_outlier_scans"></a><div class="section">
+<h3 id="method-set-filter-remove-outlier-scans-">Method <code>set_filter_remove_outlier_scans()</code><a class="anchor" aria-label="anchor" href="#method-set-filter-remove-outlier-scans-"></a></h3>
+<p>Sets the scan filtering and check for outlier function.</p><div class="section">
+<h4 id="usage-4">Usage<a class="anchor" aria-label="anchor" href="#usage-4"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span class="va">SCCharacterizePeaks</span><span class="op">$</span><span class="fu">set_filter_remove_outlier_scans</span><span class="op">(</span>
+  <span class="va">filter_remove_outlier_scans</span>
+<span class="op">)</span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="arguments-2">Arguments<a class="anchor" aria-label="anchor" href="#arguments-2"></a></h4>
+<p></p><div class="arguments"><dl><dt><code>filter_remove_outlier_scans</code></dt>
+<dd><p>the function to remove outlier scans</p></dd>
+
+
+</dl><p></p></div>
+</div>
+
+</div><p></p><hr><a id="method-set_choose_single_frequency_model"></a><div class="section">
+<h3 id="method-set-choose-single-frequency-model-">Method <code>set_choose_single_frequency_model()</code><a class="anchor" aria-label="anchor" href="#method-set-choose-single-frequency-model-"></a></h3>
+<p>Sets the function for choosing a single frequency model</p><div class="section">
+<h4 id="usage-5">Usage<a class="anchor" aria-label="anchor" href="#usage-5"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span class="va">SCCharacterizePeaks</span><span class="op">$</span><span class="fu">set_choose_single_frequency_model</span><span class="op">(</span>
+  <span class="va">choose_single_frequency_model</span>
+<span class="op">)</span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="arguments-3">Arguments<a class="anchor" aria-label="anchor" href="#arguments-3"></a></h4>
+<p></p><div class="arguments"><dl><dt><code>choose_single_frequency_model</code></dt>
+<dd><p>the function for choosing a single model</p></dd>
+
+
+</dl><p></p></div>
+</div>
+
 </div><p></p><hr><a id="method-predict_frequency"></a><div class="section">
 <h3 id="method-predict-frequency-">Method <code>predict_frequency()</code><a class="anchor" aria-label="anchor" href="#method-predict-frequency-"></a></h3>
 <p>Run frequency prediction</p><div class="section">
-<h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
+<h4 id="usage-6">Usage<a class="anchor" aria-label="anchor" href="#usage-6"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span class="va">SCCharacterizePeaks</span><span class="op">$</span><span class="fu">predict_frequency</span><span class="op">(</span><span class="op">)</span></code></pre></div><p></p></div>
 </div>
 
@@ -177,7 +232,7 @@
 </div><p></p><hr><a id="method-check_frequency_model"></a><div class="section">
 <h3 id="method-check-frequency-model-">Method <code>check_frequency_model()</code><a class="anchor" aria-label="anchor" href="#method-check-frequency-model-"></a></h3>
 <p>Check the frequency model</p><div class="section">
-<h4 id="usage-4">Usage<a class="anchor" aria-label="anchor" href="#usage-4"></a></h4>
+<h4 id="usage-7">Usage<a class="anchor" aria-label="anchor" href="#usage-7"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span class="va">SCCharacterizePeaks</span><span class="op">$</span><span class="fu">check_frequency_model</span><span class="op">(</span><span class="op">)</span></code></pre></div><p></p></div>
 </div>
 
@@ -185,7 +240,7 @@
 </div><p></p><hr><a id="method-get_frequency_data"></a><div class="section">
 <h3 id="method-get-frequency-data-">Method <code>get_frequency_data()</code><a class="anchor" aria-label="anchor" href="#method-get-frequency-data-"></a></h3>
 <p>Get the frequency data from the <code>SCMzml</code> bits</p><div class="section">
-<h4 id="usage-5">Usage<a class="anchor" aria-label="anchor" href="#usage-5"></a></h4>
+<h4 id="usage-8">Usage<a class="anchor" aria-label="anchor" href="#usage-8"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span class="va">SCCharacterizePeaks</span><span class="op">$</span><span class="fu">get_frequency_data</span><span class="op">(</span><span class="op">)</span></code></pre></div><p></p></div>
 </div>
 
@@ -193,7 +248,7 @@
 </div><p></p><hr><a id="method-scan_info"></a><div class="section">
 <h3 id="method-scan-info-">Method <code>scan_info()</code><a class="anchor" aria-label="anchor" href="#method-scan-info-"></a></h3>
 <p>Get the <code>SCMzml$scan_info</code> out</p><div class="section">
-<h4 id="usage-6">Usage<a class="anchor" aria-label="anchor" href="#usage-6"></a></h4>
+<h4 id="usage-9">Usage<a class="anchor" aria-label="anchor" href="#usage-9"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span class="va">SCCharacterizePeaks</span><span class="op">$</span><span class="fu">scan_info</span><span class="op">(</span><span class="op">)</span></code></pre></div><p></p></div>
 </div>
 
@@ -201,7 +256,7 @@
 </div><p></p><hr><a id="method-find_peaks"></a><div class="section">
 <h3 id="method-find-peaks-">Method <code><a href="find_peaks.html">find_peaks()</a></code><a class="anchor" aria-label="anchor" href="#method-find-peaks-"></a></h3>
 <p>Do the peak characterization without saving</p><div class="section">
-<h4 id="usage-7">Usage<a class="anchor" aria-label="anchor" href="#usage-7"></a></h4>
+<h4 id="usage-10">Usage<a class="anchor" aria-label="anchor" href="#usage-10"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span class="va">SCCharacterizePeaks</span><span class="op">$</span><span class="fu">find_peaks</span><span class="op">(</span><span class="op">)</span></code></pre></div><p></p></div>
 </div>
 
@@ -209,7 +264,7 @@
 </div><p></p><hr><a id="method-summarize"></a><div class="section">
 <h3 id="method-summarize-">Method <code><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarize()</a></code><a class="anchor" aria-label="anchor" href="#method-summarize-"></a></h3>
 <p>Generates the JSON output summary.</p><div class="section">
-<h4 id="usage-8">Usage<a class="anchor" aria-label="anchor" href="#usage-8"></a></h4>
+<h4 id="usage-11">Usage<a class="anchor" aria-label="anchor" href="#usage-11"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span class="va">SCCharacterizePeaks</span><span class="op">$</span><span class="fu">summarize</span><span class="op">(</span><span class="op">)</span></code></pre></div><p></p></div>
 </div>
 
@@ -217,7 +272,7 @@
 </div><p></p><hr><a id="method-save_peaks"></a><div class="section">
 <h3 id="method-save-peaks-">Method <code>save_peaks()</code><a class="anchor" aria-label="anchor" href="#method-save-peaks-"></a></h3>
 <p>Saves the peaks and JSON to the temp file</p><div class="section">
-<h4 id="usage-9">Usage<a class="anchor" aria-label="anchor" href="#usage-9"></a></h4>
+<h4 id="usage-12">Usage<a class="anchor" aria-label="anchor" href="#usage-12"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span class="va">SCCharacterizePeaks</span><span class="op">$</span><span class="fu">save_peaks</span><span class="op">(</span><span class="op">)</span></code></pre></div><p></p></div>
 </div>
 
@@ -225,7 +280,7 @@
 </div><p></p><hr><a id="method-write_zip"></a><div class="section">
 <h3 id="method-write-zip-">Method <code>write_zip()</code><a class="anchor" aria-label="anchor" href="#method-write-zip-"></a></h3>
 <p>Write the zip file</p><div class="section">
-<h4 id="usage-10">Usage<a class="anchor" aria-label="anchor" href="#usage-10"></a></h4>
+<h4 id="usage-13">Usage<a class="anchor" aria-label="anchor" href="#usage-13"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span class="va">SCCharacterizePeaks</span><span class="op">$</span><span class="fu">write_zip</span><span class="op">(</span><span class="op">)</span></code></pre></div><p></p></div>
 </div>
 
@@ -233,7 +288,7 @@
 </div><p></p><hr><a id="method-run_all"></a><div class="section">
 <h3 id="method-run-all-">Method <code>run_all()</code><a class="anchor" aria-label="anchor" href="#method-run-all-"></a></h3>
 <p>Runs all of the pieces for peak characterization in order</p><div class="section">
-<h4 id="usage-11">Usage<a class="anchor" aria-label="anchor" href="#usage-11"></a></h4>
+<h4 id="usage-14">Usage<a class="anchor" aria-label="anchor" href="#usage-14"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span class="va">SCCharacterizePeaks</span><span class="op">$</span><span class="fu">run_all</span><span class="op">(</span><span class="op">)</span></code></pre></div><p></p></div>
 </div>
 
@@ -241,7 +296,7 @@
 </div><p></p><hr><a id="method-prep_data"></a><div class="section">
 <h3 id="method-prep-data-">Method <code>prep_data()</code><a class="anchor" aria-label="anchor" href="#method-prep-data-"></a></h3>
 <p>Loads and preps the data for characterization</p><div class="section">
-<h4 id="usage-12">Usage<a class="anchor" aria-label="anchor" href="#usage-12"></a></h4>
+<h4 id="usage-15">Usage<a class="anchor" aria-label="anchor" href="#usage-15"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span class="va">SCCharacterizePeaks</span><span class="op">$</span><span class="fu">prep_data</span><span class="op">(</span><span class="op">)</span></code></pre></div><p></p></div>
 </div>
 
@@ -249,7 +304,7 @@
 </div><p></p><hr><a id="method-add_regions"></a><div class="section">
 <h3 id="method-add-regions-">Method <code>add_regions()</code><a class="anchor" aria-label="anchor" href="#method-add-regions-"></a></h3>
 <p>Adds initial regions for finding real peak containing regions</p><div class="section">
-<h4 id="usage-13">Usage<a class="anchor" aria-label="anchor" href="#usage-13"></a></h4>
+<h4 id="usage-16">Usage<a class="anchor" aria-label="anchor" href="#usage-16"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span class="va">SCCharacterizePeaks</span><span class="op">$</span><span class="fu">add_regions</span><span class="op">(</span><span class="op">)</span></code></pre></div><p></p></div>
 </div>
 
@@ -257,7 +312,7 @@
 </div><p></p><hr><a id="method-run_splitting"></a><div class="section">
 <h3 id="method-run-splitting-">Method <code>run_splitting()</code><a class="anchor" aria-label="anchor" href="#method-run-splitting-"></a></h3>
 <p>Does initial region splitting and peak finding in scans</p><div class="section">
-<h4 id="usage-14">Usage<a class="anchor" aria-label="anchor" href="#usage-14"></a></h4>
+<h4 id="usage-17">Usage<a class="anchor" aria-label="anchor" href="#usage-17"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span class="va">SCCharacterizePeaks</span><span class="op">$</span><span class="fu">run_splitting</span><span class="op">(</span><span class="op">)</span></code></pre></div><p></p></div>
 </div>
 
@@ -265,7 +320,7 @@
 </div><p></p><hr><a id="method-new"></a><div class="section">
 <h3 id="method-new-">Method <code>new()</code><a class="anchor" aria-label="anchor" href="#method-new-"></a></h3>
 <p>Creates a new <code>SCCharacterizePeaks</code> class</p><div class="section">
-<h4 id="usage-15">Usage<a class="anchor" aria-label="anchor" href="#usage-15"></a></h4>
+<h4 id="usage-18">Usage<a class="anchor" aria-label="anchor" href="#usage-18"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span class="va"><a href="../reference/SCCharacterizePeaks.html">SCCharacterizePeaks</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>
   <span class="va">in_file</span>,
   metadata_file <span class="op">=</span> <span class="cn">NULL</span>,
@@ -280,7 +335,7 @@
 </div>
 
 <div class="section">
-<h4 id="arguments-1">Arguments<a class="anchor" aria-label="anchor" href="#arguments-1"></a></h4>
+<h4 id="arguments-4">Arguments<a class="anchor" aria-label="anchor" href="#arguments-4"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>in_file</code></dt>
 <dd><p>the mass spec data file to use (required)</p></dd>
 
@@ -323,12 +378,12 @@
 </div><p></p><hr><a id="method-clone"></a><div class="section">
 <h3 id="method-clone-">Method <code>clone()</code><a class="anchor" aria-label="anchor" href="#method-clone-"></a></h3>
 <p>The objects of this class are cloneable with this method.</p><div class="section">
-<h4 id="usage-16">Usage<a class="anchor" aria-label="anchor" href="#usage-16"></a></h4>
+<h4 id="usage-19">Usage<a class="anchor" aria-label="anchor" href="#usage-19"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span class="va">SCCharacterizePeaks</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span>deep <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
-<h4 id="arguments-2">Arguments<a class="anchor" aria-label="anchor" href="#arguments-2"></a></h4>
+<h4 id="arguments-5">Arguments<a class="anchor" aria-label="anchor" href="#arguments-5"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>deep</code></dt>
 <dd><p>Whether to make a deep clone.</p></dd>
 
