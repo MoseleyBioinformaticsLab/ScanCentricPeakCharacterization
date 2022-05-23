@@ -82,6 +82,30 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
     },
 
     #' @description
+    #' Set the mz fit description
+    #' @param mz_fit_description the m/z model description
+    set_mz_fit_description = function(mz_fit_description){
+      self$sc_zip$sc_mzml$mz_fit_description = mz_fit_description
+      invisible(self)
+    },
+
+    #' @description
+    #' Sets the scan filtering and check for outlier function.
+    #' @param filter_remove_outlier_scans the function to remove outlier scans
+    set_filter_remove_outlier_scans = function(filter_remove_outlier_scans){
+      self$sc_zip$sc_mzml$filter_remove_outlier_scans = filter_remove_outlier_scans
+      invisible(self)
+    },
+
+    #' @description
+    #' Sets the function for choosing a single frequency model
+    #' @param choose_single_frequency_model the function for choosing a single model
+    set_choose_single_frequency_model = function(choose_single_frequency_model){
+      self$sc_zip$sc_mzml$choose_single_frequency_model = choose_single_frequency_model
+      invisible(self)
+    },
+
+    #' @description
     #' Run frequency prediction
     predict_frequency = function(){
       self$sc_zip$sc_mzml$predict_frequency()

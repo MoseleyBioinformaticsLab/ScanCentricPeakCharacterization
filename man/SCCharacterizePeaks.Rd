@@ -66,6 +66,9 @@ Peak characterization associates data with the \code{SCZip},
 \item \href{#method-load_file}{\code{SCCharacterizePeaks$load_file()}}
 \item \href{#method-prepare_mzml_data}{\code{SCCharacterizePeaks$prepare_mzml_data()}}
 \item \href{#method-set_frequency_fit_description}{\code{SCCharacterizePeaks$set_frequency_fit_description()}}
+\item \href{#method-set_mz_fit_description}{\code{SCCharacterizePeaks$set_mz_fit_description()}}
+\item \href{#method-set_filter_remove_outlier_scans}{\code{SCCharacterizePeaks$set_filter_remove_outlier_scans()}}
+\item \href{#method-set_choose_single_frequency_model}{\code{SCCharacterizePeaks$set_choose_single_frequency_model()}}
 \item \href{#method-predict_frequency}{\code{SCCharacterizePeaks$predict_frequency()}}
 \item \href{#method-check_frequency_model}{\code{SCCharacterizePeaks$check_frequency_model()}}
 \item \href{#method-get_frequency_data}{\code{SCCharacterizePeaks$get_frequency_data()}}
@@ -115,6 +118,61 @@ Set the frequency fit description
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{frequency_fit_description}}{the frequency model description}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-set_mz_fit_description"></a>}}
+\if{latex}{\out{\hypertarget{method-set_mz_fit_description}{}}}
+\subsection{Method \code{set_mz_fit_description()}}{
+Set the mz fit description
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$set_mz_fit_description(mz_fit_description)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{mz_fit_description}}{the m/z model description}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-set_filter_remove_outlier_scans"></a>}}
+\if{latex}{\out{\hypertarget{method-set_filter_remove_outlier_scans}{}}}
+\subsection{Method \code{set_filter_remove_outlier_scans()}}{
+Sets the scan filtering and check for outlier function.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$set_filter_remove_outlier_scans(
+  filter_remove_outlier_scans
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{filter_remove_outlier_scans}}{the function to remove outlier scans}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-set_choose_single_frequency_model"></a>}}
+\if{latex}{\out{\hypertarget{method-set_choose_single_frequency_model}{}}}
+\subsection{Method \code{set_choose_single_frequency_model()}}{
+Sets the function for choosing a single frequency model
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$set_choose_single_frequency_model(
+  choose_single_frequency_model
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{choose_single_frequency_model}}{the function for choosing a single model}
 }
 \if{html}{\out{</div>}}
 }
