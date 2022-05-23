@@ -24,5 +24,5 @@ list
 \description{
 Given a region that should contain signal, and the point data within it,
 find the peaks, and return the region, and the set of points that make
-up each point from each scan.
+up each peak from each scan.
 }

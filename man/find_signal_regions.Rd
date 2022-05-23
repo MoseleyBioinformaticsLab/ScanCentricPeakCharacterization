@@ -7,6 +7,7 @@
 find_signal_regions(
   regions,
   point_regions_list,
+  region_percentile = 0.99,
   multiplier = 1.5,
   n_point_region = 2000
 )
@@ -15,6 +16,8 @@ find_signal_regions(
 \item{regions}{the regions we want to query}
 
 \item{point_regions_list}{the individual points}
+
+\item{region_percentile}{the cumulative percentile cutoff to use}
 
 \item{multiplier}{how much above base quantiles to use (default = 1.5)}
 }

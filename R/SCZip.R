@@ -130,52 +130,6 @@ sc_zip = function(in_file, mzml_meta_file = NULL, out_file = NULL, load_raw = TR
   SCZip$new(in_file, mzml_meta_file = mzml_meta_file, out_file = out_file, load_raw = load_raw, load_peak_list = load_peak_list)
 }
 
-#' SCZip - save
-#'
-#' @name save
-#' @param out_file the file to save to
-#'
-#' @details `out_file`, if it is `NULL`, will be taken from when the
-#'  object was generated, and by default will be set to the same as the `in_file`.
-#'  If not `NULL`, then it is checked that the `id` is part of the
-#'  `out_file`, and if not, the `id` is added to the actual file name.
-#'
-#' @examples
-#' \dontrun{
-#'  new_ms = sc_zip("in_file")
-#'  new_ms$save()
-#'  new_ms$save("out_file")
-#' }
-NULL
-
-#' SCZip - show_temp_dir
-#'
-#' shows where the temp directory `SCZip` is using is
-#'
-#' @name show_temp_dir
-#' @usage SCZip$show_temp_dir()
-#'
-NULL
-
-#' SCZip - cleanup
-#'
-#' cleans up after things are done
-#'
-#' @name cleanup
-#' @usage SCZip$cleanup()
-#'
-NULL
-
-#' SCZip - add_peak_list
-#'
-#' adds a peak list to the `SCZip`
-#'
-#' @name add_peak_list
-#' @usage SCZip$add_peak_list(peak_list_data)
-#' @param peak_list_data a [Peaks()] object
-#'
-NULL
-
 #' Represents the zip mass spec file
 #'
 #' This reference class represents the zip mass spec file. It does this by

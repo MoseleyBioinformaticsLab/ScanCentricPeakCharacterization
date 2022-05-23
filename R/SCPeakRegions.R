@@ -120,42 +120,90 @@ create_frequency_regions = function(point_spacing = 0.5, frequency_range = NULL,
 
 }
 
+#' Holds all the peak region data
+#'
+#' This reference class represents the peak region data.
+#'
 #' @export
 SCPeakRegions = R6::R6Class("SCPeakRegions",
   public = list(
+    #' @field frequency_point_regions the frequency data
     frequency_point_regions = NULL,
+
+    #' @field frequency_fit_description the model of frequency ~ m/z
     frequency_fit_description = NULL,
+
+    #' @field mz_fit_description the model of m/z ~ frequency
     mz_fit_description = NULL,
 
+    #' @field peak_regions the peak regions
     peak_regions = NULL,
+    #' @field sliding_regions the sliding regions used for density calculations
     sliding_regions = NULL,
+
+    #' @field tiled_regions the tiled regions used for grouping and splitting peak regions
     tiled_regions = NULL,
 
+    #' @field peak_region_list list of regions
     peak_region_list = NULL,
 
+    #' @field frequency_multiplier how much to multiplier frequency by to make interval points
     frequency_multiplier = NULL,
+
+    #' @field scan_peaks the peaks by scans
     scan_peaks = NULL,
+
+    #' @field peak_data the data.frame of final peak data
     peak_data = NULL,
+
+    #' @field scan_level_arrays scan level peak data as matrices
     scan_level_arrays = NULL,
+
+    #' @field is_normalized are the peak intensities normalized
     is_normalized = FALSE,
+
+    #' @field normalization_factors the normalization factors calculated
     normalization_factors = NULL,
 
+    #' @field n_scan how many scans are we working with
     n_scan = NULL,
+
+    #' @field scans_per_peak ??
     scans_per_peak = NULL,
+
+    #' @field scan_perc what percentage of scans is a minimum
     scan_perc = NULL,
+
+    #' @field min_scan based on `scan_perc`, how many scans minimum does a peak
+    #'   need to be in
     min_scan = NULL,
+
+    #' @field max_subsets ??
     max_subsets = NULL,
+
+    #' @field scan_subsets ??
     scan_subsets = NULL,
 
+    #' @field frequency_range what is the range in frequency space
     frequency_range = NULL,
 
+    #' @field scan_correlation ??
     scan_correlation = NULL,
+
+    #' @field keep_peaks which peaks are we keeping out of all the peaks we had
     keep_peaks = NULL,
+
+    #' @field peak_index the indices for the peaks
     peak_index = NULL,
 
+    #' @field scan_indices the names of the scans
     scan_indices = NULL,
+
+    #' @field instrument the instrument serial number if available
     instrument = NULL,
 
+    #' @description
+    #' sets the minimum number of scans to use
     set_min_scan = function(){
       if (!is.null(self$frequency_point_regions)) {
         self$n_scan = length(unique(self$frequency_point_regions$frequency))
@@ -170,13 +218,16 @@ SCPeakRegions = R6::R6Class("SCPeakRegions",
       invisible(self)
     },
 
-    add_data = function(sc_raw){
-      if (!is.null(sc_raw)) {
-        if (inherits(sc_raw, "SCRaw")) {
-          frequency_data = sc_raw$get_frequency_data()
-          self$instrument = sc_raw$get_instrument()
-        } else if (inherits(sc_raw, "list")) {
-          frequency_data = sc_raw
+    #' @description
+    #' Adds the data from an SCMzml object to the SCPeakRegion.
+    #' @param sc_mzml the SCMzml object being passed in
+    add_data = function(sc_mzml){
+      if (!is.null(sc_mzml)) {
+        if (inherits(sc_mzml, "SCRaw")) {
+          frequency_data = sc_mzml$get_frequency_data()
+          self$instrument = sc_mzml$get_instrument()
+        } else if (inherits(sc_mzml, "list")) {
+          frequency_data = sc_mzml
         }
         self$frequency_point_regions = check_ranges_convert_to_regions(frequency_data,
                                                                       frequency_multiplier = self$frequency_multiplier)
@@ -188,7 +239,14 @@ SCPeakRegions = R6::R6Class("SCPeakRegions",
       invisible(self)
     },
 
-    initialize = function(sc_raw = NULL,
+    #' @description
+    #' Creates a new SCPeakRegions object
+    #'
+    #' @param sc_mzml the SCMzml object to get data from
+    #' @param frequency_multiplier how much to multiply frequency by
+    #' @param scan_perc how many scans are required to be in to be a "peak"
+    #' @param max_subsets ??
+    initialize = function(sc_mzml = NULL,
                           frequency_multiplier = 400,
                           scan_perc = 0.1, max_subsets = 100){
       #browser(expr = TRUE)
@@ -196,40 +254,68 @@ SCPeakRegions = R6::R6Class("SCPeakRegions",
       self$max_subsets = max_subsets
       self$frequency_multiplier = frequency_multiplier
 
-      self$add_data(sc_raw)
+      self$add_data(sc_mzml)
 
       invisible(self)
     }
   )
 )
 
-
+#' R6 Peak Region Finder
+#'
+#' Think of it like managing all the stuff that needs to happen to find the peaks
+#'   in the regions.
+#'
 #' @export
 SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
   public = list(
+    #' @field run_time how long did the process take
     run_time = NULL,
+
+    #' @field start_time when did we start
     start_time = NULL,
+
+    #' @field stop_time when did we start
     stop_time = NULL,
+
+    #' @field peak_regions SCPeakRegions object
     peak_regions = NULL,
 
+    #' @field sliding_region_size how big are the sliding regions in data points
     sliding_region_size = NULL,
+
+    #' @field sliding_region_delta how much space between sliding region starts
     sliding_region_delta = NULL,
+
+    #' @field quantile_multiplier how much to multiply quantile based cutoff by
     quantile_multiplier = NULL,
+
+    #' @field n_point_region how many points are there in the big tiled regions for quantile based cutoff
     n_point_region = NULL,
 
+    #' @field tiled_region_size how wide are the tiled regions in data points
     tiled_region_size = NULL,
+
+    #' @field tiled_region_delta how far in between each tiled region
     tiled_region_delta = NULL,
 
-    region_percentage = NULL,
+    #' @field region_percentile ??
+    region_percentile = NULL,
 
+    #' @field peak_method what method to extract peak center, height, area, etc
     peak_method = NULL,
+
+    #' @field min_points how many points wide does a peak have to be to get characterized
     min_points = NULL,
+
+    #' @field sample_id what sample are we processing
     sample_id = NULL,
 
+    #' @field zero_normalization do we want to pretend to do normalization
     zero_normalization = NULL,
 
-    progress = NULL,
-
+    #' @description
+    #' Add the sliding and tiled regions
     add_regions = function(){
       log_message("Addling sliding and tiled regions ...")
       sliding_regions = function(self){
@@ -254,26 +340,30 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
     },
 
 
-
+    #' @description
+    #' Find the regions most likely to contain real signal
     reduce_sliding_regions = function(){
      log_message("Finding initial signal regions ...")
-      self$peak_regions$peak_regions = find_signal_regions(self$peak_regions$sliding_regions, self$peak_regions$frequency_point_regions$frequency, self$quantile_multiplier, self$n_point_region)
+      self$peak_regions$peak_regions = find_signal_regions(self$peak_regions$sliding_regions, self$peak_regions$frequency_point_regions$frequency, self$region_percentile, self$quantile_multiplier, self$n_point_region)
       log_memory()
     },
 
+    #' @description
+    #' Split up signal regions by peaks found
+    #' @param use_regions an index of the regions we want to split up
     split_peak_regions = function(use_regions = NULL){
       log_message("Splitting signal regions by peaks ...")
       if (is.null(use_regions)) {
         use_regions = seq_len(length(self$peak_regions$peak_regions))
       }
-      peak_data = split_regions(self$peak_regions$peak_regions[use_regions], self$peak_regions$frequency_point_regions, self$peak_regions$tiled_regions, self$peak_regions$min_scan, peak_method = self$peak_method, min_points = self$min_points)
-
-      self$peak_regions$peak_region_list = peak_data
+      self$peak_regions$peak_region_list = split_regions(self$peak_regions$peak_regions[use_regions], self$peak_regions$frequency_point_regions, self$peak_regions$tiled_regions, self$peak_regions$min_scan, peak_method = self$peak_method, min_points = self$min_points)
 
       self$peak_regions$peak_index = seq_len(length(peak_data))
-      #self$peak_regions$peak_regions = subset_signal_regions(self$)
     },
 
+    #' @description
+    #' Check for the presence of two peaks with the same scan number in each
+    #'   region and remove them. Any regions with zero peaks left, remove the region.
     remove_double_peaks_in_scans = function(){
       peak_region_list = self$peak_regions$peak_region_list
 
@@ -302,6 +392,9 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
       invisible(self)
     },
 
+    #' @description
+    #' Normalize the intensity data
+    #' @param which_data raw, characterized, or both (default)
     normalize_data = function(which_data = "both"){
       log_message("Normalizing scans ...")
 
@@ -315,22 +408,30 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
 
     },
 
-    find_peaks_in_regions = function(which_data = "raw"){
+    #' @description
+    #' Find the peaks in the regions.
+    find_peaks_in_regions = function(){
       log_message("Finding peaks in regions ...")
       self$peak_regions = characterize_peaks(self$peak_regions)
     },
 
+    #' @description
+    #' Model the m/z standard deviation.
     model_mzsd = function(){
       self$peak_regions$peak_data$Log10ObservedMZSDModel = mz_sd_model(self$peak_regions$peak_data)
       invisible(self)
     },
 
+    #' @description
+    #' Model the intensity height standard deviation.
     model_heightsd = function(){
       self$peak_regions$peak_data$Log10HeightSDModel =
         int_sd_model(self$peak_regions$peak_data)
       invisible(self)
     },
 
+    #' @description
+    #' Look for peaks with higher than expected frequency standard deviation.
     indicate_high_frequency_sd = function() {
       peak_region = self$peak_regions
 
@@ -342,13 +443,18 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
       invisible(self)
     },
 
-    add_data = function(sc_raw) {
-      if (inherits(sc_raw, "SCRaw")) {
-        self$peak_regions$add_data(sc_raw)
+    #' @description
+    #' Add the data from an SCMzml object to the underlying SCPeakRegions object.
+    #' @param sc_mzml the SCMzml object being passed in
+    add_data = function(sc_mzml) {
+      if (inherits(sc_mzml, "SCMzml")) {
+        self$peak_regions$add_data(sc_mzml)
       }
       invisible(self)
     },
 
+    #' @description
+    #' Summarize the peaks to go into JSON form.
     summarize_peaks = function(){
       list(TIC = sum(self$peak_regions$peak_data$Height),
            Sample = self$sample_id,
@@ -356,6 +462,8 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
            ScanLevel = self$peak_regions$scan_level_arrays)
     },
 
+    #' @description
+    #' Add an offset based on width in frequency space to m/z to describe how wide the peak is.
     add_offset = function(){
       peak_data = self$peak_regions$peak_data
       frequency_offset = mean(unlist(self$peak_regions$frequency_point_regions$metadata$difference_range))
@@ -368,11 +476,15 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
       invisible(self)
     },
 
+    #' @description
+    #' Sort the data in m/z order, as the default is frequency order
     sort_ascending_mz = function(){
       self$peak_regions$peak_data = self$peak_regions$peak_data[order(self$peak_regions$peak_data$ObservedMZ), ]
       invisible(self)
     },
 
+    #' @description
+    #' Run the overall peak characterization from start to finish.
     characterize_peaks = function(){
       self$add_regions()
       self$reduce_sliding_regions()
@@ -391,6 +503,9 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
       #self$model_heightsd()
     },
 
+    #' @description
+    #' Summarize everything for output to the zip file after completion.
+    #' @param package_used which package is being used for this work.
     summarize = function(package_used = "package:ScanCentricPeakCharacterization"){
       self$stop_time = Sys.time()
       self$run_time = as.numeric(difftime(self$stop_time, self$start_time, units = "s"))
@@ -439,6 +554,8 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
 
     },
 
+    #' @description
+    #' Generate the meta data that goes into the accompanying JSON file.
     peak_meta = function(){
       mz_point_data = self$peak_regions$frequency_point_regions$frequency
       mz_point_data = mz_point_data[names(mz_point_data) %in% as.character(self$peak_regions$normalization_factors$scan)]
@@ -471,12 +588,27 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
            ))
     },
 
-    initialize = function(sc_raw = NULL,
+    #' @description
+    #' Make a new SCPeakRegionFinder object.
+    #' @param sc_mzml the SCMzml object to use (can be missing)
+    #' @param sliding_region_size how wide to make the sliding regions in data points
+    #' @param sliding_region_delta how far apart are the starting locations of the sliding regions
+    #' @param tiled_region_size how wide are the tiled regions
+    #' @param tiled_region_delta how far apart are the tiled reigons
+    #' @param region_percentile cumulative percentile cutoff to use
+    #' @param offset_multiplier what offset multiplier should be used
+    #' @param frequency_multiplier how much to multiply frequency points to interval ranges
+    #' @param quantile_multiplier how much to adjust the quantile cutoff by
+    #' @param n_point_region how many points in the large tiled regions
+    #' @param peak_method the peak characterization method to use (lm_weighted)
+    #' @param min_points how many points to say there is a peak (4)
+    #' @param zero_normalization don't actually do normalization (FALSE)
+    initialize = function(sc_mzml = NULL,
                           sliding_region_size = 10,
                           sliding_region_delta = 1,
                           tiled_region_size = 1,
                           tiled_region_delta = 1,
-                          region_percentage = 0.99,
+                          region_percentile = 0.99,
                           offset_multiplier = 1,
                           frequency_multiplier = 400,
                           quantile_multiplier = 1.5,
@@ -484,13 +616,13 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
                           peak_method = "lm_weighted",
                           min_points = 4,
                           zero_normalization = FALSE){
-      if (inherits(sc_raw, "SCRaw")) {
-        self$peak_regions = SCPeakRegions$new(sc_raw,
+      if (inherits(sc_raw, "SCMzml")) {
+        self$peak_regions = SCPeakRegions$new(sc_mzml,
                                             frequency_multiplier = frequency_multiplier)
-      } else if (inherits(sc_raw, "SCPeakRegions")) {
-        self$peak_regions = sc_raw
+      } else if (inherits(sc_mzml, "SCPeakRegions")) {
+        self$peak_regions = sc_mzml
       } else {
-        self$peak_regions = SCPeakRegions$new(sc_raw = NULL,
+        self$peak_regions = SCPeakRegions$new(sc_mzml = NULL,
                                             frequency_multiplier = frequency_multiplier)
       }
 
@@ -498,7 +630,7 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
       self$sliding_region_delta = sliding_region_delta
       self$tiled_region_size = tiled_region_size
       self$tiled_region_delta = tiled_region_delta
-      self$region_percentage = region_percentage
+      self$region_percentile = region_percentile
       self$quantile_multiplier = quantile_multiplier
       self$n_point_region = n_point_region
 
@@ -530,11 +662,12 @@ count_overlaps = function(regions, point_regions){
 #'
 #' @param regions the regions we want to query
 #' @param point_regions_list the individual points
+#' @param region_percentile the cumulative percentile cutoff to use
 #' @param multiplier how much above base quantiles to use (default = 1.5)
 #'
 #' @export
 #' @return IRanges
-find_signal_regions = function(regions, point_regions_list, multiplier = 1.5, n_point_region = 2000){
+find_signal_regions = function(regions, point_regions_list, region_percentile = 0.99, multiplier = 1.5, n_point_region = 2000){
   nz_counts = count_overlaps(regions, point_regions_list[[1]])
   n_region = seq(2, length(point_regions_list))
   for (iregion in n_region) {
@@ -547,7 +680,7 @@ find_signal_regions = function(regions, point_regions_list, multiplier = 1.5, n_
   chunk_perc = purrr::map_dbl(chunk_indices, function(in_index){
     use_counts = nz_counts[seq(in_index, min(in_index + (n_point_region - 1), length(nz_counts)))]
     if (max(use_counts) > 0) {
-      return(stats::quantile(use_counts, 0.99))
+      return(stats::quantile(use_counts, region_percentile))
     } else {
       return(0)
     }
@@ -611,7 +744,7 @@ get_reduced_peaks = function(in_range, peak_method = "lm_weighted", min_points =
 #'
 #' Given a region that should contain signal, and the point data within it,
 #' find the peaks, and return the region, and the set of points that make
-#' up each point from each scan.
+#' up each peak from each scan.
 #'
 #' @param region_list a list with points and tiles IRanges objects
 #' @param peak_method the method for getting the peaks
@@ -886,6 +1019,18 @@ zero_normalization = function(peak_regions, intensity_measure = c("RawHeight", "
   peak_regions
 }
 
+#' Single Pass Normalization
+#'
+#' Does a single pass of normalizing scans to each other.
+#'
+#' @param scan_peaks the scan peaks to normalize
+#' @param intensity_measure which intensities to normalize
+#' @param summary_function which function to use to calculate summaries (median)
+#' @param use_peaks which peaks to use for normalization
+#' @param min_ratio what ratio of maximum intensity of peaks should we use for normalization
+#'
+#' @return scan_peaks list
+#' @export
 single_pass_normalization = function(scan_peaks, intensity_measure = c("RawHeight", "Height"), summary_function = median, use_peaks = NULL, min_ratio = 0.7){
   n_scan_per_peak = purrr::map_int(scan_peaks, function(x){
     if (sum(duplicated(x$scan)) == 0) {
@@ -1350,55 +1495,4 @@ model_sds <- function(values, sds, loess_span = 0.75){
   loess_fit <- stats::loess(y ~ x, data = sd_frame, span = loess_span, control = loess.control(surface = "direct"))
   loess_pred <- predict(loess_fit, values)
   loess_pred
-}
-
-
-#' generate bootstrap samples
-#'
-#' Generates `n_bootstrap` samples, each with `n_sample` entries, from the provided
-#' `indices`. See **Details** for more information.
-#'
-#' @param n_indices the indices to take the bootstrap sample from
-#' @param n_bootstrap how many bootstrap samples to generate? (default is 1000)
-#' @param n_sample how many items should be in each sample? See **Details**.
-#' @param min_indices the minimum number of indices to be willing to work with
-#'
-#' @details A *bootstrap* sample is a sample where the entries have been sampled
-#'  **[with replacement](https://en.wikipedia.org/wiki/Bootstrapping_(statistics))**.
-#'  In general, a *bootstrap* sample has the same number of entries as the original
-#'  sample. However, there may be cases where *upsampling* to specific number
-#'  may be useful. Therefore, the parameter `n_sample` is provided to enable
-#'  *upsampling* the original indices to a larger number. If `n_sample` is NULL,
-#'  then no *upsampling* will be done.
-#'
-#' @return list of bootstrap sampled indices
-#' @export
-bootstrap_samples <- function(n_indices, n_bootstrap = 100, n_sample = NULL, min_indices = 4){
-  if (n_indices < min_indices) {
-    return(NULL)
-  }
-
-  if (is.null(n_sample)) {
-    n_sample <- n_indices
-  }
-  purrr::map(seq_len(n_bootstrap), function(x){
-    sample(n_indices, n_sample, replace = TRUE)
-  })
-}
-
-rename_peak_data = function(data_frame){
-  name_convert = c("ObservedCenter.mz" = "ObservedMZ",
-                   "Height.mz" = "Height",
-                   "Area.mz" = "Area",
-                   "ObservedCenter.frequency" = "ObservedFrequency"
-  )
-  data_names = names(data_frame)
-  for (iname in names(name_convert)) {
-    name_match = data_names %in% iname
-    if (sum(name_match) == 1) {
-      data_names[which(name_match)] = name_convert[iname]
-    }
-  }
-  names(data_frame) = data_names
-  data_frame
 }
