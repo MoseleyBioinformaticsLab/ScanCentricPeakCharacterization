@@ -7,34 +7,31 @@ test_that("individual steps run", {
   ## file.remove("master_c1.rds", "master_c1_collapsed.rds", "master_c1_scan_information_content.rds", "median_mz_offsets.rds", "master_c2.rds", "master_c2_collapsed.rds", "normalization_factors.rds")
   skip_if_not(run_peakcharacterization)
 
-  ref_peak_finder = readRDS("tests/testthat/ref_prf.rds")
-  p2 <- SCPeakRegionFinder$new()
-  p2$peak_regions <- ref_peak_finder$peak_regions
+  starting_mzml = readRDS("init_mzml.rds")
+
+  p2 = SCPeakRegionFinder$new(starting_mzml)
 
   p2$add_regions()
-  expect_snapshot_value(p2$peak_regions$sliding_regions, style = "serialize")
-  expect_snapshot_value(p2$peak_regions$tiled_regions, style = "serialize")
-
   p2$reduce_sliding_regions()
-  expect_snapshot_value(p2$peak_regions$peak_regions, style = "serialize")
+  expect_equal(p2$peak_regions$peak_regions, readRDS("reduce_sliding_regions-peak_regions.rds"))
 
   p2$split_peak_regions()
-  expect_snapshot_value(p2$peak_regions$peak_region_list, style = "serialize")
+  expect_equal(p2$peak_regions$peak_region_list, readRDS("split_peak_regions-peak_region_list"))
 
   p2$remove_double_peaks_in_scans()
-  expect_snapshot_value(p2$peak_regions$peak_region_list, "serialize")
+  expect_equal(p2$peak_regions$peak_region_list, readRDS("remove_double_peaks_in_scans-peak_region_list.rds"))
 
   p2$normalize_data()
-  expect_snapshot_value(p2$peak_regions$normalization_factors, style = "json")
+  expect_equal(p2$peak_regions$normalization_factors, readRDS("normalize_data-normalization_factors.rds"))
+  expect_equal(p2$peak_regions$frequency_point_regions, readRDS("normalize_data-frequency_point_regions.rds"))
 
   p2$find_peaks_in_regions()
-  expect_snapshot_value(p2$peak_regions$peak_data, style = "json")
-  expect_snapshot_value(p2$peak_regions$scan_level_arrays, style = "json")
+  expect_equal(p2$peak_regions$peak_data, readRDS("find_peaks_in_regions-peak_data.rds"))
+  expect_equal(p2$peak_regions$scan_level_arrays, readRDS("find_peaks_in_regions-scan_level_arrays.rds"))
 
   p2$indicate_high_frequency_sd()
-  expect_snapshot_value(p2$peak_regions$peak_data, style = "json")
+  expect_equal(p2$peak_regions$peak_data, readRDS("indicate_high_frequency_sd-peak_data.rds"))
 
   p2$add_offset()
-  expect_snapshot_value(p2$peak_regions$peak_data, style = "json")
-
+  expect_equal(p2$peak_regions$peak_data, readRDS("add_offset-peak_data.rds"))
 })
