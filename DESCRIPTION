@@ -1,7 +1,7 @@
 Package: ScanCentricPeakCharacterization
 Title: Functionality for Characterizing Peaks in Mass Spectrometry in a
         Scan-Centric Manner
-Version: 0.3.7
+Version: 0.3.8
 Date: 2022-05-25
 Authors@R: person(given = c("Robert", "M"), family = c("Flight"), email
         = "rflight79@gmail.com", role = c("aut", "cre"))

@@ -358,7 +358,7 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
       }
       self$peak_regions$peak_region_list = split_regions(self$peak_regions$peak_regions[use_regions], self$peak_regions$frequency_point_regions, self$peak_regions$tiled_regions, self$peak_regions$min_scan, peak_method = self$peak_method, min_points = self$min_points)
 
-      self$peak_regions$peak_index = seq_len(length(peak_data))
+      self$peak_regions$peak_index = seq_len(length(self$peak_regions$peak_region_list))
     },
 
     #' @description
