@@ -223,7 +223,7 @@ SCPeakRegions = R6::R6Class("SCPeakRegions",
     #' @param sc_mzml the SCMzml object being passed in
     add_data = function(sc_mzml){
       if (!is.null(sc_mzml)) {
-        if (inherits(sc_mzml, "SCRaw")) {
+        if (inherits(sc_mzml, "SCMzml")) {
           frequency_data = sc_mzml$get_frequency_data()
           self$instrument = sc_mzml$get_instrument()
         } else if (inherits(sc_mzml, "list")) {

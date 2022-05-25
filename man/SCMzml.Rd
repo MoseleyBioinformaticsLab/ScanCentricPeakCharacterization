@@ -14,19 +14,6 @@ the frequency data for use in the peak characterization.
 \examples{
 \dontrun{
   lipid_sample = system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization")
-  sc_raw = SCMzml$new(lipid_sample)
-
-  # prep data and check model
-  library(ggplot2)
-  library(patchwork)
-  sc_mzml$extract_mzml_data()
-  sc_char$()
-  sc_char$check_frequency_model()
-
-  # run characterization
-  save_loc = "test.zip"
-  sc_char = SCCharacterizePeaks$new(lipid_sample, out_file = save_loc)
-  sc_char$run_all()
 }
 }
 \seealso{

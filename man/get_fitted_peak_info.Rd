@@ -2,7 +2,7 @@
 % Please edit documentation in R/finding_peaks.R
 \name{get_fitted_peak_info}
 \alias{get_fitted_peak_info}
-\title{parabolic fitted peak}
+\title{fitted peak information}
 \usage{
 get_fitted_peak_info(possible_peak, use_loc = "mz", w = NULL, addend = 1e-08)
 }
@@ -17,6 +17,5 @@ get_fitted_peak_info(possible_peak, use_loc = "mz", w = NULL, addend = 1e-08)
 data.frame
 }
 \description{
-given the peak, simply returns the model and residuals for the full peak
-and the area
+given the peak, returns the location and intensity
 }

@@ -182,7 +182,7 @@ SCZip = R6::R6Class("SCZip",
     #' Loads the mzML file
     load_mzml = function(){
       self$sc_mzml = SCMzml$new(file.path(self$temp_directory, self$metadata$mzml$mzml_data),
-                file.path(self$temp_directory, self$metadata$mzml$metadata))
+                                metadata_file = file.path(self$temp_directory, self$metadata$mzml$metadata))
 
     },
 
