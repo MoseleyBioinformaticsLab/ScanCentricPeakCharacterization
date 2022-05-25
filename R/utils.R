@@ -85,3 +85,17 @@ numeric_to_char = function(numbers, pre_letter = "s."){
   })
   paste0(pre_letter, padded)
 }
+
+rename_peak_data = function(data_frame) {
+  name_convert = c(ObservedCenter.mz = "ObservedMZ", Height.mz = "Height",
+                   Area.mz = "Area", ObservedCenter.frequency = "ObservedFrequency")
+  data_names = names(data_frame)
+  for (iname in names(name_convert)) {
+    name_match = data_names %in% iname
+    if (sum(name_match) == 1) {
+      data_names[which(name_match)] = name_convert[iname]
+    }
+  }
+  names(data_frame) = data_names
+  data_frame
+}
