@@ -1,4 +1,4 @@
-fit_peaks = readRDS("tests/testthat/org_fitted_peaks.rds")
+fit_peaks = readRDS("org_fitted_peaks.rds")
 
 mz_file = system.file("extdata", "test_peaks_mz.rds", package = "ScanCentricPeakCharacterization")
 mz_data = readRDS(mz_file)
