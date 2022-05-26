@@ -9,10 +9,6 @@
 #' @param save_loc where should the file files be saved
 #' @param ... other parameters for `SCCharacterizePeaks`
 #'
-#' @importFrom purrr map
-#' @importFrom grDevices boxplot.stats
-#' @importFrom utils unzip zip
-#' @importFrom stats cor filter lm loess.control median pnorm predict predict.lm qnorm quantile sd
 #' @export
 #'
 #' @return list

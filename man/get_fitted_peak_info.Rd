@@ -12,6 +12,8 @@ get_fitted_peak_info(possible_peak, use_loc = "mz", w = NULL, addend = 1e-08)
 \item{use_loc}{which field to use for locations, default is "mz"}
 
 \item{w}{the weights to use for the points}
+
+\item{addend}{how much was added to the peak intensity}
 }
 \value{
 data.frame

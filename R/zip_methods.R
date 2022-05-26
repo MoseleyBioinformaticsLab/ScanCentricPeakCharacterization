@@ -111,7 +111,6 @@ load_metadata = function(zip_dir, metadata_file){
 #' @param zip_dir the directory of the unzipped data
 #'
 #' @export
-#' @importFrom assertthat assert_that
 check_zip_file = function(zip_dir){
   zip_metadata = load_metadata(zip_dir, "metadata.json")
   zip_contents = list.files(zip_dir)

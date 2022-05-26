@@ -28,9 +28,6 @@ import_json = function(json_file){
 #' @param raw_file_loc the directory holding raw files and json metadata files
 #' @param recursive should we go recursively down the directories or not (default = TRUE)
 #'
-#' @importFrom purrr map_lgl
-#' @importFrom R.utils isAbsolutePath getAbsolutePath
-#'
 #' @export
 raw_metadata_mzml = function(mzml_files, raw_file_loc, recursive = TRUE){
   # mzml_files = dir("/home/rmflight/data/test_json_meta/mzml_data", full.names = TRUE)

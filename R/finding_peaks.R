@@ -67,7 +67,6 @@ log_with_min = function(data, min_value = NULL, order_mag = 3, log_fun = log){
 #' @param y the y-values, dependent
 #' @param w weights
 #'
-#' @importFrom stats lm.fit lm.wfit
 #' @return list
 parabolic_fit = function(x, y, w = NULL){
   center_x = x - mean(x)
@@ -270,6 +269,7 @@ integration_based_area = function(mz_data, int_data, full_peak_loc, model_peak_l
 #' @param possible_peak data.frame of mz, intensity and log intensity
 #' @param use_loc which field to use for locations, default is "mz"
 #' @param w the weights to use for the points
+#' @param addend how much was added to the peak intensity
 #'
 #' @return data.frame
 #' @export

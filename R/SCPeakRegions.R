@@ -7,8 +7,6 @@
 #' @param frequency_list a list of with a `data.frame` containing `frequency`
 #' @param frequency_multiplier a value used to convert to integers.
 #'
-#' @importFrom IRanges IRanges
-#' @importFrom S4Vectors mcols
 #' @export
 check_ranges_convert_to_regions = function(frequency_list, frequency_multiplier = 400){
 
