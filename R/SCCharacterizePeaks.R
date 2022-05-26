@@ -32,7 +32,7 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
     #' Loads the mzml data into the `SCZip`
     load_file = function(){
 
-      self$sc_zip = SCZip$new(self$in_file, self$metadata_file, self$out_file, temp_loc = self$temp_loc)
+      self$sc_zip = SCZip$new(self$in_file, mzml_meta_file = self$metadata_file, out_file = self$out_file, temp_loc = self$temp_loc)
       self$id = self$sc_zip$id
       log_message(paste0("Starting sample ", self$id))
       log_message("Loading mzml data ...")
