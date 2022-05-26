@@ -19,7 +19,7 @@ for carrying out the various steps of an analysis, including peak finding.
 \seealso{
 \link{SCMzml}
 
-SCPeakRegionFinder
+\link{SCPeakRegionFinder}
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -153,7 +153,7 @@ Create a new SCZip object.
   out_file = NULL,
   load_mzml = TRUE,
   load_peak_list = TRUE,
-  temp_loc = NULL
+  temp_loc = tempfile("zipms")
 )}\if{html}{\out{</div>}}
 }
 

@@ -8,30 +8,16 @@ mzML mass spectrometry data container with some useful methods.
 }
 \details{
 Provides our own container for mzML data, and does conversion to frequency,
-filtering scans, choosing a single frequency regression model, and generating
-the frequency data for use in the peak characterization.
+filtering scans, choosing a single frequency regression model, and
+generating the frequency data for use in the peak characterization.
 }
 \examples{
 \dontrun{
-  lipid_sample = system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization")
-  sc_raw = SCMzml$new(lipid_sample)
-
-  # prep data and check model
-  library(ggplot2)
-  library(patchwork)
-  sc_mzml$extract_mzml_data()
-  sc_char$()
-  sc_char$check_frequency_model()
-
-  # run characterization
-  save_loc = "test.zip"
-  sc_char = SCCharacterizePeaks$new(lipid_sample, out_file = save_loc)
-  sc_char$run_all()
+  lipid_sample = system.file("extdata", "lipid_example.mzML",
+  package = "ScanCentricPeakCharacterization")
 }
 }
 \seealso{
-\code{\link[=convert_to_frequency]{convert_to_frequency()}} for actually converting to frequency, \code{\link[=check_frequency]{check_frequency()}} for checking the model
-
 \code{\link[=filter_remove_outlier_scans_default]{filter_remove_outlier_scans_default()}}
 
 \code{\link[=choose_single_frequency_model_default]{choose_single_frequency_model_default()}}

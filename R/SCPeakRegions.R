@@ -7,8 +7,6 @@
 #' @param frequency_list a list of with a `data.frame` containing `frequency`
 #' @param frequency_multiplier a value used to convert to integers.
 #'
-#' @importFrom IRanges IRanges
-#' @importFrom S4Vectors mcols
 #' @export
 check_ranges_convert_to_regions = function(frequency_list, frequency_multiplier = 400){
 
@@ -223,7 +221,7 @@ SCPeakRegions = R6::R6Class("SCPeakRegions",
     #' @param sc_mzml the SCMzml object being passed in
     add_data = function(sc_mzml){
       if (!is.null(sc_mzml)) {
-        if (inherits(sc_mzml, "SCRaw")) {
+        if (inherits(sc_mzml, "SCMzml")) {
           frequency_data = sc_mzml$get_frequency_data()
           self$instrument = sc_mzml$get_instrument()
         } else if (inherits(sc_mzml, "list")) {
@@ -317,7 +315,7 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
     #' @description
     #' Add the sliding and tiled regions
     add_regions = function(){
-      log_message("Addling sliding and tiled regions ...")
+      log_message("Adding sliding and tiled regions ...")
       sliding_regions = function(self){
         create_frequency_regions(frequency_range = self$peak_regions$frequency_range, n_point = self$sliding_region_size,
                                            delta_point = self$sliding_region_delta,
@@ -358,7 +356,7 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
       }
       self$peak_regions$peak_region_list = split_regions(self$peak_regions$peak_regions[use_regions], self$peak_regions$frequency_point_regions, self$peak_regions$tiled_regions, self$peak_regions$min_scan, peak_method = self$peak_method, min_points = self$min_points)
 
-      self$peak_regions$peak_index = seq_len(length(peak_data))
+      self$peak_regions$peak_index = seq_len(length(self$peak_regions$peak_region_list))
     },
 
     #' @description
@@ -664,6 +662,7 @@ count_overlaps = function(regions, point_regions){
 #' @param point_regions_list the individual points
 #' @param region_percentile the cumulative percentile cutoff to use
 #' @param multiplier how much above base quantiles to use (default = 1.5)
+#' @param n_point_region how many points make up a large segment to do percentile on?
 #'
 #' @export
 #' @return IRanges
@@ -749,6 +748,7 @@ get_reduced_peaks = function(in_range, peak_method = "lm_weighted", min_points =
 #' @param region_list a list with points and tiles IRanges objects
 #' @param peak_method the method for getting the peaks
 #' @param min_points how many points are needed for a peak
+#' @param metadata metadata that tells how things should be processed
 #'
 #' @export
 #' @return list

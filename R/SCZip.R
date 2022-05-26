@@ -26,9 +26,7 @@ import_json = function(json_file){
 #'
 #' @param mzml_files the paths to the mzml files
 #' @param raw_file_loc the directory holding raw files and json metadata files
-#'
-#' @importFrom purrr map_lgl
-#' @importFrom R.utils isAbsolutePath getAbsolutePath
+#' @param recursive should we go recursively down the directories or not (default = TRUE)
 #'
 #' @export
 raw_metadata_mzml = function(mzml_files, raw_file_loc, recursive = TRUE){
@@ -163,7 +161,7 @@ SCZip = R6::R6Class("SCZip",
     peaks = NULL,
 
     #' @field sc_peak_region_finder the peak finder object
-    #' @seealso SCPeakRegionFinder
+    #' @seealso [SCPeakRegionFinder]
     sc_peak_region_finder = NULL,
 
     #' @field json_summary jsonized summary of the peak characterization
@@ -182,7 +180,7 @@ SCZip = R6::R6Class("SCZip",
     #' Loads the mzML file
     load_mzml = function(){
       self$sc_mzml = SCMzml$new(file.path(self$temp_directory, self$metadata$mzml$mzml_data),
-                file.path(self$temp_directory, self$metadata$mzml$metadata))
+                                metadata_file = file.path(self$temp_directory, self$metadata$mzml$metadata))
 
     },
 
@@ -276,17 +274,19 @@ SCZip = R6::R6Class("SCZip",
     #' @param temp_loc where to make the temp file while working with the data
     initialize = function(in_file, mzml_meta_file = NULL, out_file = NULL, load_mzml = TRUE,
                           load_peak_list = TRUE,
-                          temp_loc = NULL){
+                          temp_loc = tempfile("zipms")){
       private$do_load_mzml = load_mzml
       private$do_load_peak_list = load_peak_list
 
-      if (is.null(temp_loc)) {
-        temp_loc = tempfile(pattern = "zipms_tmp")
-      } else {
-        temp_loc = tempfile(pattern = "zipms_tmp", tmpdir = temp_loc)
+      file_exists = file.exists(in_file)
+      if (!file_exists) {
+        stop("The supplied input file does not exist!")
       }
 
-      dir.create(temp_loc)
+      new_dir = dir.create(temp_loc, recursive = TRUE)
+      if (!new_dir) {
+        stop("Zip directory was NOT created!")
+      }
       self$temp_directory = temp_loc
 
       in_file = path.expand(in_file)
@@ -297,7 +297,11 @@ SCZip = R6::R6Class("SCZip",
         unzip(in_zip, exdir = self$temp_directory)
 
       } else {
-        file.copy(in_file, file.path(self$temp_directory, basename(in_file)))
+
+        is_copied = file.copy(in_file, file.path(self$temp_directory, basename(in_file)))
+        if (!is_copied) {
+          stop("The mzML file could not be copied to temp directory!\nDo you have permissions to the temp directory?")
+        }
         if (!is.null(mzml_meta_file)) {
           file.copy(mzml_meta_file, file.path(self$temp_directory, basename(mzml_meta_file)))
         }

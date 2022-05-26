@@ -151,12 +151,13 @@ choose_single_frequency_model_default = function(sc_mzml){
 #'
 #' @details
 #' Provides our own container for mzML data, and does conversion to frequency,
-#'   filtering scans, choosing a single frequency regression model, and generating
-#'   the frequency data for use in the peak characterization.
+#'   filtering scans, choosing a single frequency regression model, and
+#'   generating the frequency data for use in the peak characterization.
 #'
 #' @examples
 #' \dontrun{
-#'   lipid_sample = system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization")
+#'   lipid_sample = system.file("extdata", "lipid_example.mzML",
+#'   package = "ScanCentricPeakCharacterization")
 #' }
 #' @export
 SCMzml = R6::R6Class("SCMzml",
@@ -232,7 +233,6 @@ SCMzml = R6::R6Class("SCMzml",
      #' @param frequency_fit_description the regression model definition
      #' @param mz_fit_description the regression model definition
      #'
-     #' @seealso [convert_to_frequency()] for actually converting to frequency, [check_frequency()] for checking the model
      predict_frequency = function(frequency_fit_description = self$frequency_fit_description,
                                   mz_fit_description = self$mz_fit_description){
         freq_list = mz_scans_to_frequency(self$mzml_df_data,

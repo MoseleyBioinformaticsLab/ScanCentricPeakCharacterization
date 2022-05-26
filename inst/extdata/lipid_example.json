@@ -1,0 +1,308 @@
+{
+  "mzML": {
+    "schemaLocation": "http://psi.hupo.org/ms/mzml http://psidev.info/files/ms/mzML/xsd/mzML1.1.0.xsd",
+    "id": "100Cpos",
+    "version": "1.1.0"
+  },
+  "cvList": {
+    "cv": [
+      {
+        "id": "MS",
+        "fullName": "Proteomics Standards Initiative Mass Spectrometry Ontology",
+        "version": "3.79.0",
+        "URI": "http://psidev.cvs.sourceforge.net/*checkout*/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo"
+      }
+    ],
+    "cv.1": [
+      {
+        "id": "UO",
+        "fullName": "Unit Ontology",
+        "version": "12:10:2011",
+        "URI": "http://obo.cvs.sourceforge.net/*checkout*/obo/obo/ontology/phenotype/unit.obo"
+      }
+    ],
+    "count": "2"
+  },
+  "fileDescription": {
+    "fileContent": {
+      "cvParam": [
+        {
+          "cvRef": "MS",
+          "accession": "MS:1000579",
+          "name": "MS1 spectrum",
+          "value": ""
+        }
+      ],
+      "cvParam.1": [
+        {
+          "cvRef": "MS",
+          "accession": "MS:1000580",
+          "name": "MSn spectrum",
+          "value": ""
+        }
+      ]
+    },
+    "sourceFileList": {
+      "sourceFile": {
+        "cvParam": [
+          {
+            "cvRef": "MS",
+            "accession": "MS:1000768",
+            "name": "Thermo nativeID format",
+            "value": ""
+          }
+        ],
+        "cvParam.1": [
+          {
+            "cvRef": "MS",
+            "accession": "MS:1000563",
+            "name": "Thermo RAW format",
+            "value": ""
+          }
+        ],
+        "cvParam.2": [
+          {
+            "cvRef": "MS",
+            "accession": "MS:1000569",
+            "name": "SHA-1",
+            "value": "4d140e064dfa6f43710e79b032d77533f7931f14"
+          }
+        ],
+        "id": "RAW1",
+        "name": "lipid_example",
+        "location": "file:///"
+      },
+      "count": "1"
+    }
+  },
+  "referenceableParamGroupList": {
+    "referenceableParamGroup": {
+      "cvParam": [
+        {
+          "cvRef": "MS",
+          "accession": "MS:1002416",
+          "name": "Orbitrap Fusion",
+          "value": ""
+        }
+      ],
+      "cvParam.1": [
+        {
+          "cvRef": "MS",
+          "accession": "MS:1000529",
+          "name": "instrument serial number",
+          "value": "FSN10115"
+        }
+      ],
+      "id": "CommonInstrumentParams"
+    },
+    "count": "1"
+  },
+  "softwareList": {
+    "software": {
+      "cvParam": [
+        {
+          "cvRef": "MS",
+          "accession": "MS:1000532",
+          "name": "Xcalibur",
+          "value": ""
+        }
+      ],
+      "id": "Xcalibur",
+      "version": "1.1.980"
+    },
+    "software.1": {
+      "cvParam": [
+        {
+          "cvRef": "MS",
+          "accession": "MS:1000615",
+          "name": "ProteoWizard software",
+          "value": ""
+        }
+      ],
+      "id": "pwiz",
+      "version": "3.0.9205"
+    },
+    "count": "2"
+  },
+  "instrumentConfigurationList": {
+    "instrumentConfiguration": {
+      "referenceableParamGroupRef": [
+        {
+          "ref": "CommonInstrumentParams"
+        }
+      ],
+      "componentList": {
+        "source": {
+          "cvParam": [
+            {
+              "cvRef": "MS",
+              "accession": "MS:1000398",
+              "name": "nanoelectrospray",
+              "value": ""
+            }
+          ],
+          "cvParam.1": [
+            {
+              "cvRef": "MS",
+              "accession": "MS:1000485",
+              "name": "nanospray inlet",
+              "value": ""
+            }
+          ],
+          "order": "1"
+        },
+        "analyzer": {
+          "cvParam": [
+            {
+              "cvRef": "MS",
+              "accession": "MS:1000081",
+              "name": "quadrupole",
+              "value": ""
+            }
+          ],
+          "order": "2"
+        },
+        "analyzer.1": {
+          "cvParam": [
+            {
+              "cvRef": "MS",
+              "accession": "MS:1000484",
+              "name": "orbitrap",
+              "value": ""
+            }
+          ],
+          "order": "3"
+        },
+        "detector": {
+          "cvParam": [
+            {
+              "cvRef": "MS",
+              "accession": "MS:1000624",
+              "name": "inductive detector",
+              "value": ""
+            }
+          ],
+          "order": "4"
+        },
+        "count": "4"
+      },
+      "softwareRef": [
+        {
+          "ref": "Xcalibur"
+        }
+      ],
+      "id": "IC1"
+    },
+    "instrumentConfiguration.1": {
+      "referenceableParamGroupRef": [
+        {
+          "ref": "CommonInstrumentParams"
+        }
+      ],
+      "componentList": {
+        "source": {
+          "cvParam": [
+            {
+              "cvRef": "MS",
+              "accession": "MS:1000398",
+              "name": "nanoelectrospray",
+              "value": ""
+            }
+          ],
+          "cvParam.1": [
+            {
+              "cvRef": "MS",
+              "accession": "MS:1000485",
+              "name": "nanospray inlet",
+              "value": ""
+            }
+          ],
+          "order": "1"
+        },
+        "analyzer": {
+          "cvParam": [
+            {
+              "cvRef": "MS",
+              "accession": "MS:1000081",
+              "name": "quadrupole",
+              "value": ""
+            }
+          ],
+          "order": "2"
+        },
+        "analyzer.1": {
+          "cvParam": [
+            {
+              "cvRef": "MS",
+              "accession": "MS:1000083",
+              "name": "radial ejection linear ion trap",
+              "value": ""
+            }
+          ],
+          "order": "3"
+        },
+        "detector": {
+          "cvParam": [
+            {
+              "cvRef": "MS",
+              "accession": "MS:1000253",
+              "name": "electron multiplier",
+              "value": ""
+            }
+          ],
+          "order": "4"
+        },
+        "count": "4"
+      },
+      "softwareRef": [
+        {
+          "ref": "Xcalibur"
+        }
+      ],
+      "id": "IC2"
+    },
+    "count": "2"
+  },
+  "dataProcessingList": {
+    "dataProcessing": {
+      "processingMethod": {
+        "cvParam": [
+          {
+            "cvRef": "MS",
+            "accession": "MS:1000544",
+            "name": "Conversion to mzML",
+            "value": ""
+          }
+        ],
+        "order": "0",
+        "softwareRef": "pwiz"
+      },
+      "id": "pwiz_Reader_Thermo_conversion"
+    },
+    "count": "1"
+  },
+  "run": {
+    "id": "_x0031_00Cpos",
+    "defaultInstrumentConfigurationRef": "IC1",
+    "startTimeStamp": "2015-08-21 05:28:01Z",
+    "defaultSourceFileRef": "RAW1",
+    "scanPolarity": "positive",
+    "instrument": {
+      "model": "Orbitrap Fusion",
+      "serial": "FSN10115"
+    }
+  },
+  "file": {
+    "raw": {
+      "file": "lipid_example.raw",
+      "saved_path": "/mlab/scratch/raw_data/2017-06-14/lipid_example.raw",
+      "original_path": "/remote_archive/lipid_example.raw",
+      "sha1": "4d140e064dfa6f43710e79b032d77533f7931f14"
+    },
+    "mzml": {
+      "file": "lipid_example.mzML",
+      "saved_path": "/mlab/scratch/raw_data/mzml_data/2017-06-14/lipid_example.mzML",
+      "sha1": "c2012b71510c31317c77761ef9e28ac75599f816"
+    }
+  }
+}

@@ -50,7 +50,6 @@ get_mzml_header = function(mzml_file){
 #'
 #' @param mzml_file the mzML file to get metadata from
 #'
-#' @importFrom XML xmlTreeParse xmlNamespaceDefinitions xmlRoot getNodeSet xmlAttrs xmlChildren xmlToList
 #' @export
 get_mzml_metadata = function(mzml_file){
   mzml_header = get_mzml_header(mzml_file)
@@ -103,7 +102,6 @@ get_mzml_metadata = function(mzml_file){
 #'
 #' @param meta_list a list of metadata
 #'
-#' @importFrom jsonlite toJSON
 #' @export
 meta_export_json = function(meta_list){
   jsonlite::toJSON(meta_list, pretty = TRUE, auto_unbox = TRUE)
@@ -199,7 +197,6 @@ meta_export_json = function(meta_list){
 #'
 #' @export
 #'
-#' @importFrom purrr map_df
 #'
 #' @return data.frame
 #'

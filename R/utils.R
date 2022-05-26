@@ -5,10 +5,10 @@
 #'
 #' @param mzml_files the list of mzML files to use
 #' @param json_files the list of corresponding json meta-data files
+#' @param progress whether to give messages about the progress of things
 #' @param save_loc where should the file files be saved
 #' @param ... other parameters for `SCCharacterizePeaks`
 #'
-#' @importFrom purrr map
 #' @export
 #'
 #' @return list

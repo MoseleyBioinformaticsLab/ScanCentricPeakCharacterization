@@ -43,7 +43,7 @@ add_to_zip = function(object, filename, zip_file){
 #' so that our interface is consistent.
 #'
 #' @param mzml_file the mzML file to zip up
-#' @param out_dir the directory to save the zip file
+#' @param out_file the directory to save the zip file
 #' @export
 mzml_to_zip = function(mzml_file, out_file){
   mzml_file = path.expand(mzml_file)
@@ -111,7 +111,6 @@ load_metadata = function(zip_dir, metadata_file){
 #' @param zip_dir the directory of the unzipped data
 #'
 #' @export
-#' @importFrom assertthat assert_that
 check_zip_file = function(zip_dir){
   zip_metadata = load_metadata(zip_dir, "metadata.json")
   zip_contents = list.files(zip_dir)
@@ -126,13 +125,20 @@ check_zip_file = function(zip_dir){
 
 #' initialize metadata
 #'
-#' @param zip_dir
+#' @param zip_dir the temp directory that represents the final zip
 #'
 #' @export
 initialize_zip_metadata = function(zip_dir){
-  mzml_file = dir(zip_dir, pattern = "mzML", full.names = TRUE)
-  json_file = dir(zip_dir, pattern = "json", full.names = TRUE)
+  if (!dir.exists(zip_dir)) {
+    stop("The zip temp directory does not exist!")
+  }
+  mzml_file = dir(zip_dir, pattern = "mzML$", full.names = TRUE)
+  #message(mzml_file)
+  json_file = dir(zip_dir, pattern = "json$", full.names = TRUE)
 
+  if (length(mzml_file) == 0) {
+    stop("No mzML files found in the zip temp directory!")
+  }
   if (length(mzml_file) == 1) {
     mzml_base = tools::file_path_sans_ext(basename(mzml_file))
   } else {

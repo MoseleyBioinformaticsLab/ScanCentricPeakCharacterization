@@ -10,6 +10,7 @@ generate_contaminants = function(contaminants){
 #' may be standards or contaminants that should be removed after assignment.
 #'
 #' @param zip_dir which directories to look for files within
+#' @param file_pattern what files are we actually using
 #' @param blank_pattern regex indicating that a sample may be a blank
 #' @param save_dir where to save the files (default is to overwrite originals)
 #' @param conversion_factor how much to multiply frequencies by

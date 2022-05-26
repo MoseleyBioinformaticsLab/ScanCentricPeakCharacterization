@@ -7,7 +7,6 @@
 ^\.Rproj\.user$
 ^\.httr-oauth$
 ^.*\.*.log$
-^.*.mzML$
 ^integration_test$
 ^\.github$
 ^_pkgdown\.yml$

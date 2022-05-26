@@ -1,4 +1,4 @@
 library(testthat)
-library(FTMS.peakCharacterization)
+library(ScanCentricPeakCharacterization)
 
-test_check("FTMS.peakCharacterization")
+test_check("ScanCentricPeakCharacterization")

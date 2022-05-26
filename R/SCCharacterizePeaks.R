@@ -9,7 +9,9 @@
 #'
 #' @examples
 #' \dontrun{
-#'   lipid_sample = system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization")
+#'   lipid_sample = system.file("extdata",
+#'      "lipid_example.mzML",
+#'      package = "ScanCentricPeakCharacterization")
 #'   sc_char = SCCharacterizePeaks$new(lipid_sample)
 #'
 #'   # prep data and check model
@@ -21,7 +23,8 @@
 #'
 #'   # run characterization
 #'   save_loc = "test.zip"
-#'   sc_char = SCCharacterizePeaks$new(lipid_sample, out_file = save_loc)
+#'   sc_char = SCCharacterizePeaks$new(lipid_sample,
+#'                                     out_file = save_loc)
 #'   sc_char$run_all()
 #' }
 #' @export
@@ -32,7 +35,7 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
     #' Loads the mzml data into the `SCZip`
     load_file = function(){
 
-      self$sc_zip = SCZip$new(self$in_file, self$metadata_file, self$out_file, temp_loc = self$temp_loc)
+      self$sc_zip = SCZip$new(self$in_file, mzml_meta_file = self$metadata_file, out_file = self$out_file, temp_loc = self$temp_loc)
       self$id = self$sc_zip$id
       log_message(paste0("Starting sample ", self$id))
       log_message("Loading mzml data ...")
@@ -153,7 +156,6 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
     #' @description
     #' Generates the JSON output summary.
     #'
-    #' @seealso [SCPeakRegionFinder$summarize()]
     summarize = function(){
       self$sc_zip$json_summary = self$sc_zip$sc_peak_region_finder$summarize()
     },

@@ -17,6 +17,8 @@ split_region_by_peaks(
 \item{peak_method}{the method for getting the peaks}
 
 \item{min_points}{how many points are needed for a peak}
+
+\item{metadata}{metadata that tells how things should be processed}
 }
 \value{
 list
