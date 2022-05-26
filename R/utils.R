@@ -5,10 +5,14 @@
 #'
 #' @param mzml_files the list of mzML files to use
 #' @param json_files the list of corresponding json meta-data files
+#' @param progress whether to give messages about the progress of things
 #' @param save_loc where should the file files be saved
 #' @param ... other parameters for `SCCharacterizePeaks`
 #'
 #' @importFrom purrr map
+#' @importFrom grDevices boxplot.stats
+#' @importFrom utils unzip zip
+#' @importFrom stats cor filter lm loess.control median pnorm predict predict.lm qnorm quantile sd
 #' @export
 #'
 #' @return list

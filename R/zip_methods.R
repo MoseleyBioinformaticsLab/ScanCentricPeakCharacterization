@@ -43,7 +43,7 @@ add_to_zip = function(object, filename, zip_file){
 #' so that our interface is consistent.
 #'
 #' @param mzml_file the mzML file to zip up
-#' @param out_dir the directory to save the zip file
+#' @param out_file the directory to save the zip file
 #' @export
 mzml_to_zip = function(mzml_file, out_file){
   mzml_file = path.expand(mzml_file)
@@ -126,7 +126,7 @@ check_zip_file = function(zip_dir){
 
 #' initialize metadata
 #'
-#' @param zip_dir
+#' @param zip_dir the temp directory that represents the final zip
 #'
 #' @export
 initialize_zip_metadata = function(zip_dir){

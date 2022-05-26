@@ -24,5 +24,5 @@ a truncated normal distribution.
 https://en.wikipedia.org/wiki/Truncated_normal_distribution
 }
 \seealso{
-correct_peak correct_variance
+\code{\link[=correct_peak]{correct_peak()}} \code{\link[=correct_variance]{correct_variance()}}
 }

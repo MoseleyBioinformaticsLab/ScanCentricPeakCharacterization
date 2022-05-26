@@ -17,6 +17,8 @@ run_mzml_list(
 
 \item{json_files}{the list of corresponding json meta-data files}
 
+\item{progress}{whether to give messages about the progress of things}
+
 \item{save_loc}{where should the file files be saved}
 
 \item{...}{other parameters for \code{SCCharacterizePeaks}}

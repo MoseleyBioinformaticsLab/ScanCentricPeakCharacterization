@@ -19,7 +19,7 @@ for carrying out the various steps of an analysis, including peak finding.
 \seealso{
 \link{SCMzml}
 
-SCPeakRegionFinder
+\link{SCPeakRegionFinder}
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}

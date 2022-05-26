@@ -26,5 +26,5 @@ that is truncated on one side only.
 https://en.wikipedia.org/wiki/Truncated_normal_distribution
 }
 \seealso{
-correct_mean correct_variance
+\code{\link[=correct_mean]{correct_mean()}} \code{\link[=correct_variance]{correct_variance()}}
 }

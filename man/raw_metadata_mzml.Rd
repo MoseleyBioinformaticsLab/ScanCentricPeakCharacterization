@@ -10,6 +10,8 @@ raw_metadata_mzml(mzml_files, raw_file_loc, recursive = TRUE)
 \item{mzml_files}{the paths to the mzml files}
 
 \item{raw_file_loc}{the directory holding raw files and json metadata files}
+
+\item{recursive}{should we go recursively down the directories or not (default = TRUE)}
 }
 \description{
 When raw files are copied, we also generated metadata about their original locations

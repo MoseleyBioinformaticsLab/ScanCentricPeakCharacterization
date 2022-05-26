@@ -24,7 +24,7 @@ Z <- function(x){
 #' @return corrected variance
 #' @export
 #'
-#' @seealso correct_mean correct_peak
+#' @seealso [correct_mean()] [correct_peak()]
 correct_variance <- function(observed_variance, fraction){
   if (fraction >= 1) {
     return(observed_variance)
@@ -56,7 +56,7 @@ correct_variance <- function(observed_variance, fraction){
 #' @return corrected mean
 #' @export
 #'
-#' @seealso correct_peak correct_variance
+#' @seealso [correct_peak()] [correct_variance()]
 correct_mean <- function(observed_mean, corrected_sd, fraction){
   if ((fraction >= 1) || (is.na(corrected_sd))) {
     return(observed_mean)
@@ -86,7 +86,7 @@ correct_mean <- function(observed_mean, corrected_sd, fraction){
 #' @return data.frame, with corrected mean and sd
 #' @export
 #'
-#' @seealso correct_mean correct_variance
+#' @seealso [correct_mean()] [correct_variance()]
 #'
 correct_peak <- function(observed_mean, observed_sd, n_observed, n_should_observe){
   fraction <- n_observed / (n_should_observe)

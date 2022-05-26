@@ -9,7 +9,7 @@ mzml_to_zip(mzml_file, out_file)
 \arguments{
 \item{mzml_file}{the mzML file to zip up}
 
-\item{out_dir}{the directory to save the zip file}
+\item{out_file}{the directory to save the zip file}
 }
 \description{
 given an mzML file, create the initial zip file containing the

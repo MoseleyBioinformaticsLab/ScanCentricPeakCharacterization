@@ -8,17 +8,16 @@ mzML mass spectrometry data container with some useful methods.
 }
 \details{
 Provides our own container for mzML data, and does conversion to frequency,
-filtering scans, choosing a single frequency regression model, and generating
-the frequency data for use in the peak characterization.
+filtering scans, choosing a single frequency regression model, and
+generating the frequency data for use in the peak characterization.
 }
 \examples{
 \dontrun{
-  lipid_sample = system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization")
+  lipid_sample = system.file("extdata", "lipid_example.mzML",
+  package = "ScanCentricPeakCharacterization")
 }
 }
 \seealso{
-\code{\link[=convert_to_frequency]{convert_to_frequency()}} for actually converting to frequency, \code{\link[=check_frequency]{check_frequency()}} for checking the model
-
 \code{\link[=filter_remove_outlier_scans_default]{filter_remove_outlier_scans_default()}}
 
 \code{\link[=choose_single_frequency_model_default]{choose_single_frequency_model_default()}}

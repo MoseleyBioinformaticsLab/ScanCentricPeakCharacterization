@@ -1,7 +1,7 @@
 Package: ScanCentricPeakCharacterization
 Title: Functionality for Characterizing Peaks in Mass Spectrometry in a
         Scan-Centric Manner
-Version: 0.3.17
+Version: 0.3.18
 Date: 2022-05-26
 Authors@R: person(given = c("Robert", "M"), family = c("Flight"), email
         = "rflight79@gmail.com", role = c("aut", "cre"))
@@ -9,14 +9,15 @@ Description: Provides a functions and classes for detecting,
         characterizing, and integrating peaks in a scan-centric manner
         from direct-injection mass spectrometry data.
 Depends: R (>= 3.5.0)
-Imports: cowplot, dplyr, ggplot2, readxl, MSnbase, debugme, assertthat,
+Imports: cowplot, dplyr, readxl, MSnbase, debugme, assertthat,
         jsonlite, purrr, R6, tibble, XML, forcats, pracma, R.utils,
-        IRanges, S4Vectors, magrittr, tidyr, lubridate
+        IRanges, S4Vectors, magrittr, tidyr, lubridate, stats, stringr,
+        digest, knitrProgressBar
 License: file LICENSE
 LazyData: true
 RoxygenNote: 7.1.2
 Suggests: knitr, rmarkdown, testthat (>= 3.0.0), furrr, ggplot2,
-        patchwork, ggforce
+        patchwork, ggforce, logger
 Encoding: UTF-8
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)

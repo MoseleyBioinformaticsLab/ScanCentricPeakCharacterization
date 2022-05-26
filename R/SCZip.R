@@ -26,6 +26,7 @@ import_json = function(json_file){
 #'
 #' @param mzml_files the paths to the mzml files
 #' @param raw_file_loc the directory holding raw files and json metadata files
+#' @param recursive should we go recursively down the directories or not (default = TRUE)
 #'
 #' @importFrom purrr map_lgl
 #' @importFrom R.utils isAbsolutePath getAbsolutePath
@@ -163,7 +164,7 @@ SCZip = R6::R6Class("SCZip",
     peaks = NULL,
 
     #' @field sc_peak_region_finder the peak finder object
-    #' @seealso SCPeakRegionFinder
+    #' @seealso [SCPeakRegionFinder]
     sc_peak_region_finder = NULL,
 
     #' @field json_summary jsonized summary of the peak characterization

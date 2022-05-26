@@ -7,7 +7,7 @@
 initialize_zip_metadata(zip_dir)
 }
 \arguments{
-\item{zip_dir}{}
+\item{zip_dir}{the temp directory that represents the final zip}
 }
 \description{
 initialize metadata

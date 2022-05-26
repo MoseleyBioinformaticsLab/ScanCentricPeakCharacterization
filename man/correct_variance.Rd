@@ -22,5 +22,5 @@ assuming that it should have had 100\% observaionts
 https://en.wikipedia.org/wiki/Truncated_normal_distribution
 }
 \seealso{
-correct_mean correct_peak
+\code{\link[=correct_mean]{correct_mean()}} \code{\link[=correct_peak]{correct_peak()}}
 }

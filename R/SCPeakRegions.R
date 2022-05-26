@@ -317,7 +317,7 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
     #' @description
     #' Add the sliding and tiled regions
     add_regions = function(){
-      log_message("Addling sliding and tiled regions ...")
+      log_message("Adding sliding and tiled regions ...")
       sliding_regions = function(self){
         create_frequency_regions(frequency_range = self$peak_regions$frequency_range, n_point = self$sliding_region_size,
                                            delta_point = self$sliding_region_delta,
@@ -664,6 +664,7 @@ count_overlaps = function(regions, point_regions){
 #' @param point_regions_list the individual points
 #' @param region_percentile the cumulative percentile cutoff to use
 #' @param multiplier how much above base quantiles to use (default = 1.5)
+#' @param n_point_region how many points make up a large segment to do percentile on?
 #'
 #' @export
 #' @return IRanges
@@ -749,6 +750,7 @@ get_reduced_peaks = function(in_range, peak_method = "lm_weighted", min_points =
 #' @param region_list a list with points and tiles IRanges objects
 #' @param peak_method the method for getting the peaks
 #' @param min_points how many points are needed for a peak
+#' @param metadata metadata that tells how things should be processed
 #'
 #' @export
 #' @return list

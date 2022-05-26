@@ -20,6 +20,8 @@ find_signal_regions(
 \item{region_percentile}{the cumulative percentile cutoff to use}
 
 \item{multiplier}{how much above base quantiles to use (default = 1.5)}
+
+\item{n_point_region}{how many points make up a large segment to do percentile on?}
 }
 \value{
 IRanges

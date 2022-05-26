@@ -12,7 +12,9 @@ Peak characterization associates data with the \code{SCZip},
 }
 \examples{
 \dontrun{
-  lipid_sample = system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization")
+  lipid_sample = system.file("extdata",
+     "lipid_example.mzML",
+     package = "ScanCentricPeakCharacterization")
   sc_char = SCCharacterizePeaks$new(lipid_sample)
 
   # prep data and check model
@@ -24,12 +26,10 @@ Peak characterization associates data with the \code{SCZip},
 
   # run characterization
   save_loc = "test.zip"
-  sc_char = SCCharacterizePeaks$new(lipid_sample, out_file = save_loc)
+  sc_char = SCCharacterizePeaks$new(lipid_sample,
+                                    out_file = save_loc)
   sc_char$run_all()
 }
-}
-\seealso{
-\code{\link[=SCPeakRegionFinder$summarize]{SCPeakRegionFinder$summarize()}}
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
