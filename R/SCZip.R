@@ -286,7 +286,10 @@ SCZip = R6::R6Class("SCZip",
         temp_loc = tempfile(pattern = "zipms_tmp", tmpdir = temp_loc)
       }
 
-      dir.create(temp_loc)
+      new_dir = dir.create(temp_loc, recursive = TRUE)
+      if (!new_dir) {
+        stop("Zip directory was NOT created!")
+      }
       self$temp_directory = temp_loc
 
       in_file = path.expand(in_file)
@@ -297,7 +300,10 @@ SCZip = R6::R6Class("SCZip",
         unzip(in_zip, exdir = self$temp_directory)
 
       } else {
-        file.copy(in_file, file.path(self$temp_directory, basename(in_file)))
+        is_copied = file.copy(in_file, file.path(self$temp_directory, basename(in_file)))
+        if (!is_copied) {
+          stop("The mzML file could not be copied to temp directory!\nDo you have permissions to the temp directory?")
+        }
         if (!is.null(mzml_meta_file)) {
           file.copy(mzml_meta_file, file.path(self$temp_directory, basename(mzml_meta_file)))
         }
