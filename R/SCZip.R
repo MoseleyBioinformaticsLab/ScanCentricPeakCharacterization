@@ -276,15 +276,9 @@ SCZip = R6::R6Class("SCZip",
     #' @param temp_loc where to make the temp file while working with the data
     initialize = function(in_file, mzml_meta_file = NULL, out_file = NULL, load_mzml = TRUE,
                           load_peak_list = TRUE,
-                          temp_loc = NULL){
+                          temp_loc = tempfile("zipms")){
       private$do_load_mzml = load_mzml
       private$do_load_peak_list = load_peak_list
-
-      if (is.null(temp_loc)) {
-        temp_loc = tempfile(pattern = "zipms_tmp")
-      } else {
-        temp_loc = tempfile(pattern = "zipms_tmp", tmpdir = temp_loc)
-      }
 
       new_dir = dir.create(temp_loc, recursive = TRUE)
       if (!new_dir) {
