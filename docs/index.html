@@ -32,7 +32,7 @@
     
     <a class="navbar-brand me-2" href="index.html">ScanCentricPeakCharacterization</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.20</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -128,7 +128,7 @@
 <img src="https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&amp;space;%5Cbg_white&amp;space;mz_%7Bdiff%7D%20%3D%20mz_%7Bp2%7D%20-%20mz_%7Bp1%7D" title="mz_{diff} = mz_{p2} - mz_{p1}" alt=""><p class="caption">mz_{diff} = mz_{p2} - mz_{p1}</p>
 </div>
 <div class="figure">
-<img src="https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&amp;space;%5Cbg_white&amp;space;frequency%20%3D%20%5Cfrac%7Bmz_%7Bdiff%7D%7D%7Bmz_%7Bmean%7D%7D" title="frequency = \frac{mz_{diff}}{mz_{mean}}" alt=""><p class="caption">frequency = \frac{mz_{diff}}{mz_{mean}}</p>
+<img src="https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&amp;space;%5Cbg_white&amp;space;frequency%20%3D%20%5Cfrac%7Bmz_%7Bmean%7D%7D%7Bmz_%7Bdiff%7D%7D" title="frequency = \frac{mz_{mean}}{mz_{diff}}" alt=""><p class="caption">frequency = \frac{mz_{mean}}{mz_{diff}}</p>
 </div>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">mzml_lipid</span><span class="op">$</span><span class="va">mzml_df_data</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span> <span class="op"><a href="reference/pipe.html">%&gt;%</a></span>
@@ -138,7 +138,7 @@
 <p><img src="reference/figures/README-show_frequency-1.png" width="100%"></p>
 <p>However, we can more generally define the conversion of m/z to frequency using a linear model of the form:</p>
 <div class="figure">
-<img src="https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&amp;space;%5Cbg_white&amp;space;frequency%20%3D%20a%20%2B%20%5Cfrac%7By%7D%7B%5Csqrt%7Bmz%7D%7D%20%2B%20%5Cfrac%7Bz%7D%7B%5Csqrt%5B3%5D%7Bmz%7D%7D" title="frequency = a + \frac{y}{\sqrt{mz}} + \frac{z}{\sqrt[3]{mz}}" alt=""><p class="caption">frequency = a + \frac{y}{\sqrt{mz}} + \frac{z}{\sqrt[3]{mz}}</p>
+<img src="https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&amp;space;%5Cbg_white&amp;space;frequency%20%3D%20a%20%2B%20%5Cfrac%7Bx%7D%7Bmz%7D%20%2B%20%20%5Cfrac%7By%7D%7B%5Csqrt%7Bmz%7D%7D%20%2B%20%5Cfrac%7Bz%7D%7B%5Csqrt%5B3%5D%7Bmz%7D%7D" title="frequency = a + \frac{x}{mz} + \frac{y}{\sqrt{mz}} + \frac{z}{\sqrt[3]{mz}}" alt=""><p class="caption">frequency = a + \frac{x}{mz} + \frac{y}{\sqrt{mz}} + \frac{z}{\sqrt[3]{mz}}</p>
 </div>
 <p>And we can verify that with a plot of the m/z vs frequency and their predicted values, in a couple of ways, as well as a plot of the residuals.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
