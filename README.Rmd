@@ -92,7 +92,7 @@ $$mz_{mean} = mean(mz_{p1}, mz_{p2})$$
 
 $$mz_{diff} = mz_{p2} - mz_{p1}$$
 
-$$frequency = \frac{mz_{diff}}{mz_{mean}}$$
+$$frequency = \frac{mz_{mean}}{mz_{diff}}$$
 
 ```{r show_frequency}
 mzml_lipid$mzml_df_data[[1]] %>%
@@ -103,7 +103,7 @@ mzml_lipid$mzml_df_data[[1]] %>%
 
 However, we can more generally define the conversion of m/z to frequency using a linear model of the form:
 
-$$frequency = a + \frac{y}{\sqrt{mz}} + \frac{z}{\sqrt[3]{mz}}$$
+$$frequency = a + \frac{x}{mz} +  \frac{y}{\sqrt{mz}} + \frac{z}{\sqrt[3]{mz}}$$
 
 And we can verify that with a plot of the m/z vs frequency and their predicted values, in a couple of ways, as well as a plot of the residuals.
 

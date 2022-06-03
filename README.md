@@ -90,7 +90,7 @@ therefore is constant.
 
 ![mz\_{diff} = mz\_{p2} - mz\_{p1}](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;mz_%7Bdiff%7D%20%3D%20mz_%7Bp2%7D%20-%20mz_%7Bp1%7D "mz_{diff} = mz_{p2} - mz_{p1}")
 
-![frequency = \\frac{mz\_{diff}}{mz\_{mean}}](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;frequency%20%3D%20%5Cfrac%7Bmz_%7Bdiff%7D%7D%7Bmz_%7Bmean%7D%7D "frequency = \frac{mz_{diff}}{mz_{mean}}")
+![frequency = \frac{mz\_{mean}}{mz\_{diff}}](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;frequency%20%3D%20%5Cfrac%7Bmz_%7Bmean%7D%7D%7Bmz_%7Bdiff%7D%7D "frequency = \frac{mz_{mean}}{mz_{diff}}")
 
 ``` r
 mzml_lipid$mzml_df_data[[1]] %>%
@@ -104,7 +104,7 @@ mzml_lipid$mzml_df_data[[1]] %>%
 However, we can more generally define the conversion of m/z to frequency
 using a linear model of the form:
 
-![frequency = a + \\frac{y}{\\sqrt{mz}} + \\frac{z}{\\sqrt\[3\]{mz}}](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;frequency%20%3D%20a%20%2B%20%5Cfrac%7By%7D%7B%5Csqrt%7Bmz%7D%7D%20%2B%20%5Cfrac%7Bz%7D%7B%5Csqrt%5B3%5D%7Bmz%7D%7D "frequency = a + \frac{y}{\sqrt{mz}} + \frac{z}{\sqrt[3]{mz}}")
+![frequency = a + \frac{x}{mz} +  \frac{y}{\sqrt{mz}} + \frac{z}{\sqrt\[3\]{mz}}](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;frequency%20%3D%20a%20%2B%20%5Cfrac%7Bx%7D%7Bmz%7D%20%2B%20%20%5Cfrac%7By%7D%7B%5Csqrt%7Bmz%7D%7D%20%2B%20%5Cfrac%7Bz%7D%7B%5Csqrt%5B3%5D%7Bmz%7D%7D "frequency = a + \frac{x}{mz} +  \frac{y}{\sqrt{mz}} + \frac{z}{\sqrt[3]{mz}}")
 
 And we can verify that with a plot of the m/z vs frequency and their
 predicted values, in a couple of ways, as well as a plot of the
@@ -187,20 +187,34 @@ data.frame.
 ``` r
 scan_info = sc_char$scan_info()
 head(scan_info)
-#>   scanIndex scan polarity      rtime       tic rtime_lag rtime_lead rtime_keep y_freq_keep
-#> 1         1 s.01        1  0.8358959 429046848        NA   11.06028       TRUE        TRUE
-#> 2         2 s.02        1 11.8961766 282278784  11.06028   11.07281       TRUE        TRUE
-#> 3         3 s.03        1 22.9689818 439026304  11.07281   11.04548       TRUE        TRUE
-#> 4         4 s.04        1 34.0144615 429789920  11.04548   11.04705       TRUE        TRUE
-#> 5         5 s.05        1 45.0615118 433693216  11.04705   11.04636       TRUE        TRUE
-#> 6         6 s.06        1 56.1078670 429844288  11.04636   11.04656       TRUE        TRUE
-#>   stats_keep keep        mad      median    a.freq   x.freq   y.freq   z.freq        a.mz      x.mz
-#> 1       TRUE TRUE 0.09488578 -0.01991055 -36.29313 4339.548 29800864 1070.974 0.003203856 -19081.56
-#> 2       TRUE TRUE 0.11431756 -0.02607351 -42.73811 5607.854 29800327 1289.635 0.003874297 -22330.45
-#> 3       TRUE TRUE 0.08638029 -0.01477036 -37.93255 4734.174 29800719 1129.750 0.002996038 -18154.25
-#> 4       TRUE TRUE 0.09700394 -0.03144327 -37.61949 4656.438 29800744 1119.253 0.004465065 -24589.24
-#> 5       TRUE TRUE 0.08886880 -0.01449103 -35.80378 4281.555 29800892 1056.818 0.003222591 -19116.27
-#> 6       TRUE TRUE 0.10315704 -0.01284821 -41.00362 5388.045 29800458 1236.099 0.004144753 -23243.80
+#>   scanIndex scan polarity      rtime       tic
+#> 1         1 s.01        1  0.8358959 429046848
+#> 2         2 s.02        1 11.8961766 282278784
+#> 3         3 s.03        1 22.9689818 439026304
+#> 4         4 s.04        1 34.0144615 429789920
+#> 5         5 s.05        1 45.0615118 433693216
+#> 6         6 s.06        1 56.1078670 429844288
+#>   rtime_lag rtime_lead rtime_keep y_freq_keep
+#> 1        NA   11.06028       TRUE        TRUE
+#> 2  11.06028   11.07281       TRUE        TRUE
+#> 3  11.07281   11.04548       TRUE        TRUE
+#> 4  11.04548   11.04705       TRUE        TRUE
+#> 5  11.04705   11.04636       TRUE        TRUE
+#> 6  11.04636   11.04656       TRUE        TRUE
+#>   stats_keep keep        mad      median    a.freq
+#> 1       TRUE TRUE 0.09488578 -0.01991055 -36.29313
+#> 2       TRUE TRUE 0.11431756 -0.02607351 -42.73811
+#> 3       TRUE TRUE 0.08638029 -0.01477036 -37.93255
+#> 4       TRUE TRUE 0.09700394 -0.03144327 -37.61949
+#> 5       TRUE TRUE 0.08886880 -0.01449103 -35.80378
+#> 6       TRUE TRUE 0.10315704 -0.01284821 -41.00362
+#>     x.freq   y.freq   z.freq        a.mz      x.mz
+#> 1 4339.548 29800864 1070.974 0.003203856 -19081.56
+#> 2 5607.854 29800327 1289.635 0.003874297 -22330.45
+#> 3 4734.174 29800719 1129.750 0.002996038 -18154.25
+#> 4 4656.438 29800744 1119.253 0.004465065 -24589.24
+#> 5 4281.555 29800892 1056.818 0.003222591 -19116.27
+#> 6 5388.045 29800458 1236.099 0.004144753 -23243.80
 #>           y.mz          z.mz
 #> 1 8.882685e+14 -1.900395e+16
 #> 2 8.882729e+14 -2.130416e+16
