@@ -274,7 +274,7 @@ SCZip = R6::R6Class("SCZip",
     #' @param temp_loc where to make the temp file while working with the data
     initialize = function(in_file, mzml_meta_file = NULL, out_file = NULL, load_mzml = TRUE,
                           load_peak_list = TRUE,
-                          temp_loc = tempfile("zipms")){
+                          temp_loc = tempfile("scpcms")){
       private$do_load_mzml = load_mzml
       private$do_load_peak_list = load_peak_list
 
