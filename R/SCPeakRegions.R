@@ -62,8 +62,8 @@ check_ranges_convert_to_regions = function(frequency_list, frequency_multiplier 
 #'
 #' @export
 frequency_points_to_frequency_regions = function(frequency_data, frequency_variable = "frequency", multiplier = 400){
-  frequency_regions = IRanges::IRanges(start = round(frequency_data[, frequency_variable] * multiplier), width = 1)
-  if (is.null(frequency_data$point)) {
+  frequency_regions = IRanges::IRanges(start = round(frequency_data[[frequency_variable]] * multiplier), width = 1)
+  if (is.null(frequency_data[["point"]])) {
     frequency_data$point = seq(1, nrow(frequency_data))
   }
   S4Vectors::mcols(frequency_regions) = frequency_data
@@ -692,7 +692,7 @@ find_signal_regions = function(regions, point_regions_list, region_percentile = 
 }
 
 create_na_peak = function(peak_method = "lm_weighted"){
-  data.frame(ObservedCenter = as.numeric(NA),
+  list(ObservedCenter = as.numeric(NA),
              Height = as.numeric(NA),
              Area = as.numeric(NA),
              SSR = as.numeric(NA),
@@ -708,17 +708,18 @@ get_reduced_peaks = function(in_range, peak_method = "lm_weighted", min_points =
 
   if (!is.null(possible_peaks)) {
     n_peak = nrow(possible_peaks)
-    peaks = purrr::map_df(seq(1, n_peak), function(in_peak){
+    peaks = purrr::map(seq(1, n_peak), function(in_peak){
       #print(in_peak)
       "!DEBUG Peak `in_peak`"
       peak_loc = seq(possible_peaks[in_peak, 3], possible_peaks[in_peak, 4])
       peak_data = range_point_data[peak_loc, ]
       weights = peak_data$intensity / max(peak_data$intensity)
-      out_peak = purrr::map_dfc(which, function(in_which){
+      out_peak = purrr::map(which, function(in_which){
         tmp_peak = get_fitted_peak_info(peak_data, use_loc = in_which, w = weights)
         names(tmp_peak) = paste0(names(tmp_peak), ".", in_which)
         tmp_peak
       })
+      out_peak = dplyr::bind_cols(out_peak)
       #out_peak = get_fitted_peak_info(peak_data, w = weights)
       #out_peak = get_peak_info(range_data[peak_loc, ], peak_method = peak_method, min_points = min_points)
       out_peak$points = I(list(IRanges::start(in_range)[peak_loc]))
@@ -727,11 +728,12 @@ get_reduced_peaks = function(in_range, peak_method = "lm_weighted", min_points =
       out_peak
     })
   } else {
-    peaks = purrr::map_dfc(which, function(in_which){
+    peaks = purrr::map(which, function(in_which){
       tmp_peak = create_na_peak()
       names(tmp_peak) = paste0(names(tmp_peak), ".", in_which)
       tmp_peak
     })
+    peaks = dplyr::bind_cols(peaks)
     peaks$points = NA
     peaks$scan = range_point_data$scan[1]
     peaks$scan_index = range_point_data$scan_index[1]
