@@ -11,8 +11,8 @@ You can read more about the merits of this scan-centric method in:
 
 RM Flight, JM Mitchell & HNB Moseley, “Scan-Centric, Frequency-Based
 Method for Characterizing Peaks from Direct Injection Fourier transform
-Mass Spectrometry Experiments”, bioRxiv, doi:
-<https://doi.org/10.1101/2022.04.14.488423>
+Mass Spectrometry Experiments”, Metabolites 2022, 12(6), 515;
+<https://doi.org/10.3390/metabo12060515>
 
 ## License
 
