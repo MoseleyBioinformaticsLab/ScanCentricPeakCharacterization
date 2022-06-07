@@ -854,80 +854,96 @@ split_reduced_points = function(reduced_points, tiled_regions, n_zero = 2){
   return(list(region = sub_region, peaks = sub_point))
 }
 
+subset_signal_reduce = function(in_points, min_points, metadata) {
+  reduced_data = get_reduced_peaks(in_points, min_points = min_points, which = c("mz", "frequency"))
+  point_data = frequency_points_to_frequency_regions(reduced_data, "ObservedCenter.frequency", metadata$frequency_multiplier)
+  log_memory()
+  point_data
+}
 
-
-split_regions = function(signal_regions, frequency_point_regions, tiled_regions, min_scan, peak_method = "lm_weighted", min_points = 4) {
+# so this function takes the initial signal regions, the frequency data, and tiled regions
+# and assumes that the initial signal regions at least determine where there is "potential" signal.
+# We subset the scan-by-scan frequency data to the signal data, and then find the peaks
+# in them. We then overlap the peaks in them to the tiled data.
+# With the tiled data, we look for contiguous tiled regions with 0's less than n_zero to define "true"
+# signal regions. After we define contiguous tiled regions, we merge and reduce them,
+# and then count the scan level peaks within them again, looking for those regions
+# with peaks from at least min_scan scans (normally 10% of total scans).
+# Finally, with that set, we go through and extract the original point and frequency data.
+split_regions = function(signal_regions, frequency_point_regions, tiled_regions, min_scan, peak_method = "lm_weighted", min_points = 4, n_zero = 1) {
   # alternative idea to current implementation:
   #   take each scan, and then do the subsetting in parallel
   #   the object that needs to be cloned is "in_points", which is points from "frequency"
   #   hmmm, so maybe not.
-  signal_list = as.list(split(signal_regions, seq(1, length(signal_regions))))
-  min_scan2 = floor(min_scan / 2)
-  log_message("Separating sub regions:")
-  log_message("Finding non-zero regions")
-  scan_regions_list = internal_map$map_function(frequency_point_regions$frequency, function(in_points){
-    points_list = purrr::map(signal_list, function(in_region){
-      IRanges::subsetByOverlaps(in_points, in_region)
-    })
-    null_points = purrr::map_lgl(points_list, ~ length(.x) == 0)
-    log_memory()
-    points_list[!null_points]
+  frequency_list_points = frequency_point_regions$frequency
+  frequency_list_points = purrr::map(frequency_list_points, function(.x){
+    .x@elementMetadata$log_int = log(.x@elementMetadata$intensity + 1e-8)
+    .x
   })
+  frequency_in_signal = internal_map$map_function(frequency_list_points, function(.x){IRanges::subsetByOverlaps(.x, signal_regions)})
+  log_message("Finding peaks in each scan ...")
+  frequency_reduced = internal_map$map_function(frequency_in_signal, subset_signal_reduce, min_points, frequency_point_regions$metadata)
 
-  log_message("Mapping back to regions")
+  log_message("Finding regions with peaks ...")
+  tile_counts = IRanges::countOverlaps(tiled_regions, frequency_reduced[[1]])
+  n_scan = seq(2, length(frequency_reduced))
+  for (iscan in n_scan) {
+    tmp_counts = IRanges::countOverlaps(tiled_regions, frequency_reduced[[iscan]])
+    tile_counts = tile_counts + tmp_counts
+  }
 
-  all_regions = vector("list", length(scan_regions_list))
-  names(all_regions) = names(scan_regions_list)
-  all_points = purrr::map(scan_regions_list, ~ names(.x)) %>% unlist(.) %>% unique(.)
-  point_regions_list = vector("list", length(all_points))
-  names(point_regions_list) = all_points
+  rle_tiles = rle(tile_counts)
+  rle_tile_df = data.frame(lengths = rle_tiles$lengths, values = rle_tiles$values,
+                           row = seq(1, length(rle_tiles$lengths)))
+
+  rle_index = vector("list", nrow(rle_tile_df))
+  start_index = 1
+  for (irow in seq(1, nrow(rle_tile_df))) {
+    rle_index[[irow]] = seq(from = start_index, length.out = rle_tile_df[irow, "lengths"])
+    start_index = max(rle_index[[irow]]) + 1
+  }
+  mask_values = dplyr::filter(rle_tile_df, values == 0, lengths >= n_zero)
+  exclude_indices = unlist(rle_index[mask_values$row])
+
+  sub_tiles = IRanges::reduce(tiled_regions[-exclude_indices])
+  S4Vectors::mcols(sub_tiles) = list(region = seq(1, length(sub_tiles)))
+
+  sub_counts = IRanges::countOverlaps(sub_tiles, frequency_reduced[[1]])
+  for (iscan in n_scan) {
+    tmp_counts = IRanges::countOverlaps(sub_tiles, frequency_reduced[[iscan]])
+    sub_counts = sub_counts + tmp_counts
+  }
+
+  keep_sub_counts = sub_counts >= min_scan
+  keep_sub_tiles = sub_tiles[keep_sub_counts]
+
+  region_list = as.list(split(keep_sub_tiles, seq(1, length(keep_sub_tiles))))
 
   if (get("status", envir = scpc_progress)) {
-    pb = knitrProgressBar::progress_estimated(length(point_regions_list))
+    pb = knitrProgressBar::progress_estimated(length(region_list))
   } else {
     pb = NULL
   }
-  for (ipoints in names(point_regions_list)) {
-    tmp_scans = all_regions
-    for (iscan in names(tmp_scans)) {
-      tmp_scans[[iscan]] = scan_regions_list[[iscan]][[ipoints]]
-    }
-    nonzero_scans = purrr::map_dbl(tmp_scans, function(in_points){
-      as.data.frame(in_points@elementMetadata) %>%
-        dplyr::filter(intensity > 0) %>%
-        dplyr::pull(scan) %>% unique(.) %>% length(.)
+  log_message("Extracting peak data in each region ...")
+  peak_region_list = purrr::map(region_list, function(in_region){
+    peaks = purrr::map(frequency_reduced, function(scan_peaks){
+      IRanges::subsetByOverlaps(scan_peaks, in_region)
     })
-    if (sum(nonzero_scans) >= min_scan2) {
-      tiles = IRanges::subsetByOverlaps(tiled_regions, signal_list[[ipoints]])
-      point_regions_list[[ipoints]] = list(
-        points = tmp_scans[nonzero_scans > 0],
-        tiles = tiles, region = signal_list[[ipoints]]
-      )
-    }
+    peaks = unlist(IRanges::IRangesList(peaks))
+
+    all_points = peaks@elementMetadata$points
+    names(all_points) = peaks@elementMetadata$scan
+
+    scan_points = purrr::map(names(all_points), function(in_scan){
+      tmp_range = IRanges::IRanges(start = all_points[[in_scan]], width = 1)
+      IRanges::subsetByOverlaps(frequency_list_points[[in_scan]], tmp_range)
+    })
+    names(scan_points) = names(all_points)
     knitrProgressBar::update_progress(pb)
-  }
-
-  not_null = purrr::map_lgl(point_regions_list, ~ !is.null(.x))
-  point_regions_list = point_regions_list[not_null]
-  point_regions_list = point_regions_list[sample(length(point_regions_list))]
-
-  metadata = frequency_point_regions$metadata
-
-  # split_data = purrr::imap(point_regions_list, function(.x, .y){
-  #   message(.y)
-  #   split_region_by_peaks(.x, peak_method = peak_method, min_points = min_points)
-  # })
-  log_message("Finding peaks within them")
-  # safe_split_region = purrr::possibly(split_region_by_peaks, otherwise = NULL, quiet = TRUE)
-  split_data = internal_map$map_function(point_regions_list, split_region_by_peaks,
-                                          peak_method = peak_method, min_points = min_points,
-                                         metadata = metadata)
-
-  null_regions = purrr::map_lgl(split_data, ~ is.null(.x[[1]]$points))
-  split_data = split_data[!null_regions]
-
-  out_data = unlist(split_data, recursive = FALSE, use.names = FALSE)
-  return(out_data)
+    list(points = scan_points,
+         peaks = rename_peak_data(S4Vectors::mcols(peaks)))
+  })
+  return(peak_region_list)
 }
 
 two_pass_normalization = function(peak_regions, intensity_measure = c("RawHeight", "Height"), summary_function = median, normalize_peaks = "both"){
