@@ -727,6 +727,7 @@ get_reduced_peaks = function(in_range, peak_method = "lm_weighted", min_points =
       out_peak$scan_index = range_point_data[peak_loc[1], "scan_index"]
       out_peak
     })
+    peaks = dplyr::bind_rows(peaks)
   } else {
     peaks = purrr::map(which, function(in_which){
       tmp_peak = create_na_peak()
@@ -1372,7 +1373,7 @@ characterize_mz_points = function(in_region, peak_scans = NULL){
   in_points = in_points[!null_points]
 
   if ((nrow(scan_peaks) == 0) || (length(peak_scans) == 0) || (length(in_points) == 0)) {
-    peak_info = data.frame(Height = NA,
+    peak_info = list(Height = NA,
                             Area = NA,
                             SSR = NA,
                             ObservedMZ = NA,
@@ -1391,7 +1392,7 @@ characterize_mz_points = function(in_region, peak_scans = NULL){
                             Stop = NA,
                             NScan = 0L,
                             NPoint = NA)
-    scan_heights = data.frame(Scan = NA,
+    scan_heights = list(Scan = NA,
                                LogHeight = NA,
                                ObservedMZ = NA,
                                ObservedFrequency = NA)
@@ -1420,11 +1421,11 @@ characterize_mz_points = function(in_region, peak_scans = NULL){
 
     peak_info$NPoint = median(purrr::map_int(in_points, length))
 
-    scan_heights = data.frame(Scan = scan_peaks$scan, LogHeight = log10(scan_peaks$Height), ObservedMZ = scan_peaks$ObservedMZ,
+    scan_heights = list(Scan = scan_peaks$scan, LogHeight = log10(scan_peaks$Height), ObservedMZ = scan_peaks$ObservedMZ,
                                ObservedFrequency = scan_peaks$ObservedFrequency)
   }
 
-  list(peak_info = peak_info, scan_data = scan_heights)
+  list(peak_info = dplyr::bind_cols(peak_info), scan_data = dplyr::bind_cols(scan_heights))
 }
 
 
