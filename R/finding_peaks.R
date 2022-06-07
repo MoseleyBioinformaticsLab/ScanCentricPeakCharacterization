@@ -270,23 +270,27 @@ integration_based_area = function(mz_data, int_data, full_peak_loc, model_peak_l
 #' @param use_loc which field to use for locations, default is "mz"
 #' @param w the weights to use for the points
 #' @param addend how much was added to the peak intensity
+#' @param calculate_area should the area of the peak be calculated too?
 #'
 #' @return list
 #' @export
-get_fitted_peak_info = function(possible_peak, use_loc = "mz", w = NULL, addend = 1e-8){
+get_fitted_peak_info = function(possible_peak, use_loc = "mz", w = NULL, addend = 1e-8, calculate_peak_area = FALSE){
   peak_model = parabolic_fit(possible_peak[, use_loc], possible_peak[, "log_int"], w)
-  peak_model$residuals = transform_residuals(possible_peak[, "log_int"], peak_model$fitted.values)
-  peak_ssr = ssr(peak_model)
+  #peak_model$residuals = transform_residuals(possible_peak[, "log_int"], peak_model$fitted.values)
+  #peak_ssr = ssr(peak_model)
 
   peak_center_model = model_peak_center_intensity(possible_peak[, use_loc], peak_model$coefficients)
   peak_center_model["Height"] = exp(peak_center_model["Height"]) - addend
   full_points = seq(1, nrow(possible_peak))
-  peak_area_model = integration_based_area(possible_peak[, use_loc], possible_peak$intensity,
-                                            full_points, full_points, peak_model$coefficients)
-  list(ObservedCenter = peak_center_model[["ObservedMZ"]],
-             Height = peak_center_model[["Height"]],
-             Area = peak_area_model,
-             SSR = peak_ssr,
-             stringsAsFactors = FALSE)
-
+  if (calculate_peak_area) {
+    peak_area_model = integration_based_area(possible_peak[, use_loc], possible_peak$intensity,
+                                             full_points, full_points, peak_model$coefficients)
+    out_data = list(ObservedCenter = peak_center_model[["ObservedMZ"]],
+                    Height = peak_center_model[["Height"]],
+                    Area = peak_area_model[[1]])
+  } else {
+    out_data = list(ObservedCenter = peak_center_model[["ObservedMZ"]],
+                    Height = peak_center_model[["Height"]])
+  }
+  return(out_data)
 }

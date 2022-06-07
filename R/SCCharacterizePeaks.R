@@ -63,6 +63,9 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
     #' @field mz_fit_description the model for converting back to m/z
     mz_fit_description = NULL,
 
+    #' @field calculate_peak_area whether to calculate peak area or not
+    calculate_peak_area = NULL,
+
     #' @field sc_peak_region_finder the peak finder object
     sc_peak_region_finder = NULL,
 
@@ -141,6 +144,7 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
         self$sc_zip$sc_mzml$convert_to_frequency()
         self$sc_zip$sc_peak_region_finder = self$sc_peak_region_finder
         self$sc_zip$sc_peak_region_finder$add_data(self$sc_zip$sc_mzml)
+        self$sc_zip$sc_peak_region_finder$calculate_peak_area = self$calculate_peak_area
         if (!is.null(self$sc_zip$id)) {
           self$sc_zip$sc_peak_region_finder$sample_id = self$sc_zip$id
         } else {
@@ -253,6 +257,7 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
     #' @param filter_remove_outlier_scans function for scan filtering
     #' @param choose_single_frequency_model function to choose a single frequency model
     #' @param sc_peak_region_finder a blank `SCPeakRegionFinder` to use instead of the default
+    #' @param calculate_peak_area should peak areas be returned as well as height?
     initialize = function(in_file,
                          metadata_file = NULL,
                          out_file = NULL,
@@ -261,7 +266,8 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
                          mz_fit_description = NULL,
                          filter_remove_outlier_scans = NULL,
                          choose_single_frequency_model = NULL,
-                         sc_peak_region_finder = NULL
+                         sc_peak_region_finder = NULL,
+                         calculate_peak_area = FALSE
                          ){
       self$in_file = in_file
 
@@ -296,6 +302,8 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
       } else {
         self$choose_single_frequency_model = choose_single_frequency_model_default
       }
+
+      self$calculate_peak_area = calculate_peak_area
 
       if (!is.null(sc_peak_region_finder)) {
         self$sc_peak_region_finder = sc_peak_region_finder

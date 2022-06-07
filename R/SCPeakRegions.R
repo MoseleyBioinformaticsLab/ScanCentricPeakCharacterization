@@ -309,8 +309,14 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
     #' @field sample_id what sample are we processing
     sample_id = NULL,
 
+    #' @field n_zero_tiles how many zero count tiled regions split up a region into multiple peaks?
+    n_zero_tiles = NULL,
+
     #' @field zero_normalization do we want to pretend to do normalization
     zero_normalization = NULL,
+
+    #' @field calculate_peak_area should peak area be calculated as well?
+    calculate_peak_area = NULL,
 
     #' @description
     #' Add the sliding and tiled regions
@@ -354,7 +360,13 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
       if (is.null(use_regions)) {
         use_regions = seq_len(length(self$peak_regions$peak_regions))
       }
-      self$peak_regions$peak_region_list = split_regions(self$peak_regions$peak_regions[use_regions], self$peak_regions$frequency_point_regions, self$peak_regions$tiled_regions, self$peak_regions$min_scan, peak_method = self$peak_method, min_points = self$min_points)
+      self$peak_regions$peak_region_list = split_regions(signal_regions = self$peak_regions$peak_regions[use_regions],
+                                                         frequency_point_regions = self$peak_regions$frequency_point_regions,
+                                                         tiled_regions = self$peak_regions$tiled_regions,
+                                                         min_scan = self$peak_regions$min_scan,
+                                                         min_points = self$min_points,
+                                                         n_zero = self$n_zero_tiles,
+                                                         calculate_peak_area = self$calculate_peak_area)
 
       self$peak_regions$peak_index = seq_len(length(self$peak_regions$peak_region_list))
     },
@@ -410,7 +422,7 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
     #' Find the peaks in the regions.
     find_peaks_in_regions = function(){
       log_message("Finding peaks in regions ...")
-      self$peak_regions = characterize_peaks(self$peak_regions)
+      self$peak_regions = characterize_peaks(self$peak_regions, self$calculate_peak_area)
     },
 
     #' @description
@@ -581,7 +593,7 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
              intensity_range = range(self$peak_regions$peak_data$Height),
              dynamic_range = max(self$peak_regions$peak_data$Height) / min(self$peak_regions$peak_data$Height),
              median_intensity = median(self$peak_regions$peak_data$Height),
-             indicated_standards = !is.null(self$peak_regions$peak_data$StandardContaminant),
+             indicated_standards = !is.null(self$peak_regions$peak_data[["StandardContaminant"]]),
              instrument = self$peak_regions$instrument
            ))
     },
@@ -600,7 +612,9 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
     #' @param n_point_region how many points in the large tiled regions
     #' @param peak_method the peak characterization method to use (lm_weighted)
     #' @param min_points how many points to say there is a peak (4)
+    #' @param n_zero_tiles how many tiles in a row do there need to be to split things up? (1)
     #' @param zero_normalization don't actually do normalization (FALSE)
+    #' @param calculate_peak_area should peak area as well as peak height be returned? (FALSE)
     initialize = function(sc_mzml = NULL,
                           sliding_region_size = 10,
                           sliding_region_delta = 1,
@@ -613,7 +627,9 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
                           n_point_region = 2000,
                           peak_method = "lm_weighted",
                           min_points = 4,
-                          zero_normalization = FALSE){
+                          n_zero_tiles = 1,
+                          zero_normalization = FALSE,
+                          calculate_peak_area = FALSE){
       if (inherits(sc_mzml, "SCMzml")) {
         self$peak_regions = SCPeakRegions$new(sc_mzml,
                                             frequency_multiplier = frequency_multiplier)
@@ -634,8 +650,10 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
 
       self$peak_method = peak_method
       self$min_points = min_points
+      self$n_zero_tiles = n_zero_tiles
       self$zero_normalization = zero_normalization
       self$offset_multiplier = offset_multiplier
+      self$calculate_peak_area = calculate_peak_area
 
       invisible(self)
     }
@@ -691,17 +709,21 @@ find_signal_regions = function(regions, point_regions_list, region_percentile = 
   IRanges::reduce(regions)
 }
 
-create_na_peak = function(peak_method = "lm_weighted"){
-  list(ObservedCenter = as.numeric(NA),
-             Height = as.numeric(NA),
-             Area = as.numeric(NA),
-             SSR = as.numeric(NA),
-             type = peak_method,
-             stringsAsFactors = FALSE)
+create_na_peak = function(calculate_peak_area = FALSE){
+  if (calculate_peak_area) {
+    out_data = list(ObservedCenter = as.numeric(NA),
+                    Height = as.numeric(NA),
+                    Area = as.numeric(NA))
+  } else {
+    out_data = list(ObservedCenter = as.numeric(NA),
+                    Height = as.numeric(NA))
+  }
+  out_data
 }
 
-get_reduced_peaks = function(in_range, peak_method = "lm_weighted", min_points = 4,
-                              which = c("mz", "frequency")){
+get_reduced_peaks = function(in_range, min_points = 4,
+                              which = c("mz", "frequency"),
+                             calculate_peak_area = FALSE){
   range_point_data = in_range@elementMetadata
 
   possible_peaks = pracma::findpeaks(range_point_data$log_int, nups = round(min_points / 2))
@@ -715,7 +737,7 @@ get_reduced_peaks = function(in_range, peak_method = "lm_weighted", min_points =
       peak_data = range_point_data[peak_loc, ]
       weights = peak_data$intensity / max(peak_data$intensity)
       out_peak = purrr::map(which, function(in_which){
-        tmp_peak = get_fitted_peak_info(peak_data, use_loc = in_which, w = weights)
+        tmp_peak = get_fitted_peak_info(peak_data, use_loc = in_which, w = weights, calculate_peak_area = calculate_peak_area)
         names(tmp_peak) = paste0(names(tmp_peak), ".", in_which)
         tmp_peak
       })
@@ -730,7 +752,7 @@ get_reduced_peaks = function(in_range, peak_method = "lm_weighted", min_points =
     peaks = dplyr::bind_rows(peaks)
   } else {
     peaks = purrr::map(which, function(in_which){
-      tmp_peak = create_na_peak()
+      tmp_peak = create_na_peak(calculate_peak_area = calculate_peak_area)
       names(tmp_peak) = paste0(names(tmp_peak), ".", in_which)
       tmp_peak
     })
@@ -749,14 +771,15 @@ get_reduced_peaks = function(in_range, peak_method = "lm_weighted", min_points =
 #' up each peak from each scan.
 #'
 #' @param region_list a list with points and tiles IRanges objects
-#' @param peak_method the method for getting the peaks
 #' @param min_points how many points are needed for a peak
 #' @param metadata metadata that tells how things should be processed
 #'
 #' @export
 #' @return list
-split_region_by_peaks = function(region_list, peak_method = "lm_weighted", min_points = 4,
-                                  metadata = NULL){
+split_region_by_peaks = function(region_list,
+                                 min_points = 4,
+                                 metadata = NULL,
+                                 calculate_peak_area = FALSE){
   log_memory()
   if (is.null(metadata)) {
     stop("You must pass metadata!")
@@ -769,7 +792,7 @@ split_region_by_peaks = function(region_list, peak_method = "lm_weighted", min_p
   })
 
   reduced_peaks = purrr::map_df(names(frequency_point_list), function(in_scan){
-    get_reduced_peaks(frequency_point_list[[in_scan]], peak_method = peak_method, min_points = min_points)
+    get_reduced_peaks(frequency_point_list[[in_scan]], min_points = min_points)
   })
 
   reduced_peaks = reduced_peaks[!is.na(reduced_peaks$ObservedCenter.frequency), ]
@@ -855,8 +878,8 @@ split_reduced_points = function(reduced_points, tiled_regions, n_zero = 2){
   return(list(region = sub_region, peaks = sub_point))
 }
 
-subset_signal_reduce = function(in_points, min_points, metadata) {
-  reduced_data = get_reduced_peaks(in_points, min_points = min_points, which = c("mz", "frequency"))
+subset_signal_reduce = function(in_points, min_points, metadata, calculate_peak_area = FALSE) {
+  reduced_data = get_reduced_peaks(in_points, min_points = min_points, which = c("mz", "frequency"), calculate_peak_area = calculate_peak_area)
   point_data = frequency_points_to_frequency_regions(reduced_data, "ObservedCenter.frequency", metadata$frequency_multiplier)
   log_memory()
   point_data
@@ -871,7 +894,8 @@ subset_signal_reduce = function(in_points, min_points, metadata) {
 # and then count the scan level peaks within them again, looking for those regions
 # with peaks from at least min_scan scans (normally 10% of total scans).
 # Finally, with that set, we go through and extract the original point and frequency data.
-split_regions = function(signal_regions, frequency_point_regions, tiled_regions, min_scan, peak_method = "lm_weighted", min_points = 4, n_zero = 1) {
+split_regions = function(signal_regions, frequency_point_regions, tiled_regions, min_scan, min_points = 4, n_zero = 1,
+                         calculate_peak_area = FALSE) {
   # alternative idea to current implementation:
   #   take each scan, and then do the subsetting in parallel
   #   the object that needs to be cloned is "in_points", which is points from "frequency"
@@ -883,7 +907,7 @@ split_regions = function(signal_regions, frequency_point_regions, tiled_regions,
   })
   frequency_in_signal = internal_map$map_function(frequency_list_points, function(.x){IRanges::subsetByOverlaps(.x, signal_regions)})
   log_message("Finding peaks in each scan ...")
-  frequency_reduced = internal_map$map_function(frequency_in_signal, subset_signal_reduce, min_points, frequency_point_regions$metadata)
+  frequency_reduced = internal_map$map_function(frequency_in_signal, subset_signal_reduce, min_points, frequency_point_regions$metadata, calculate_peak_area)
 
   log_message("Finding regions with peaks ...")
   tile_counts = IRanges::countOverlaps(tiled_regions, frequency_reduced[[1]])
@@ -1221,20 +1245,20 @@ apply_normalization_peak_regions = function(peak_regions, normalization_factors,
   return(peak_regions)
 }
 
-get_merged_peak_info = function(point_data, peak_method = "lm_weighted", min_points = 4){
+get_merged_peak_info = function(point_data, calculate_peak_area = FALSE){
 
   point_data = point_data[point_data$intensity > 0, ]
-    point_data$log_int = log(point_data$intensity + 1e-8)
-    weights = point_data$intensity / max(point_data$intensity)
-    mz_peak_info = get_fitted_peak_info(point_data, use_loc = "mz", w = weights)
-    freq_peak_info = get_fitted_peak_info(point_data, use_loc = "frequency", w = weights)
-    mz_peak_info$ObservedMZ = mz_peak_info$ObservedCenter
-    mz_peak_info$ObservedCenter = NULL
-    mz_peak_info$ObservedMZMean = mean(point_data[, "mz"])
-    mz_peak_info$ObservedMZMedian = median(point_data[, "mz"])
-    mz_peak_info$ObservedFrequency = freq_peak_info$ObservedCenter
-    mz_peak_info$ObservedFrequencyMean = mean(point_data[, "frequency"])
-    mz_peak_info$ObservedFrequencyMedian = median(point_data[, "frequency"])
+  point_data$log_int = log(point_data$intensity + 1e-8)
+  weights = point_data$intensity / max(point_data$intensity)
+  mz_peak_info = get_fitted_peak_info(point_data, use_loc = "mz", w = weights, calculate_peak_area = calculate_peak_area)
+  freq_peak_info = get_fitted_peak_info(point_data, use_loc = "frequency", w = weights, calculate_peak_area = calculate_peak_area)
+  mz_peak_info$ObservedMZ = mz_peak_info$ObservedCenter
+  mz_peak_info$ObservedCenter = NULL
+  mz_peak_info$ObservedMZMean = mean(point_data[, "mz"])
+  mz_peak_info$ObservedMZMedian = median(point_data[, "mz"])
+  mz_peak_info$ObservedFrequency = freq_peak_info$ObservedCenter
+  mz_peak_info$ObservedFrequencyMean = mean(point_data[, "frequency"])
+  mz_peak_info$ObservedFrequencyMedian = median(point_data[, "frequency"])
 
   mz_peak_info
 
@@ -1247,7 +1271,7 @@ get_merged_peak_info = function(point_data, peak_method = "lm_weighted", min_poi
 #'
 #' @return list
 #' @export
-characterize_peaks = function(peak_region){
+characterize_peaks = function(peak_region, calculate_peak_area = FALSE){
 
   stopifnot(peak_region$is_normalized == "both")
 
@@ -1269,7 +1293,7 @@ characterize_peaks = function(peak_region){
   #   characterize_mz_points(.x, peak_scans = use_scans)
   # })
   peak_data = internal_map$map_function(
-    use_region_list, characterize_mz_points, peak_scans = use_scans)
+    use_region_list, characterize_mz_points, peak_scans = use_scans, calculate_peak_area = calculate_peak_area)
 
   peak_height = purrr::map_df(peak_data, ~ .x$peak_info[, c("Height", "Log10Height")])
   bad_peaks = is.na(peak_height$Height) | is.na(peak_height$Log10Height)
@@ -1356,7 +1380,7 @@ characterize_peaks = function(peak_region){
   invisible(peak_region)
 }
 
-characterize_mz_points = function(in_region, peak_scans = NULL){
+characterize_mz_points = function(in_region, peak_scans = NULL, calculate_peak_area = FALSE){
   log_memory()
   in_points = in_region$points
   scan_peaks = in_region$peaks
@@ -1392,6 +1416,9 @@ characterize_mz_points = function(in_region, peak_scans = NULL){
                             Stop = NA,
                             NScan = 0L,
                             NPoint = NA)
+    if (!calculate_peak_area) {
+      peak_info$Area = NULL
+    }
     scan_heights = list(Scan = NA,
                                LogHeight = NA,
                                ObservedMZ = NA,
@@ -1400,7 +1427,7 @@ characterize_mz_points = function(in_region, peak_scans = NULL){
 
     all_points = purrr::map_df(in_points, ~ as.data.frame(S4Vectors::mcols(.x)))
 
-    peak_info = get_merged_peak_info(all_points)
+    peak_info = get_merged_peak_info(all_points, calculate_peak_area = calculate_peak_area)
     peak_info$ObservedMZSD = sd(scan_peaks$ObservedMZ)
     peak_info$ObservedFrequencySD = sd(scan_peaks$ObservedFrequency)
     peak_info$Log10ObservedMZSD = sd(log10(scan_peaks$ObservedMZ))
