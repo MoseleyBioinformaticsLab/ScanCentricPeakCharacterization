@@ -7,10 +7,11 @@ test_that("peak fitting works", {
   peak_locs_intensities = purrr::map_df(mz_data, function(in_data){
     mz_loc = ScanCentricPeakCharacterization::get_fitted_peak_info(in_data, use_loc = "mz", w = in_data$w)
     freq_loc = ScanCentricPeakCharacterization::get_fitted_peak_info(in_data, use_loc = "frequency", w = in_data$w)
+    mz_area = ScanCentricPeakCharacterization::get_fitted_peak_info(in_data, use_loc = "mz", w = in_data$w, calculate_peak_area = TRUE)
     data.frame(ObservedMZ = mz_loc$ObservedCenter,
                ObservedFrequency = freq_loc$ObservedCenter,
                Height = mz_loc$Height,
-               Area = mz_loc$Area
+               Area = mz_area$Area
     )
   })
 
