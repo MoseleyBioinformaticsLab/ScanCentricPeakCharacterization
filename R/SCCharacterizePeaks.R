@@ -264,8 +264,8 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
                          temp_loc = tempfile("scpcms"),
                          frequency_fit_description = NULL,
                          mz_fit_description = NULL,
-                         filter_remove_outlier_scans = NULL,
-                         choose_single_frequency_model = NULL,
+                         filter_remove_outlier_scans = generate_scan_outlier_filter(rtime = NA, y.freq = NA),
+                         choose_single_frequency_model = choose_single_frequency_model_default,
                          sc_peak_region_finder = NULL,
                          calculate_peak_area = FALSE
                          ){
@@ -289,18 +289,6 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
         self$mz_fit_description = mz_fit_description
       } else {
         self$mz_fit_description = c("a.mz" = 0, "x.mz" = -1, "y.mz" = -2, "z.mz" = -3)
-      }
-
-      if (!is.null(filter_remove_outlier_scans)) {
-        self$filter_remove_outlier_scans = filter_remove_outlier_scans
-      } else {
-        self$filter_remove_outlier_scans = filter_remove_outlier_scans_default
-      }
-
-      if (!is.null(choose_single_frequency_model)) {
-        self$choose_single_frequency_model = choose_single_frequency_model
-      } else {
-        self$choose_single_frequency_model = choose_single_frequency_model_default
       }
 
       self$calculate_peak_area = calculate_peak_area

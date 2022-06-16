@@ -4,7 +4,13 @@
 \alias{get_fitted_peak_info}
 \title{fitted peak information}
 \usage{
-get_fitted_peak_info(possible_peak, use_loc = "mz", w = NULL, addend = 1e-08)
+get_fitted_peak_info(
+  possible_peak,
+  use_loc = "mz",
+  w = NULL,
+  addend = 1e-08,
+  calculate_peak_area = FALSE
+)
 }
 \arguments{
 \item{possible_peak}{data.frame of mz, intensity and log intensity}
@@ -14,9 +20,11 @@ get_fitted_peak_info(possible_peak, use_loc = "mz", w = NULL, addend = 1e-08)
 \item{w}{the weights to use for the points}
 
 \item{addend}{how much was added to the peak intensity}
+
+\item{calculate_area}{should the area of the peak be calculated too?}
 }
 \value{
-data.frame
+list
 }
 \description{
 given the peak, returns the location and intensity

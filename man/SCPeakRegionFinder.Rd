@@ -43,7 +43,11 @@ in the regions.
 
 \item{\code{sample_id}}{what sample are we processing}
 
+\item{\code{n_zero_tiles}}{how many zero count tiled regions split up a region into multiple peaks?}
+
 \item{\code{zero_normalization}}{do we want to pretend to do normalization}
+
+\item{\code{calculate_peak_area}}{should peak area be calculated as well?}
 }
 \if{html}{\out{</div>}}
 }
@@ -280,7 +284,9 @@ Make a new SCPeakRegionFinder object.
   n_point_region = 2000,
   peak_method = "lm_weighted",
   min_points = 4,
-  zero_normalization = FALSE
+  n_zero_tiles = 1,
+  zero_normalization = FALSE,
+  calculate_peak_area = FALSE
 )}\if{html}{\out{</div>}}
 }
 
@@ -311,7 +317,11 @@ Make a new SCPeakRegionFinder object.
 
 \item{\code{min_points}}{how many points to say there is a peak (4)}
 
+\item{\code{n_zero_tiles}}{how many tiles in a row do there need to be to split things up? (1)}
+
 \item{\code{zero_normalization}}{don't actually do normalization (FALSE)}
+
+\item{\code{calculate_peak_area}}{should peak area as well as peak height be returned? (FALSE)}
 }
 \if{html}{\out{</div>}}
 }
