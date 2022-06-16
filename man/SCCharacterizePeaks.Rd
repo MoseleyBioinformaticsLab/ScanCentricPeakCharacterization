@@ -46,6 +46,8 @@ Peak characterization associates data with the \code{SCZip},
 
 \item{\code{mz_fit_description}}{the model for converting back to m/z}
 
+\item{\code{calculate_peak_area}}{whether to calculate peak area or not}
+
 \item{\code{sc_peak_region_finder}}{the peak finder object}
 
 \item{\code{sc_zip}}{the \code{SCZip} that represents the final file}
@@ -307,12 +309,13 @@ Creates a new \code{SCCharacterizePeaks} class
   in_file,
   metadata_file = NULL,
   out_file = NULL,
-  temp_loc = NULL,
+  temp_loc = tempfile("scpcms"),
   frequency_fit_description = NULL,
   mz_fit_description = NULL,
-  filter_remove_outlier_scans = NULL,
-  choose_single_frequency_model = NULL,
-  sc_peak_region_finder = NULL
+  filter_remove_outlier_scans = generate_scan_outlier_filter(rtime = NA, y.freq = NA),
+  choose_single_frequency_model = choose_single_frequency_model_default,
+  sc_peak_region_finder = NULL,
+  calculate_peak_area = FALSE
 )}\if{html}{\out{</div>}}
 }
 
@@ -336,6 +339,8 @@ Creates a new \code{SCCharacterizePeaks} class
 \item{\code{choose_single_frequency_model}}{function to choose a single frequency model}
 
 \item{\code{sc_peak_region_finder}}{a blank \code{SCPeakRegionFinder} to use instead of the default}
+
+\item{\code{calculate_peak_area}}{should peak areas be returned as well as height?}
 }
 \if{html}{\out{</div>}}
 }

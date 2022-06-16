@@ -6,15 +6,13 @@
 \usage{
 split_region_by_peaks(
   region_list,
-  peak_method = "lm_weighted",
   min_points = 4,
-  metadata = NULL
+  metadata = NULL,
+  calculate_peak_area = FALSE
 )
 }
 \arguments{
 \item{region_list}{a list with points and tiles IRanges objects}
-
-\item{peak_method}{the method for getting the peaks}
 
 \item{min_points}{how many points are needed for a peak}
 

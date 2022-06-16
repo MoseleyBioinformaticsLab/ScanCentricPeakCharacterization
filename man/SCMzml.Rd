@@ -173,8 +173,8 @@ get the frequency data to go into the next steps of analysis.
   rtime_range = NULL,
   mz_range = NULL,
   remove_zero = FALSE,
-  filter_remove_outlier_scans = NULL,
-  choose_single_frequency_model = NULL
+  filter_remove_outlier_scans = generate_scan_outlier_filter(rtime = NA, y.freq = NA),
+  choose_single_frequency_model = choose_single_frequency_model_default
 )}\if{html}{\out{</div>}}
 }
 

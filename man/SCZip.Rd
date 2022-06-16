@@ -153,7 +153,7 @@ Create a new SCZip object.
   out_file = NULL,
   load_mzml = TRUE,
   load_peak_list = TRUE,
-  temp_loc = tempfile("zipms")
+  temp_loc = tempfile("scpcms")
 )}\if{html}{\out{</div>}}
 }
 

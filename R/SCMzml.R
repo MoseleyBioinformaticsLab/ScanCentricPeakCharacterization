@@ -404,8 +404,8 @@ SCMzml = R6::R6Class("SCMzml",
                          rtime_range = NULL,
                          mz_range = NULL,
                          remove_zero = FALSE,
-                         filter_remove_outlier_scans = NULL,
-                         choose_single_frequency_model = NULL){
+                         filter_remove_outlier_scans = generate_scan_outlier_filter(rtime = NA, y.freq = NA),
+                         choose_single_frequency_model = choose_single_frequency_model_default){
      if (missing(mzml_file)) {
        stop("You must provide an mzML file as input!")
      }
@@ -419,12 +419,6 @@ SCMzml = R6::R6Class("SCMzml",
      self$mz_fit_description = mz_fit_description
      self$remove_zero = remove_zero
 
-     if (is.null(filter_remove_outlier_scans)) {
-       self$filter_remove_outlier_scans = filter_remove_outlier_scans_default
-     }
-     if (is.null(choose_single_frequency_model)) {
-       self$choose_single_frequency_model = choose_single_frequency_model_default
-     }
     invisible(self)
    }
   )

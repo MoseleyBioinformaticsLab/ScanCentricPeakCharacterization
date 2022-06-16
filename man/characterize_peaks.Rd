@@ -4,7 +4,7 @@
 \alias{characterize_peaks}
 \title{characterize peaks from points and picked peaks}
 \usage{
-characterize_peaks(peak_region)
+characterize_peaks(peak_region, calculate_peak_area = FALSE)
 }
 \arguments{
 \item{peak_region}{the PeakRegion object to work on}
