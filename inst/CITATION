@@ -1,0 +1,14 @@
+citHeader("To cite ScanCentricPeakCharacterization in publications use:")
+
+citEntry(
+  entry    = "Article",
+  title    = "Scan-Centric, Frequency-Based Method for Characterizing Peaks from Direct Injection Fourier transform Mass Spectrometry Experiments",
+  author   = "RM Flight, JM Mitchell and HNB Moseley",
+  journal  = "Metabolites",
+  year     = "2022",
+  volume   = "12",
+  number   = "6",
+  pages    = "515",
+  url      = "https://doi.org/10.3390/metabo12060515",
+  textVersion = paste()
+)
