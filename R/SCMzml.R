@@ -360,7 +360,7 @@ SCMzml = R6::R6Class("SCMzml",
        }
        keep_info = scan_info |>
          dplyr::filter(keep)
-       all_long = tidyr::pivot_longer(scan_info[, c("scan", "mad", "median")], cols = c("mad", "median"), names_to = "measures", values_to = "value")
+       all_long = tidyr::pivot_longer(keep_info[, c("scan", "mad", "median")], cols = c("mad", "median"), names_to = "measures", values_to = "value")
        variance_histogram = all_long %>%
          ggplot2::ggplot(ggplot2::aes(x = value)) +
          ggplot2::geom_histogram(bins = 30) +
