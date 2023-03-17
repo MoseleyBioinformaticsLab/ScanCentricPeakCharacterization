@@ -306,12 +306,29 @@ SCMzml = R6::R6Class("SCMzml",
      #' @description check how well a given frequency model works for this data
      #' @param scan which scan to show predictions for
      #' @param as_list whether plots should be returned as a single plot or a list of plots
-     check_frequency_model = function(scan = 1, as_list = FALSE){
+     check_frequency_model = function(scan = NULL, as_list = FALSE){
        if (is.null(self$mzml_df_data)) {
          stop("Have you extracted the mzml data to scans yet?\nPlease do sc_mzml$extract_mzml_data() first!")
        }
 
-       use_scan = self$mzml_df_data[[scan]]
+       scan_info = self$scan_info
+       if (is.null(scan)) {
+         if (is.null(scan_info$keep)) {
+           warning("You should ideally do scan filtering first\nbefore checking the model assumptions.\nUsing the first scan.")
+           scan_id = scan_info$scan[1]
+         } else {
+           scan_id = scan_info$scan[scan_info$keep][1]
+         }
+       } else {
+         is_keep = scan %in% scan_info$scan[scan_info$keep]
+         if (!is_keep) {
+           warning("Supplied scan is not in those marked to be kept by scan filtering.\nUsing the first scan.")
+           scan_id = scan_info$scan[1]
+         } else {
+           scan_id = scan
+         }
+       }
+       use_scan = self$mzml_df_data[[scan_id]]
        if (!("mean_predicted" %in% names(use_scan))) {
          stop("Have you done prediction of frequency yet?\nPlease do sc_mzml$predict_frequency() first!")
        }
@@ -324,29 +341,29 @@ SCMzml = R6::R6Class("SCMzml",
          message("patchwork enables easy arrangement of diagnostic plots alongside each other, we suggest you install it with\ninstall.packages('patchwork')")
        }
        frequency_as_mz = use_scan %>%
-         ggplot(aes(x = mz, y = mean_frequency)) +
-         geom_point() +
-         geom_line(aes(x = mz, y = predicted_frequency), color = "red") +
-         labs(x = "MZ", y = "Frequency", subtitle = "Frequency as a Function of M/Z")
+         ggplot2::ggplot(aes(x = mz, y = mean_frequency)) +
+         ggplot2::geom_point() +
+         ggplot2::geom_line(ggplot2::aes(x = mz, y = predicted_frequency), color = "red") +
+         ggplot2::labs(x = "MZ", y = "Frequency", subtitle = "Frequency as a Function of M/Z")
        predicted_original = use_scan %>%
-         ggplot(aes(x = mean_frequency, y = predicted_frequency)) +
-         geom_point() +
-         geom_abline(slope = 1, color = "red") +
-         labs(x = "Original Frequency", y = "Predicted Frequency", subtitle = "Original vs Predicted Frequency")
+         ggplot2::ggplot(ggplot2::aes(x = mean_frequency, y = predicted_frequency)) +
+         ggplot2::geom_point() +
+         ggplot2::geom_abline(slope = 1, color = "red") +
+         ggplot2::labs(x = "Original Frequency", y = "Predicted Frequency", subtitle = "Original vs Predicted Frequency")
        residuals_as_mz = use_scan %>%
-         ggplot(aes(x = mz, y = mean_predicted)) +
-         geom_point() +
-         geom_hline(yintercept = 0, color = "red") +
-         labs(x = "MZ", y = "Residuals of Predicted - Original Frequency", subtitle = "Residuals as a Function of M/Z")
+         ggplot2::ggplot(ggplot2::aes(x = mz, y = mean_predicted)) +
+         ggplot2::geom_point() +
+         ggplot2::geom_hline(yintercept = 0, color = "red") +
+         ggplot2::labs(x = "MZ", y = "Residuals of Predicted - Original Frequency", subtitle = "Residuals as a Function of M/Z")
        all_info = self$scan_info
        all_long = tidyr::pivot_longer(all_info[, c("scan", "mad", "median")], cols = c("mad", "median"), names_to = "measures", values_to = "value")
        variance_histogram = all_long %>%
-         ggplot(aes(x = value)) +
-         geom_histogram(bins = 30) +
-         facet_wrap(~ measures, nrow = 1, scales = "free_x")
+         ggplot2::ggplot(ggplot2::aes(x = value)) +
+         ggplot2::geom_histogram(bins = 30) +
+         ggplot2::facet_wrap(~ measures, nrow = 1, scales = "free_x")
        if (has_ggforce) {
          variance_histogram = all_long %>%
-           ggplot(aes(x = measures, y = value)) +
+           ggplot2::ggplot(ggplot2::aes(x = measures, y = value)) +
            ggforce::geom_sina()
        }
        if (has_patchwork && !as_list) {
