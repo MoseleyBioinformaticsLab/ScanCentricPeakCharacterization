@@ -341,7 +341,7 @@ SCMzml = R6::R6Class("SCMzml",
          message("patchwork enables easy arrangement of diagnostic plots alongside each other, we suggest you install it with\ninstall.packages('patchwork')")
        }
        frequency_as_mz = use_scan %>%
-         ggplot2::ggplot(aes(x = mz, y = mean_frequency)) +
+         ggplot2::ggplot(ggplot2::aes(x = mz, y = mean_frequency)) +
          ggplot2::geom_point() +
          ggplot2::geom_line(ggplot2::aes(x = mz, y = predicted_frequency), color = "red") +
          ggplot2::labs(x = "MZ", y = "Frequency", subtitle = "Frequency as a Function of M/Z")
