@@ -355,8 +355,12 @@ SCMzml = R6::R6Class("SCMzml",
          ggplot2::geom_point() +
          ggplot2::geom_hline(yintercept = 0, color = "red") +
          ggplot2::labs(x = "MZ", y = "Residuals of Predicted - Original Frequency", subtitle = "Residuals as a Function of M/Z")
-       all_info = self$scan_info
-       all_long = tidyr::pivot_longer(all_info[, c("scan", "mad", "median")], cols = c("mad", "median"), names_to = "measures", values_to = "value")
+       if (is.null(scan_info$keep)) {
+         scan_info$keep = TRUE
+       }
+       keep_info = scan_info |>
+         dplyr::filter(keep)
+       all_long = tidyr::pivot_longer(scan_info[, c("scan", "mad", "median")], cols = c("mad", "median"), names_to = "measures", values_to = "value")
        variance_histogram = all_long %>%
          ggplot2::ggplot(ggplot2::aes(x = value)) +
          ggplot2::geom_histogram(bins = 30) +
