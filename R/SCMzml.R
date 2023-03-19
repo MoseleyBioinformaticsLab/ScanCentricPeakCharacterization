@@ -517,7 +517,7 @@ SCMzml = R6::R6Class("SCMzml",
      self$memory_mode = memory_mode
      if (!missing(mzml_file)) {
        self$mzml_file = mzml_file
-       self$import_mzml_data()
+       self = self$import_mzml()
      }
      if (!is.null(metadata_file)) {
        self$mzml_metadata = fromJSON(metadata_file)
