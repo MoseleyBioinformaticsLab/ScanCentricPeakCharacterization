@@ -325,6 +325,9 @@ SCMzml = R6::R6Class("SCMzml",
        invisible(self)
      },
 
+     #' @field filter_scan_function where the added filter scan function will live.
+     filter_scan_function = NULL,
+
      #' @description generate a filter function and attach it
      #'
      #' @param rtime retention time limits of scans to keep (NA)
