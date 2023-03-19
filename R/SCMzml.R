@@ -212,7 +212,7 @@ SCMzml = R6::R6Class("SCMzml",
      #' @param ms_level which ms level to import (default is 1)
      #' @param memory_mode use inMemory or onDisk mode
      import_mzml = function(mzml_file = self$mzml_file, ms_level = self$ms_level, memory_mode = self$memory_mode){
-       self$mzml_data = MSnbase::readMSData(mzml_data, msLevel. = ms_level, mode = memory_mode)
+       self$mzml_data = MSnbase::readMSData(mzml_file, msLevel. = ms_level, mode = memory_mode)
        self$scan_info = add_scan_info(self$mzml_data)
 
        invisible(self)
