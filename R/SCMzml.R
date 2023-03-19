@@ -318,11 +318,28 @@ SCMzml = R6::R6Class("SCMzml",
      #' @field difference_range how wide to consider adjacent frequency points as *good*
      difference_range = NULL,
 
+     #' @description filter the scans using the previously added function
      filter_scans = function()
      {
        self = self$filter_scan_function(self)
        invisible(self)
      },
+
+     #' @description generate a filter function and attach it
+     #'
+     #' @param rtime retention time limits of scans to keep (NA)
+     #' @param y.freq y-frequency coefficient limits of scans to keep (NA)
+     #' @param f_function a full function to set as the filtering function
+     #'
+     #' @details
+     #' Creates a new function that accesses the `scan_info` slot of
+     #' an `SCMzml` object, filters the scans by their retention-time and
+     #' y-frequency coefficients, tests for outliers in the y-frequency
+     #' coefficients, and denotes which scans will be kept for further
+     #' processing.
+     #'
+     #' `NA` means no filtering will be done, one-sided limits, eg. `(NA, 10)` or `(10, NA)`
+     #' implies to filter `<=` or `>=`, respectively.
      generate_filter_scan_function = function(rtime = NA, y.freq = NA, f_function = NULL){
        force(rtime)
        force(y.freq)
@@ -484,8 +501,8 @@ SCMzml = R6::R6Class("SCMzml",
    #' @param rtime_range the retention time to use for scans
    #' @param mz_range what m/z range to use
    #' @param remove_zero should zero intensity data be removed?
-   #' @param filter_remove_outlier_scans the function to use to filter scans
-   #' @param choose_single_frequency_model the function to use to choose single frequency regression model
+   #' @param ms_level what MS level should be extracted (default is 1)
+   #' @param memory_mode what memory mode should MSnbase be using (inMemory or onDisk)
    initialize = function(mzml_file,
                          frequency_fit_description = c("a.freq" = 0, "x.freq" = -1, "y.freq" = -1/2, "z.freq" = -1/3),
                          mz_fit_description = c("a.mz" = 0, "x.mz" = -1, "y.mz" = -2, "z.mz" = -3),

@@ -18,13 +18,13 @@ generating the frequency data for use in the peak characterization.
 }
 }
 \seealso{
-\code{\link[=filter_remove_outlier_scans_default]{filter_remove_outlier_scans_default()}}
-
 \code{\link[=choose_single_frequency_model_default]{choose_single_frequency_model_default()}}
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
+\item{\code{mzml_file}}{the mzml file location}
+
 \item{\code{mzml_metadata}}{metadata from an external json file}
 
 \item{\code{mzml_data}}{the actual mzml data from MSnbase}
@@ -49,9 +49,11 @@ generating the frequency data for use in the peak characterization.
 
 \item{\code{mz_coefficients}}{the coefficients for the m/z model}
 
-\item{\code{difference_range}}{how wide to consider adjacent frequency points as \emph{good}}
+\item{\code{ms_level}}{which MS level will we be using from the mzml file?}
 
-\item{\code{filter_remove_outlier_scans}}{the function to remove scans that shouldn't be used as well as outliers}
+\item{\code{memory_mode}}{how will the mzml data be worked with to start, inMemory or onDisk?}
+
+\item{\code{difference_range}}{how wide to consider adjacent frequency points as \emph{good}}
 
 \item{\code{choose_single_frequency_model}}{function to choose a single frequency model}
 }
@@ -60,19 +62,47 @@ generating the frequency data for use in the peak characterization.
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-extract_mzml_data}{\code{SCMzml$extract_mzml_data()}}
-\item \href{#method-predict_frequency}{\code{SCMzml$predict_frequency()}}
-\item \href{#method-convert_to_frequency}{\code{SCMzml$convert_to_frequency()}}
-\item \href{#method-check_frequency_model}{\code{SCMzml$check_frequency_model()}}
-\item \href{#method-get_instrument}{\code{SCMzml$get_instrument()}}
-\item \href{#method-get_frequency_data}{\code{SCMzml$get_frequency_data()}}
-\item \href{#method-new}{\code{SCMzml$new()}}
-\item \href{#method-clone}{\code{SCMzml$clone()}}
+\item \href{#method-SCMzml-import_mzml}{\code{SCMzml$import_mzml()}}
+\item \href{#method-SCMzml-extract_mzml_data}{\code{SCMzml$extract_mzml_data()}}
+\item \href{#method-SCMzml-predict_frequency}{\code{SCMzml$predict_frequency()}}
+\item \href{#method-SCMzml-convert_to_frequency}{\code{SCMzml$convert_to_frequency()}}
+\item \href{#method-SCMzml-filter_scans}{\code{SCMzml$filter_scans()}}
+\item \href{#method-SCMzml-generate_filter_scan_function}{\code{SCMzml$generate_filter_scan_function()}}
+\item \href{#method-SCMzml-check_frequency_model}{\code{SCMzml$check_frequency_model()}}
+\item \href{#method-SCMzml-get_instrument}{\code{SCMzml$get_instrument()}}
+\item \href{#method-SCMzml-get_frequency_data}{\code{SCMzml$get_frequency_data()}}
+\item \href{#method-SCMzml-new}{\code{SCMzml$new()}}
+\item \href{#method-SCMzml-clone}{\code{SCMzml$clone()}}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-extract_mzml_data"></a>}}
-\if{latex}{\out{\hypertarget{method-extract_mzml_data}{}}}
+\if{html}{\out{<a id="method-SCMzml-import_mzml"></a>}}
+\if{latex}{\out{\hypertarget{method-SCMzml-import_mzml}{}}}
+\subsection{Method \code{import_mzml()}}{
+import the mzml file defined
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SCMzml$import_mzml(
+  mzml_file = self$mzml_file,
+  ms_level = self$ms_level,
+  memory_mode = self$memory_mode
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{mzml_file}}{what file are we reading in?}
+
+\item{\code{ms_level}}{which ms level to import (default is 1)}
+
+\item{\code{memory_mode}}{use inMemory or onDisk mode}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-SCMzml-extract_mzml_data"></a>}}
+\if{latex}{\out{\hypertarget{method-SCMzml-extract_mzml_data}{}}}
 \subsection{Method \code{extract_mzml_data()}}{
 get the mzml data into data.frame form so we can use it
 \subsection{Usage}{
@@ -88,8 +118,8 @@ get the mzml data into data.frame form so we can use it
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-predict_frequency"></a>}}
-\if{latex}{\out{\hypertarget{method-predict_frequency}{}}}
+\if{html}{\out{<a id="method-SCMzml-predict_frequency"></a>}}
+\if{latex}{\out{\hypertarget{method-SCMzml-predict_frequency}{}}}
 \subsection{Method \code{predict_frequency()}}{
 predict frequency and generate some summary information.
 This does regression of frequency ~ m/z for each scan separately.
@@ -111,8 +141,8 @@ This does regression of frequency ~ m/z for each scan separately.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-convert_to_frequency"></a>}}
-\if{latex}{\out{\hypertarget{method-convert_to_frequency}{}}}
+\if{html}{\out{<a id="method-SCMzml-convert_to_frequency"></a>}}
+\if{latex}{\out{\hypertarget{method-SCMzml-convert_to_frequency}{}}}
 \subsection{Method \code{convert_to_frequency()}}{
 actually do the conversion of m/z to frequency
 \subsection{Usage}{
@@ -121,12 +151,58 @@ actually do the conversion of m/z to frequency
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-check_frequency_model"></a>}}
-\if{latex}{\out{\hypertarget{method-check_frequency_model}{}}}
+\if{html}{\out{<a id="method-SCMzml-filter_scans"></a>}}
+\if{latex}{\out{\hypertarget{method-SCMzml-filter_scans}{}}}
+\subsection{Method \code{filter_scans()}}{
+filter the scans using the previously added function
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SCMzml$filter_scans()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-SCMzml-generate_filter_scan_function"></a>}}
+\if{latex}{\out{\hypertarget{method-SCMzml-generate_filter_scan_function}{}}}
+\subsection{Method \code{generate_filter_scan_function()}}{
+generate a filter function and attach it
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SCMzml$generate_filter_scan_function(
+  rtime = NA,
+  y.freq = NA,
+  f_function = NULL
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{rtime}}{retention time limits of scans to keep (NA)}
+
+\item{\code{y.freq}}{y-frequency coefficient limits of scans to keep (NA)}
+
+\item{\code{f_function}}{a full function to set as the filtering function}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Details}{
+Creates a new function that accesses the \code{scan_info} slot of
+an \code{SCMzml} object, filters the scans by their retention-time and
+y-frequency coefficients, tests for outliers in the y-frequency
+coefficients, and denotes which scans will be kept for further
+processing.
+
+\code{NA} means no filtering will be done, one-sided limits, eg. \verb{(NA, 10)} or \verb{(10, NA)}
+implies to filter \code{<=} or \code{>=}, respectively.
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-SCMzml-check_frequency_model"></a>}}
+\if{latex}{\out{\hypertarget{method-SCMzml-check_frequency_model}{}}}
 \subsection{Method \code{check_frequency_model()}}{
 check how well a given frequency model works for this data
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SCMzml$check_frequency_model(scan = 1, as_list = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SCMzml$check_frequency_model(scan = NULL, as_list = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -140,8 +216,8 @@ check how well a given frequency model works for this data
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-get_instrument"></a>}}
-\if{latex}{\out{\hypertarget{method-get_instrument}{}}}
+\if{html}{\out{<a id="method-SCMzml-get_instrument"></a>}}
+\if{latex}{\out{\hypertarget{method-SCMzml-get_instrument}{}}}
 \subsection{Method \code{get_instrument()}}{
 get instrument data from associated mzml file metadata
 \subsection{Usage}{
@@ -150,8 +226,8 @@ get instrument data from associated mzml file metadata
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-get_frequency_data"></a>}}
-\if{latex}{\out{\hypertarget{method-get_frequency_data}{}}}
+\if{html}{\out{<a id="method-SCMzml-get_frequency_data"></a>}}
+\if{latex}{\out{\hypertarget{method-SCMzml-get_frequency_data}{}}}
 \subsection{Method \code{get_frequency_data()}}{
 get the frequency data to go into the next steps of analysis.
 \subsection{Usage}{
@@ -160,8 +236,8 @@ get the frequency data to go into the next steps of analysis.
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-new"></a>}}
-\if{latex}{\out{\hypertarget{method-new}{}}}
+\if{html}{\out{<a id="method-SCMzml-new"></a>}}
+\if{latex}{\out{\hypertarget{method-SCMzml-new}{}}}
 \subsection{Method \code{new()}}{
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCMzml$new(
@@ -173,8 +249,8 @@ get the frequency data to go into the next steps of analysis.
   rtime_range = NULL,
   mz_range = NULL,
   remove_zero = FALSE,
-  filter_remove_outlier_scans = generate_scan_outlier_filter(rtime = NA, y.freq = NA),
-  choose_single_frequency_model = choose_single_frequency_model_default
+  ms_level = 1,
+  memory_mode = "inMemory"
 )}\if{html}{\out{</div>}}
 }
 
@@ -197,16 +273,16 @@ get the frequency data to go into the next steps of analysis.
 
 \item{\code{remove_zero}}{should zero intensity data be removed?}
 
-\item{\code{filter_remove_outlier_scans}}{the function to use to filter scans}
+\item{\code{ms_level}}{what MS level should be extracted (default is 1)}
 
-\item{\code{choose_single_frequency_model}}{the function to use to choose single frequency regression model}
+\item{\code{memory_mode}}{what memory mode should MSnbase be using (inMemory or onDisk)}
 }
 \if{html}{\out{</div>}}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-clone}{}}}
+\if{html}{\out{<a id="method-SCMzml-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-SCMzml-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{
