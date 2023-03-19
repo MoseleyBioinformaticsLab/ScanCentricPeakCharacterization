@@ -162,6 +162,9 @@ choose_single_frequency_model_default = function(sc_mzml){
 #' @export
 SCMzml = R6::R6Class("SCMzml",
    public = list(
+     #' @field mzml_file the mzml file location
+     mzml_file = NULL,
+
      #' @field mzml_metadata metadata from an external json file
      mzml_metadata = NULL,
 
@@ -197,6 +200,24 @@ SCMzml = R6::R6Class("SCMzml",
 
      #' @field mz_coefficients the coefficients for the m/z model
      mz_coefficients = NULL,
+
+     #' @field ms_level which MS level will we be using from the mzml file?
+     ms_level = NULL,
+
+     #' @field memory_mode how will the mzml data be worked with to start, inMemory or onDisk?
+     memory_mode = NULL,
+
+     #' @description import the mzml file defined
+     #' @param mzml_file what file are we reading in?
+     #' @param ms_level which ms level to import (default is 1)
+     #' @param memory_mode use inMemory or onDisk mode
+     import_mzml = function(mzml_file = self$mzml_file, ms_level = self$ms_level, memory_mode = self$memory_mode){
+       self$mzml_data = MSnbase::readMSData(mzml_data, msLevel. = ms_level, mode = memory_mode)
+       self$scan_info = add_scan_info(self$mzml_data)
+
+       invisible(self)
+     }
+
 
      #' @description get the mzml data into data.frame form so we can use it
      #' @param remove_zero whether to remove zero intensity points or not
@@ -272,6 +293,8 @@ SCMzml = R6::R6Class("SCMzml",
         invisible(self)
      },
 
+
+
      #' @description actually do the conversion of m/z to frequency
      convert_to_frequency = function(){
        freq_list = self$mzml_df_data
@@ -295,9 +318,55 @@ SCMzml = R6::R6Class("SCMzml",
      #' @field difference_range how wide to consider adjacent frequency points as *good*
      difference_range = NULL,
 
-     #' @field filter_remove_outlier_scans the function to remove scans that shouldn't be used as well as outliers
-     #' @seealso [filter_remove_outlier_scans_default()]
-     filter_remove_outlier_scans = NULL,
+     filter_scans = function()
+     {
+       self = self$filter_scan_function(self)
+       invisible(self)
+     },
+     generate_filter_scan_function = function(rtime = NA, y.freq = NA, f_function = NULL){
+       force(rtime)
+       force(y.freq)
+
+       filter_function = function(sc_mzml){
+         scan_info = sc_mzml$scan_info
+
+         if ((length(rtime) == 1) && (all(is.na(rtime)))) {
+           scan_info$rtime_keep = TRUE
+         }  else {
+           if (is.na(rtime[1])) {
+             scan_info$rtime_keep = scan_info$rtime <= rtime[2]
+           } else if (is.na(rtime[2])) {
+             scan_info$rtime_keep = scan_info$rtime >= rtime[1]
+           } else {
+             scan_info$rtime_keep = dplyr::between(scan_info$rtime, rtime[1], rtime[2])
+           }
+         }
+
+         if ((length(y.freq) == 1) && (all(is.na(y.freq)))) {
+           scan_info$y.freq_keep = TRUE
+         } else {
+           if (is.na(y.freq[1])) {
+             scan_info$y.freq_keep = scan_info$y.freq <= y.freq[2]
+           } else if (is.na(y.freq[2])) {
+             scan_info$y.freq_keep = scan_info$y.freq >= y.freq[1]
+           } else {
+             scan_info$y.freq_keep = dplyr::between(scan_info$y.freq, y.freq[1], y.freq[2])
+           }
+         }
+         stats_y.freq = boxplot.stats(scan_info$y.freq[scan_info$y.freq_keep & scan_info$rtime_keep])
+         scan_info$stats_keep = !(scan_info$y.freq %in% stats_y.freq$out)
+         scan_info$keep = scan_info$stats_keep & scan_info$y.freq_keep & scan_info$rtime_keep
+         sc_mzml$scan_info = scan_info
+         sc_mzml
+       }
+       if (!is.null(f_function)) {
+         self$filter_scan_function = f_function
+       } else {
+         self$filter_scan_function = filter_function
+       }
+
+       invisible(self)
+     },
 
      #' @field choose_single_frequency_model function to choose a single frequency model
      #' @seealso [choose_single_frequency_model_default()]
@@ -425,17 +494,20 @@ SCMzml = R6::R6Class("SCMzml",
                          rtime_range = NULL,
                          mz_range = NULL,
                          remove_zero = FALSE,
-                         filter_remove_outlier_scans = generate_scan_outlier_filter(rtime = NA, y.freq = NA),
-                         choose_single_frequency_model = choose_single_frequency_model_default){
-     if (missing(mzml_file)) {
-       stop("You must provide an mzML file as input!")
+                         ms_level = 1,
+                         memory_mode = "inMemory"){
+     self$ms_level = ms_level
+     self$memory_mode = memory_mode
+     if (!missing(mzml_file)) {
+       self$mzml_file = mzml_file
+       self = self$import_mzml_data()
      }
-     self$mzml_data = import_sc_mzml(mzml_file)
-     self$scan_info = add_scan_info(self$mzml_data)
      if (!is.null(metadata_file)) {
        self$mzml_metadata = fromJSON(metadata_file)
      }
-
+     self$scan_range = scan_range
+     self$rt_range = rt_range
+     self$mz_range = mz_range
      self$frequency_fit_description = frequency_fit_description
      self$mz_fit_description = mz_fit_description
      self$remove_zero = remove_zero
