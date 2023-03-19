@@ -26,12 +26,12 @@
 #'   # no filtering
 #'   sc_filter = generate_scan_outlier_filter()
 #' }
-generate_scan_outlier_filter = function(rtime = NA, y.freq = NA){
+generate_scan_filter = function(rtime = NA, y.freq = NA){
   force(rtime)
   force(y.freq)
 
-  function(sc_mzml){
-    scan_info = sc_mzml$scan_info
+  function(){
+    scan_info = self$scan_info
 
     if ((length(rtime) == 1) && (all(is.na(rtime)))) {
       scan_info$rtime_keep = TRUE
@@ -59,7 +59,7 @@ generate_scan_outlier_filter = function(rtime = NA, y.freq = NA){
     stats_y.freq = boxplot.stats(scan_info$y.freq[scan_info$y.freq_keep & scan_info$rtime_keep])
     scan_info$stats_keep = !(scan_info$y.freq %in% stats_y.freq$out)
     scan_info$keep = scan_info$stats_keep & scan_info$y.freq_keep & scan_info$rtime_keep
-    sc_mzml$scan_info = scan_info
-    sc_mzml
+    self$scan_info = scan_info
+    self
   }
 }

@@ -216,7 +216,7 @@ SCMzml = R6::R6Class("SCMzml",
        self$scan_info = add_scan_info(self$mzml_data)
 
        invisible(self)
-     }
+     },
 
 
      #' @description get the mzml data into data.frame form so we can use it
