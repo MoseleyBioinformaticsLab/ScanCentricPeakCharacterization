@@ -1,7 +1,7 @@
 # runs peak characterization, saves the result files, and then runs assignments and checks them against known
-curr_version = packageVersion("FTMS.peakCharacterization")
+curr_version = packageVersion("ScanCentricPeakCharacterization")
 curr_date = Sys.Date()
-library(FTMS.peakCharacterization)
+library(ScanCentricPeakCharacterization)
 library(furrr)
 plan(multiprocess)
 set_internal_map(furrr::future_map)
