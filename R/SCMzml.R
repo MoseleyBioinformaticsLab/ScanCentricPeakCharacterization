@@ -523,7 +523,7 @@ SCMzml = R6::R6Class("SCMzml",
        self$mzml_metadata = fromJSON(metadata_file)
      }
      self$scan_range = scan_range
-     self$rt_range = rt_range
+     self$rtime_range = rtime_range
      self$mz_range = mz_range
      self$frequency_fit_description = frequency_fit_description
      self$mz_fit_description = mz_fit_description
