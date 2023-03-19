@@ -55,6 +55,8 @@ generating the frequency data for use in the peak characterization.
 
 \item{\code{difference_range}}{how wide to consider adjacent frequency points as \emph{good}}
 
+\item{\code{filter_scan_function}}{where the added filter scan function will live.}
+
 \item{\code{choose_single_frequency_model}}{function to choose a single frequency model}
 }
 \if{html}{\out{</div>}}

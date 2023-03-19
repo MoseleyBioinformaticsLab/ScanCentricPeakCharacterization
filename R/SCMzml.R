@@ -67,24 +67,24 @@ add_scan_info = function(mzml_data){
   ms_scan_info
 }
 
-#' default outlier scan function
+#' built in filter scan function
 #'
 #' @param sc_mzml the sc_mzml object
 #'
-#' @details This is the default filtering and removing outliers function.
+#' @details This is the built in filtering and removing outliers function.
 #'   It is based on the Moseley groups normal samples and experience.
 #'   However, it does not reflect everyone's experience and needs.
 #'   We expect that others have different use cases and needs, and therefore
 #'   they should create their own function and use it appropriately.
 #'
 #'   Please examine this function and write your own as needed.
-#'   It should at the very least take a SCmzml object, work on the scan_info slot,
+#'   It **must** take an `SCMzml` object, work on the `scan_info` slot,
 #'   and then create a column with the name "keep" denoting which scans to keep.
-#'   To view the current definition, you can do `filter_remove_outlier_scans_default`
+#'   To view the current definition, you can do `filter_scans_builtin`
 #'
 #' @export
 #' @return SCmzml
-filter_remove_outlier_scans_default = function(sc_mzml){
+filter_scans_builtin = function(sc_mzml){
   scan_info = sc_mzml$scan_info
 
   # notice we are keeping each of the filters and recording them
