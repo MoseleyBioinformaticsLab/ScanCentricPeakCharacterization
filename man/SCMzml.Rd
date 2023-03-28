@@ -55,6 +55,8 @@ generating the frequency data for use in the peak characterization.
 
 \item{\code{difference_range}}{how wide to consider adjacent frequency points as \emph{good}}
 
+\item{\code{choose_frequency_model_function}}{where the added model selection function will live}
+
 \item{\code{filter_scan_function}}{where the added filter scan function will live.}
 
 \item{\code{choose_single_frequency_model}}{function to choose a single frequency model}
@@ -68,6 +70,8 @@ generating the frequency data for use in the peak characterization.
 \item \href{#method-SCMzml-extract_mzml_data}{\code{SCMzml$extract_mzml_data()}}
 \item \href{#method-SCMzml-predict_frequency}{\code{SCMzml$predict_frequency()}}
 \item \href{#method-SCMzml-convert_to_frequency}{\code{SCMzml$convert_to_frequency()}}
+\item \href{#method-SCMzml-choose_frequency_model}{\code{SCMzml$choose_frequency_model()}}
+\item \href{#method-SCMzml-generate_choose_frequency_model_function}{\code{SCMzml$generate_choose_frequency_model_function()}}
 \item \href{#method-SCMzml-filter_scans}{\code{SCMzml$filter_scans()}}
 \item \href{#method-SCMzml-generate_filter_scan_function}{\code{SCMzml$generate_filter_scan_function()}}
 \item \href{#method-SCMzml-check_frequency_model}{\code{SCMzml$check_frequency_model()}}
@@ -149,6 +153,39 @@ This does regression of frequency ~ m/z for each scan separately.
 actually do the conversion of m/z to frequency
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCMzml$convert_to_frequency()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-SCMzml-choose_frequency_model"></a>}}
+\if{latex}{\out{\hypertarget{method-SCMzml-choose_frequency_model}{}}}
+\subsection{Method \code{choose_frequency_model()}}{
+choose a frequency model using the previously added function
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SCMzml$choose_frequency_model()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-SCMzml-generate_choose_frequency_model_function"></a>}}
+\if{latex}{\out{\hypertarget{method-SCMzml-generate_choose_frequency_model_function}{}}}
+\subsection{Method \code{generate_choose_frequency_model_function()}}{
+generate a frequency model choosing function and attach it
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SCMzml$generate_choose_frequency_model_function(f_function = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{f_function}}{the function you want to pass in}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Details}{
+Creates a new function that access the \code{scan_info} slot of an \code{SCMzml} object
+after conversion to frequency space, and chooses a single model based on the information
+there.
 }
 
 }

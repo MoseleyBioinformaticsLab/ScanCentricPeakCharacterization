@@ -120,11 +120,11 @@ filter_scans_builtin = function(sc_mzml){
 #'   It takes the scan_info after filtering scans, and calculates the median of the
 #'   square root terms, and chooses the one closest to the median value.
 #'
-#'   Please examine this function and write your own if needed. You can view the function definition using `choose_single_frequency_model_default`
+#'   Please examine this function and write your own if needed. You can view the function definition using `choose_frequency_model_builtin`
 #'
 #' @export
 #' @return SCmzml
-choose_single_frequency_model_default = function(sc_mzml){
+choose_frequency_model_builtin = function(sc_mzml){
   scan_info = sc_mzml$scan_info
 
   # filtering to those things we decided to keep
@@ -317,6 +317,34 @@ SCMzml = R6::R6Class("SCMzml",
 
      #' @field difference_range how wide to consider adjacent frequency points as *good*
      difference_range = NULL,
+
+     #' @description choose a frequency model using the previously added function
+     choose_frequency_model = function()
+     {
+       self = self$choose_frequency_model_function(self)
+       invisible(self)
+     },
+
+     #' @field choose_frequency_model_function where the added model selection function will live
+     choose_frequency_model_function = NULL,
+
+     #' @description generate a frequency model choosing function and attach it
+     #'
+     #' @param f_function the function you want to pass in
+     #'
+     #' @details
+     #' Creates a new function that access the `scan_info` slot of an `SCMzml` object
+     #' after conversion to frequency space, and chooses a single model based on the information
+     #' there.
+     generate_choose_frequency_model_function = function(f_function = NULL)
+     {
+       if (is.null(f_function)) {
+         self$choose_frequency_model_function = choose_single_frequency_model_builtin
+       } else {
+         self$choose_frequency_model_function = f_function
+       }
+       invisible(self)
+     },
 
      #' @description filter the scans using the previously added function
      filter_scans = function()
