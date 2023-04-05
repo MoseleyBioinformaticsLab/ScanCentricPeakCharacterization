@@ -321,8 +321,13 @@ SCMzml = R6::R6Class("SCMzml",
      #' @description choose a frequency model using the previously added function
      choose_frequency_model = function()
      {
-       self = self$choose_frequency_model_function(self)
-       invisible(self)
+       if (!is.null(self$choose_frequency_model_function)) {
+         self = self$choose_frequency_model_function(self)
+         return(invisible(self))
+       } else {
+         stop("No choose_frequency_model_function set. You need to run `generate_choose_frequency_model_function` first!")
+       }
+
      },
 
      #' @field choose_frequency_model_function where the added model selection function will live
@@ -339,7 +344,7 @@ SCMzml = R6::R6Class("SCMzml",
      generate_choose_frequency_model_function = function(f_function = NULL)
      {
        if (is.null(f_function)) {
-         self$choose_frequency_model_function = choose_single_frequency_model_builtin
+         self$choose_frequency_model_function = choose_frequency_model_builtin
        } else {
          self$choose_frequency_model_function = f_function
        }
@@ -349,8 +354,12 @@ SCMzml = R6::R6Class("SCMzml",
      #' @description filter the scans using the previously added function
      filter_scans = function()
      {
-       self = self$filter_scan_function(self)
-       invisible(self)
+       if (!is.null(self$filter_scan_function)) {
+         self = self$filter_scan_function(self)
+         return(invisible(self))
+       } else {
+         stop("No filter_scan_function set. You need to run `generate_filter_scan_function` first!")
+       }
      },
 
      #' @field filter_scan_function where the added filter scan function will live.

@@ -18,6 +18,8 @@
 #'   library(ggplot2)
 #'   library(patchwork)
 #'   sc_char$load_file()
+#'   sc_char$generate_filter_scan_function()
+#'   sc_char$generate_choose_frequency_model_function()
 #'   sc_char$prepare_mzml_data()
 #'   sc_char$check_frequency_model()
 #'
@@ -41,8 +43,6 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
       log_message("Loading mzml data ...")
       self$sc_zip$sc_mzml$frequency_fit_description = self$frequency_fit_description
       self$sc_zip$sc_mzml$mz_fit_description = self$mz_fit_description
-      self$sc_zip$sc_mzml$filter_remove_outlier_scans = self$filter_remove_outlier_scans
-      self$sc_zip$sc_mzml$choose_single_frequency_model = self$choose_single_frequency_model
     },
 
     #' @field found_peaks peaks found by a function
@@ -51,11 +51,23 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
     #' @field id a holder for the ID of the sample
     id = NULL,
 
-    #' @field filter_remove_outlier_scans function to be used for filtering scans, see [filter_remove_outlier_scans_default] as an example
-    filter_remove_outlier_scans = NULL,
+    #' @description
+    #'
+    #' Filter the scans in data.
+    filter_scans = function()
+    {
+      self$sc_zip$sc_mzml$filter_scans()
+      invisible(self)
+    },
 
-    #' @field choose_single_frequency_model function to be used to choose a single model for frequency conversion, see [choose_single_frequency_model_default] as an example
-    choose_single_frequency_model = NULL,
+    #' @description
+    #'
+    #' Choose the single frequency model.
+    choose_frequency_model = function()
+    {
+      self$sc_zip$sc_mzml$choose_frequency_model()
+      invisible(self)
+    },
 
     #' @field frequency_fit_description the model for conversion to frequency
     frequency_fit_description = NULL,
@@ -75,8 +87,8 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
     prepare_mzml_data = function(){
       self$sc_zip$sc_mzml$extract_mzml_data()
       self$sc_zip$sc_mzml$predict_frequency()
-      self$sc_zip$sc_mzml = self$sc_zip$sc_mzml$filter_remove_outlier_scans(self$sc_zip$sc_mzml)
-      self$sc_zip$sc_mzml = self$sc_zip$sc_mzml$choose_single_frequency_model(self$sc_zip$sc_mzml)
+      self$sc_zip$sc_mzml = self$sc_zip$sc_mzml$filter_scans()
+      self$sc_zip$sc_mzml = self$sc_zip$sc_mzml$choose_frequency_model()
     },
 
     #' @description
@@ -97,17 +109,22 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
 
     #' @description
     #' Sets the scan filtering and check for outlier function.
-    #' @param filter_remove_outlier_scans the function to remove outlier scans
-    set_filter_remove_outlier_scans = function(filter_remove_outlier_scans){
-      self$sc_zip$sc_mzml$filter_remove_outlier_scans = filter_remove_outlier_scans
+    #' @param rtime retention time limits of scans to keep
+    #' @param y.freq y-frequency coefficient limits of scans to keep (NA)
+    #' @param f_function a full function to set as the filtering function
+    #'
+    generate_filter_scan_function = function(rtime = NA, y.freq = NA, f_function = NULL){
+      self$sc_zip$sc_mzml$generate_filter_scan_function(rtime = rtime,
+                                                        y.freq = y.freq,
+                                                        f_function = f_function)
       invisible(self)
     },
 
     #' @description
     #' Sets the function for choosing a single frequency model
-    #' @param choose_single_frequency_model the function for choosing a single model
-    set_choose_single_frequency_model = function(choose_single_frequency_model){
-      self$sc_zip$sc_mzml$choose_single_frequency_model = choose_single_frequency_model
+    #' @param f_function the function for choosing a single model
+    generate_choose_frequency_model_function = function(f_function = NULL){
+      self$sc_zip$sc_mzml$generate_choose_frequency_model_function(f_function = f_function)
       invisible(self)
     },
 
@@ -200,9 +217,14 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
 
     #' @description
     #' Runs all of the pieces for peak characterization in order
-    run_all = function(){
+    #' @param filter_scan_function the scan filtering function
+    #' @param choose_frequency_model_function the function for choosing a frequency model
+    run_all = function(filter_scan_function = NULL,
+                       choose_frequency_model_function = NULL){
       self$load_file()
       self$sc_peak_region_finder$start_time = Sys.time()
+      self$generate_filter_scan_function(f_function = filter_scan_function)
+      self$generate_choose_frequency_model_function(f_function = choose_frequency_model_function)
       self$prepare_mzml_data()
       self$find_peaks()
       self$summarize()
@@ -264,8 +286,8 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
                          temp_loc = tempfile("scpcms"),
                          frequency_fit_description = NULL,
                          mz_fit_description = NULL,
-                         filter_remove_outlier_scans = generate_scan_outlier_filter(rtime = NA, y.freq = NA),
-                         choose_single_frequency_model = choose_single_frequency_model_default,
+                         filter_remove_outlier_scans = NULL,
+                         choose_single_frequency_model = NULL,
                          sc_peak_region_finder = NULL,
                          calculate_peak_area = FALSE
                          ){

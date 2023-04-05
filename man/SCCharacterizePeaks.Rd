@@ -21,6 +21,8 @@ Peak characterization associates data with the \code{SCZip},
   library(ggplot2)
   library(patchwork)
   sc_char$load_file()
+  sc_char$generate_filter_scan_function()
+  sc_char$generate_choose_frequency_model_function()
   sc_char$prepare_mzml_data()
   sc_char$check_frequency_model()
 
@@ -37,10 +39,6 @@ Peak characterization associates data with the \code{SCZip},
 \item{\code{found_peaks}}{peaks found by a function}
 
 \item{\code{id}}{a holder for the ID of the sample}
-
-\item{\code{filter_remove_outlier_scans}}{function to be used for filtering scans, see \link{filter_remove_outlier_scans_default} as an example}
-
-\item{\code{choose_single_frequency_model}}{function to be used to choose a single model for frequency conversion, see \link{choose_single_frequency_model_default} as an example}
 
 \item{\code{frequency_fit_description}}{the model for conversion to frequency}
 
@@ -66,11 +64,13 @@ Peak characterization associates data with the \code{SCZip},
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-SCCharacterizePeaks-load_file}{\code{SCCharacterizePeaks$load_file()}}
+\item \href{#method-SCCharacterizePeaks-filter_scans}{\code{SCCharacterizePeaks$filter_scans()}}
+\item \href{#method-SCCharacterizePeaks-choose_frequency_model}{\code{SCCharacterizePeaks$choose_frequency_model()}}
 \item \href{#method-SCCharacterizePeaks-prepare_mzml_data}{\code{SCCharacterizePeaks$prepare_mzml_data()}}
 \item \href{#method-SCCharacterizePeaks-set_frequency_fit_description}{\code{SCCharacterizePeaks$set_frequency_fit_description()}}
 \item \href{#method-SCCharacterizePeaks-set_mz_fit_description}{\code{SCCharacterizePeaks$set_mz_fit_description()}}
-\item \href{#method-SCCharacterizePeaks-set_filter_remove_outlier_scans}{\code{SCCharacterizePeaks$set_filter_remove_outlier_scans()}}
-\item \href{#method-SCCharacterizePeaks-set_choose_single_frequency_model}{\code{SCCharacterizePeaks$set_choose_single_frequency_model()}}
+\item \href{#method-SCCharacterizePeaks-generate_filter_scan_function}{\code{SCCharacterizePeaks$generate_filter_scan_function()}}
+\item \href{#method-SCCharacterizePeaks-generate_choose_frequency_model_function}{\code{SCCharacterizePeaks$generate_choose_frequency_model_function()}}
 \item \href{#method-SCCharacterizePeaks-predict_frequency}{\code{SCCharacterizePeaks$predict_frequency()}}
 \item \href{#method-SCCharacterizePeaks-check_frequency_model}{\code{SCCharacterizePeaks$check_frequency_model()}}
 \item \href{#method-SCCharacterizePeaks-get_frequency_data}{\code{SCCharacterizePeaks$get_frequency_data()}}
@@ -94,6 +94,26 @@ Peak characterization associates data with the \code{SCZip},
 Loads the mzml data into the \code{SCZip}
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$load_file()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-filter_scans"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-filter_scans}{}}}
+\subsection{Method \code{filter_scans()}}{
+Filter the scans in data.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$filter_scans()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-choose_frequency_model"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-choose_frequency_model}{}}}
+\subsection{Method \code{choose_frequency_model()}}{
+Choose the single frequency model.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$choose_frequency_model()}\if{html}{\out{</div>}}
 }
 
 }
@@ -142,39 +162,43 @@ Set the mz fit description
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-SCCharacterizePeaks-set_filter_remove_outlier_scans"></a>}}
-\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-set_filter_remove_outlier_scans}{}}}
-\subsection{Method \code{set_filter_remove_outlier_scans()}}{
+\if{html}{\out{<a id="method-SCCharacterizePeaks-generate_filter_scan_function"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-generate_filter_scan_function}{}}}
+\subsection{Method \code{generate_filter_scan_function()}}{
 Sets the scan filtering and check for outlier function.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$set_filter_remove_outlier_scans(
-  filter_remove_outlier_scans
+\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$generate_filter_scan_function(
+  rtime = NA,
+  y.freq = NA,
+  f_function = NULL
 )}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{filter_remove_outlier_scans}}{the function to remove outlier scans}
+\item{\code{rtime}}{retention time limits of scans to keep}
+
+\item{\code{y.freq}}{y-frequency coefficient limits of scans to keep (NA)}
+
+\item{\code{f_function}}{a full function to set as the filtering function}
 }
 \if{html}{\out{</div>}}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-SCCharacterizePeaks-set_choose_single_frequency_model"></a>}}
-\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-set_choose_single_frequency_model}{}}}
-\subsection{Method \code{set_choose_single_frequency_model()}}{
+\if{html}{\out{<a id="method-SCCharacterizePeaks-generate_choose_frequency_model_function"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-generate_choose_frequency_model_function}{}}}
+\subsection{Method \code{generate_choose_frequency_model_function()}}{
 Sets the function for choosing a single frequency model
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$set_choose_single_frequency_model(
-  choose_single_frequency_model
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$generate_choose_frequency_model_function(f_function = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{choose_single_frequency_model}}{the function for choosing a single model}
+\item{\code{f_function}}{the function for choosing a single model}
 }
 \if{html}{\out{</div>}}
 }
@@ -312,8 +336,8 @@ Creates a new \code{SCCharacterizePeaks} class
   temp_loc = tempfile("scpcms"),
   frequency_fit_description = NULL,
   mz_fit_description = NULL,
-  filter_remove_outlier_scans = generate_scan_outlier_filter(rtime = NA, y.freq = NA),
-  choose_single_frequency_model = choose_single_frequency_model_default,
+  filter_remove_outlier_scans = NULL,
+  choose_single_frequency_model = NULL,
   sc_peak_region_finder = NULL,
   calculate_peak_area = FALSE
 )}\if{html}{\out{</div>}}

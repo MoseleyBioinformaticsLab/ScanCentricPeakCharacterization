@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
 # ScanCentricPeakCharacterization
 
 
-The goal of the ScanCentricPeakCharacterization package is to facilitate scan-centric, frequency based, peak characterization of profile level, multi-scan, direct-injection Fourier-transform mass spectrometry data.
+The goal of the ScanCentricPeakCharacterization (SCPC) package is to facilitate scan-centric, frequency based, peak characterization of profile level, multi-scan, direct-injection Fourier-transform mass spectrometry data.
 
 You can read more about the merits of this scan-centric method in:
 
@@ -39,7 +39,7 @@ Please contact us even if you aren't sure what would be required for licensing, 
 
 ## Installation
 
-You can install ScanCentricPeakCharacterization from [GitHub](https://github.com/) with:
+You can install SCPC from [GitHub](https://github.com/) with:
 
 ``` r
 # install.packages("remotes")
@@ -111,9 +111,179 @@ And we can verify that with a plot of the m/z vs frequency and their predicted v
 mzml_lipid$check_frequency_model()
 ```
 
-See the example of `SCRaw` below to see how we can change the model being used.
+See the example of `SCMzml` below to see how we can change the model being used.
 
 ## Basic Objects and Classes
+
+A note about the assumptions baked into SCPC:
+
+* Data is acquired in multiple, direct-injection scans (i.e. there is no chromatography component).
+* The scans are not aggregated together.
+* The data is in **profile mode**, not centroided.
+* The M/Z range for each scan is identical.
+* The data is in an open format supported by `MSnbase` and `mzR`.
+
+### SCMzml
+
+We assume `mzML` is the most likely mass-spectrometer format, and `SCMzml` is an R6 container around the `mzML` file (although it should work with **any** of the formats supported by `MSnbase`).
+It has basic functionality for loading the `mzML` data using `MSnbase`, filtering out scans that are not required, and converting the M/Z to frequency space for subsequent peak detection.
+
+It is good to check a few samples using `SCMzml` before peak characterization.
+This is especially important if you need to define custom scan filtering and choosing a single frequency model before attempting full peak characterization.
+
+Let's go through some of it using the example file included with SCPC.
+This sample is a lipidomics sample acquired on a Thermo-Fisher tribrid Orbitrap Fusion over 15 minutes, with a combination of MS1 and MS2 scans, acquired in profile mode.
+It has been filtered to a subset of M/Z and total scans to save space.
+The first 7.5 minutes are the MS1 primary scans, and the remaining 7.5 minutes are combination of MS1 and MS2 scans of the highest intensity M/Z in the MS1 primary scans.
+
+#### Load the Data
+
+```{r}
+#| label: load-data
+lipid_sample = system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization")
+sc_mzml = SCMzml$new(lipid_sample)
+```
+
+After instantiating the object, we extract the data into a list of data.frames that make it easier to work with.
+This may change over time to use more efficient data structures.
+
+```{r}
+#| label: extract-mzml
+sc_mzml$extract_mzml_data()
+```
+
+#### Examine the Scan Level Information
+
+We can see what is reported at the scan level in the mzML data itself.
+
+```{r}
+#| label: show-scans
+head(sc_mzml$scan_info) |>
+  gt::gt()
+```
+
+```{r}
+#| label: show-data
+head(sc_mzml$mzml_df_data[[1]]) |>
+  gt::gt()
+```
+
+#### Frequency and M/Z Models
+
+As discussed above (see [Theory](#theory)), SCPC is based on the idea that we should work in a pseudo-frequency space, which is achieved by calculating an initial frequency based on the M/Z spacing, and then fit that to a model based on the geometry of the Orbitrap.
+
+For Thermo Orbitrap (Fusion and Fusion Lumos), that our lab primarily uses, this model looks like:
+
+$$frequency = a + \frac{x}{mz} +  \frac{y}{\sqrt{mz}} + \frac{z}{\sqrt[3]{mz}}$$
+
+In contrast, for Bruker SolariX, the model has one fewer term:
+
+$$frequency = a + \frac{x}{mz} +  \frac{y}{\sqrt{mz}}$$
+
+```{r}
+#| label: predict-frequency
+sc_mzml$predict_frequency()
+
+sc_mzml$scan_info |>
+  head() |>
+  gt::gt()
+
+sc_mzml$mzml_df_data[[1]] |>
+  head() |>
+  gt::gt()
+```
+
+We can see a bunch more information added to the scan level summary data and the M/Z data.frame after we predict frequency in each scan.
+
+We can check the frequency fit using `check_frequency`.
+
+```{r}
+#| label: check-frequency
+sc_mzml$check_frequency_model()
+```
+
+What we've plotted are for a single scan:
+
+* The M/Z and the calculated frequency (black), and the fit line according to the model above;
+* The calculated frequency from M/Z points, and the predicted frequency after fitting a model, as well as the 1 - 1 line (red);
+* Calculated - predicted frequency as a function of M/Z
+
+For all scans, we have the median and maximum absolute deviation (MAD) of the calculated - predicted residuals.
+
+#### Filter Scans
+
+Next we set up our filter scans function.
+Let's plot the scans first.
+
+```{r}
+#| label: scan-info-plot
+sc_mzml$scan_info |>
+  ggplot(aes(x = rtime, xend = rtime,
+             y = 0, yend = tic,
+             color = y.freq)) +
+  geom_segment()
+```
+
+We've plotted the scans by their *retention time* (rtime), and their height is the *total intensity chromatogram* (tic), and colored by the value of the *y frequency term* (y.freq).
+
+For **this** data, we only want those scans below an rtime of 450, and with a y.freq >= 2.9e7.
+After using these criteria, the default function also uses `boxplot.stats` on the y.freq term to check for possible outlier scans.
+
+```{r}
+#| label: create-filter-scans
+sc_mzml$generate_filter_scan_function(rtime = c(NA, 450),
+                                      y.freq = c(2.9e7, NA))
+sc_mzml$filter_scans()
+```
+
+Now we can see which scans are being excluded with this filter.
+
+```{r}
+#| label: filter-scans-plot
+sc_mzml$scan_info |>
+  head() |>
+  gt::gt()
+
+sc_mzml$scan_info |>
+  ggplot(aes(x = rtime, xend = rtime,
+             y = 0, yend = tic,
+             color = keep)) +
+  geom_segment()
+```
+
+Changing the filters here using variations of `rtime` and `y.freq` should be simple.
+If you have more involved needs, you can write your own filtering function.
+`filter_scans_builtin` is another example of a function you can use as a template.
+
+If you want to use a custom function (named *my_custom_filter*), you can add it like this:
+
+```{r}
+#| label: filter-scans-custom
+#| eval: false
+sc_mzml$generate_filter_scan_function(f_function = my_custom_filter)
+```
+
+#### Choose Frequency Model
+
+After filtering scans, we need to pick a single frequency model.
+Our [publication](https://doi.org/10.3390/metabo12060515) showed using each scan's own model is a bad idea, and we don't advise using some conglomeration of models either.
+Instead, the default is to take the model with the y-term closest to the median of all the y-terms.
+
+```{r}
+#| label: choose-model
+sc_mzml$generate_choose_frequency_model_function()
+sc_mzml$choose_frequency_model()
+sc_mzml$frequency_coefficients
+```
+
+#### Convert to Frequency
+
+Finally, we can convert our M/Z data to frequency for use in peak characterization.
+
+```{r}
+#| label: convert-frequency
+sc_mzml$convert_to_frequency()
+```
 
 ### SCCharacterizePeaks
 
@@ -123,86 +293,37 @@ See the example of `SCRaw` below to see how we can change the model being used.
 * the `SCMzml` object that loads mzml data, transforms it to frequency space, and filters out scans that don't seem to belong;
 * the `SCPeakRegion` and `SCPeakRegionFinder` that actually do all of the peak characterization.
 
-It also has the ability to do the first preparation steps of the data and check that the frequency model is appropriate.
-
 Let's give an example using an example lipid file.
+This chunk is **not** evaluated due to peak characterization taking so long.
 
-```{r example_char}
+```{r example_char, eval = FALSE}
 lipid_sample = system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization")
 sc_char = SCCharacterizePeaks$new(lipid_sample, out_file = here::here("lipid_sample.zip"))
 
 sc_char$load_file()
+sc_char$generate_filter_scan_function(rtime = c(NA, 450),
+                                      y.freq = c(2.9e7, NA))
+sc_char$generate_choose_frequency_model_function()
 sc_char$prepare_mzml_data()
-```
-
-#### Check Frequency Model
-
-And now we can check that our frequency model should work for the rest of the steps.
-
-```{r check_frequency}
-sc_char$check_frequency_model()
-```
-
-If the frequency model was wrong, then we should instantiate a new one with a different model.
-
-```{r example_char2}
-freq_model = c("a.freq" = 0, "x.freq" = -1, "y.freq" = -1/2, "z.freq" = -1/3)
-freq_model2 = c("a.freq" = 0, "x.freq" = -1, "y.freq" = -1/3)
-
-sc_char$set_frequency_fit_description(freq_model2)
-sc_char$predict_frequency()
-
-sc_char$check_frequency_model()
-```
-
-This model is definitely incorrect.
-We can see this from the plot of residuals by m/z, and the MAD (median absolute deviations) and median differences of the residuals across the scans are very, very high.
-
-```{r reset}
-sc_char$set_frequency_fit_description(freq_model)
-sc_char$predict_frequency()
-```
-
-#### Check Scans Kept
-
-We can also check which peaks were excluded by examining the `scan_info` data.frame.
-
-```{r check_scans}
-scan_info = sc_char$scan_info()
-head(scan_info)
-
-scan_info %>%
-  ggplot(aes(x = rtime, xend = rtime, y = 0, yend = tic, color = keep)) +
-  geom_segment()
-```
-
-We can see that several scans were excluded by being too high in their retention time (rtime), and then two were outliers based on the statistics of the frequency square root coefficient.
-
-If this isn't doing what we want, we can define a different scan-filtering function that does more along the lines of what we want. See the documentation about `add_scan_info()` using `?add_scan_info` to see what is generally available.
-
-#### Run Peak Characterization
-
-Once we are happy with how we have set up the `SCCharacterizePeaks` object, we can run the peak characterization.
-
-```{r run_characterization, eval = FALSE}
-# not run
 sc_char$find_peaks()
+sc_char$summarize()
+sc_char$save_peaks()
+sc_char$write_zip()
 ```
 
 #### Run Everything
 
-If you've already examined the model, and have your function for filtering scans all set up, then you can run everything on your sample rather quickly using this simple command:
+If you have a large number of samples to run, and you know you will be using the same functions for filtering scans and choosing the frequency model, you can use the `run_all` instead.
+It takes two arguments, the `filter_scan_function`, and the `choose_frequency_model_function`.
 
 ```{r run_everything, eval = FALSE}
 # not run
 sc_char = SCCharacterizePeaks$new("file.mzML", out_file = "file.zip")
-sc_char$run_all()
+sc_char$run_all(filter_scan_function = custom_filter,
+                choose_frequency_model_function = custom_frequency_model)
 ```
 
-### SCMzml
-
-`SCMzml` is responsible for loading the raw data, holding per-scan metadata, extracting the scan-level m/z and intensity, converting them to frequency, and filtering any scans out.
-Although the user should not have to interact with it much, and **normally** it is controlled by `SCCharacterizePeaks`, we mention it here so that the user knows it exists.
+You should see the vignette on custom functions if you want to go this route.
 
 ### SCPeakRegionFinder
 
@@ -220,3 +341,11 @@ It is controlled by `SCPeakRegionFinder`.
 We wanted a fairly generic way to store the original mzML file, any metadata generated about it, the binary output of `SCPeakRegionFinder`, and a JSONized peak list that can be used for assignment.
 What we decided on was a simple zip file that keeps those objects together.
 When we create a new `SCZip`, we actually create a temp directory, and move all the data there, and unzip it so that it is easily accessible and pieces can be modified easily.
+
+For example, we can see where the temp data lives for our previously created `sc_char` object.
+
+```{r}
+#| label: show-temp
+sc_char$temp_loc
+dir(sc_char$temp_loc)
+```
