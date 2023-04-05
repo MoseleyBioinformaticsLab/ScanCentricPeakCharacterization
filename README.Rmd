@@ -12,6 +12,10 @@ knitr::opts_chunk$set(
   comment = "#>",
   fig.path = "man/figures/README-",
   out.width = "100%",
+  dev = "ragg_png",
+  dpi = 600,
+  fig.width = 12,
+  fig.height = 8,
   message = FALSE,
   warning = FALSE
 )
@@ -57,7 +61,7 @@ library(ScanCentricPeakCharacterization)
 library(dplyr)
 library(patchwork)
 library(ggplot2)
-theme_set(cowplot::theme_cowplot())
+#theme_set(cowplot::theme_cowplot())
 ```
 
 ## Theory
@@ -154,13 +158,15 @@ sc_mzml$extract_mzml_data()
 
 #### Examine the Scan Level Information
 
-We can see what is reported at the scan level in the mzML data itself.
+We can see what is reported at the scan level:
 
 ```{r}
 #| label: show-scans
 head(sc_mzml$scan_info) |>
   gt::gt()
 ```
+
+And in the data.frame created from the mzML data (here is a single scan):
 
 ```{r}
 #| label: show-data
@@ -170,7 +176,7 @@ head(sc_mzml$mzml_df_data[[1]]) |>
 
 #### Frequency and M/Z Models
 
-As discussed above (see [Theory](#theory)), SCPC is based on the idea that we should work in a pseudo-frequency space, which is achieved by calculating an initial frequency based on the M/Z spacing, and then fit that to a model based on the geometry of the Orbitrap.
+As discussed above (see [Theory](#theory)), SCPC is based on the idea that we should work in a pseudo-frequency space, which is achieved by calculating an initial frequency based on the M/Z spacing, and then fit that to a model based on the geometry of the Orbitrap or ICR.
 
 For Thermo Orbitrap (Fusion and Fusion Lumos), that our lab primarily uses, this model looks like:
 
@@ -180,14 +186,33 @@ In contrast, for Bruker SolariX, the model has one fewer term:
 
 $$frequency = a + \frac{x}{mz} +  \frac{y}{\sqrt{mz}}$$
 
+Note how these models are encoded, the (-) indicates a fraction, and the actual fraction indicates a root (either square or cube in these cases):
+
+```{r}
+#| label: example-models
+# thermo fusion model:
+thermo = c("a.freq" = 0, "x.freq" = -1, "y.freq" = -1/2, "z.freq" = -1/3)
+
+# bruker
+bruker = c("a.freq" = 0, "x.freq" = -1, "y.freq" = -1/2)
+```
+
 ```{r}
 #| label: predict-frequency
 sc_mzml$predict_frequency()
+```
 
+Here is the scan information after prediction, it now has model terms related to the above equations:
+
+```{r}
 sc_mzml$scan_info |>
   head() |>
   gt::gt()
+```
 
+And the mz data.frame now has frequency related data as well:
+
+```{r}
 sc_mzml$mzml_df_data[[1]] |>
   head() |>
   gt::gt()
@@ -209,6 +234,32 @@ What we've plotted are for a single scan:
 * Calculated - predicted frequency as a function of M/Z
 
 For all scans, we have the median and maximum absolute deviation (MAD) of the calculated - predicted residuals.
+
+#### Changing the Frequency Model
+
+We can change the frequency model and recheck it easily.
+Let's use a model where we change the square root to a cube root.
+
+```{r}
+#| label: change-model
+correct_model = c("a.freq" = 0, "x.freq" = -1, "y.freq" = -1/2, "z.freq" = -1/3)
+off_model = c("a.freq" = 0, "x.freq" = -1, "y.freq" = -1/3)
+
+sc_mzml$frequency_fit_description = off_model
+sc_mzml$predict_frequency()
+sc_mzml$check_frequency_model()
+```
+
+From this diagram, we are pretty sure that the model is incorrect for our instrument.
+
+Before proceeding, let's revert it.
+
+```{r}
+#| label: revert-model
+sc_mzml$frequency_fit_description = correct_model
+sc_mzml$predict_frequency()
+```
+
 
 #### Filter Scans
 
@@ -239,11 +290,14 @@ sc_mzml$filter_scans()
 Now we can see which scans are being excluded with this filter.
 
 ```{r}
-#| label: filter-scans-plot
+#| label: filter-scans-table
 sc_mzml$scan_info |>
   head() |>
   gt::gt()
+```
 
+```{r}
+#| label: filter-scans-plot
 sc_mzml$scan_info |>
   ggplot(aes(x = rtime, xend = rtime,
              y = 0, yend = tic,
@@ -296,11 +350,15 @@ sc_mzml$convert_to_frequency()
 Let's give an example using an example lipid file.
 This chunk is **not** evaluated due to peak characterization taking so long.
 
-```{r example_char, eval = FALSE}
+```{r example_char}
 lipid_sample = system.file("extdata", "lipid_example.mzML", package = "ScanCentricPeakCharacterization")
 sc_char = SCCharacterizePeaks$new(lipid_sample, out_file = here::here("lipid_sample.zip"))
-
 sc_char$load_file()
+```
+
+```{r}
+#| label: run-all
+#| eval: false
 sc_char$generate_filter_scan_function(rtime = c(NA, 450),
                                       y.freq = c(2.9e7, NA))
 sc_char$generate_choose_frequency_model_function()
