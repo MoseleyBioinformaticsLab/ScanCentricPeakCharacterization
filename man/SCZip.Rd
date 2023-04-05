@@ -51,24 +51,24 @@ for carrying out the various steps of an analysis, including peak finding.
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-load_mzml}{\code{SCZip$load_mzml()}}
-\item \href{#method-load_sc_peak_region_finder}{\code{SCZip$load_sc_peak_region_finder()}}
-\item \href{#method-save_json}{\code{SCZip$save_json()}}
-\item \href{#method-save_sc_peak_region_finder}{\code{SCZip$save_sc_peak_region_finder()}}
-\item \href{#method-load_peak_list}{\code{SCZip$load_peak_list()}}
-\item \href{#method-compare_mzml_corresponded_densities}{\code{SCZip$compare_mzml_corresponded_densities()}}
-\item \href{#method-new}{\code{SCZip$new()}}
-\item \href{#method-show_temp_dir}{\code{SCZip$show_temp_dir()}}
-\item \href{#method-write_zip}{\code{SCZip$write_zip()}}
-\item \href{#method-cleanup}{\code{SCZip$cleanup()}}
-\item \href{#method-finalize}{\code{SCZip$finalize()}}
-\item \href{#method-add_peak_list}{\code{SCZip$add_peak_list()}}
-\item \href{#method-clone}{\code{SCZip$clone()}}
+\item \href{#method-SCZip-load_mzml}{\code{SCZip$load_mzml()}}
+\item \href{#method-SCZip-load_sc_peak_region_finder}{\code{SCZip$load_sc_peak_region_finder()}}
+\item \href{#method-SCZip-save_json}{\code{SCZip$save_json()}}
+\item \href{#method-SCZip-save_sc_peak_region_finder}{\code{SCZip$save_sc_peak_region_finder()}}
+\item \href{#method-SCZip-load_peak_list}{\code{SCZip$load_peak_list()}}
+\item \href{#method-SCZip-compare_mzml_corresponded_densities}{\code{SCZip$compare_mzml_corresponded_densities()}}
+\item \href{#method-SCZip-new}{\code{SCZip$new()}}
+\item \href{#method-SCZip-show_temp_dir}{\code{SCZip$show_temp_dir()}}
+\item \href{#method-SCZip-write_zip}{\code{SCZip$write_zip()}}
+\item \href{#method-SCZip-cleanup}{\code{SCZip$cleanup()}}
+\item \href{#method-SCZip-finalize}{\code{SCZip$finalize()}}
+\item \href{#method-SCZip-add_peak_list}{\code{SCZip$add_peak_list()}}
+\item \href{#method-SCZip-clone}{\code{SCZip$clone()}}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-load_mzml"></a>}}
-\if{latex}{\out{\hypertarget{method-load_mzml}{}}}
+\if{html}{\out{<a id="method-SCZip-load_mzml"></a>}}
+\if{latex}{\out{\hypertarget{method-SCZip-load_mzml}{}}}
 \subsection{Method \code{load_mzml()}}{
 Loads the mzML file
 \subsection{Usage}{
@@ -77,8 +77,8 @@ Loads the mzML file
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-load_sc_peak_region_finder"></a>}}
-\if{latex}{\out{\hypertarget{method-load_sc_peak_region_finder}{}}}
+\if{html}{\out{<a id="method-SCZip-load_sc_peak_region_finder"></a>}}
+\if{latex}{\out{\hypertarget{method-SCZip-load_sc_peak_region_finder}{}}}
 \subsection{Method \code{load_sc_peak_region_finder()}}{
 Loads the SCPeakRegionFinder object
 \subsection{Usage}{
@@ -87,8 +87,8 @@ Loads the SCPeakRegionFinder object
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-save_json"></a>}}
-\if{latex}{\out{\hypertarget{method-save_json}{}}}
+\if{html}{\out{<a id="method-SCZip-save_json"></a>}}
+\if{latex}{\out{\hypertarget{method-SCZip-save_json}{}}}
 \subsection{Method \code{save_json()}}{
 Save the jsonized summary out to actual json files
 \subsection{Usage}{
@@ -97,8 +97,8 @@ Save the jsonized summary out to actual json files
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-save_sc_peak_region_finder"></a>}}
-\if{latex}{\out{\hypertarget{method-save_sc_peak_region_finder}{}}}
+\if{html}{\out{<a id="method-SCZip-save_sc_peak_region_finder"></a>}}
+\if{latex}{\out{\hypertarget{method-SCZip-save_sc_peak_region_finder}{}}}
 \subsection{Method \code{save_sc_peak_region_finder()}}{
 Saves the SCPeakRegionFinder binary object
 \subsection{Usage}{
@@ -107,8 +107,8 @@ Saves the SCPeakRegionFinder binary object
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-load_peak_list"></a>}}
-\if{latex}{\out{\hypertarget{method-load_peak_list}{}}}
+\if{html}{\out{<a id="method-SCZip-load_peak_list"></a>}}
+\if{latex}{\out{\hypertarget{method-SCZip-load_peak_list}{}}}
 \subsection{Method \code{load_peak_list()}}{
 loads just the peak list data-frame instead of peak region finder
 \subsection{Usage}{
@@ -117,8 +117,8 @@ loads just the peak list data-frame instead of peak region finder
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-compare_mzml_corresponded_densities"></a>}}
-\if{latex}{\out{\hypertarget{method-compare_mzml_corresponded_densities}{}}}
+\if{html}{\out{<a id="method-SCZip-compare_mzml_corresponded_densities"></a>}}
+\if{latex}{\out{\hypertarget{method-SCZip-compare_mzml_corresponded_densities}{}}}
 \subsection{Method \code{compare_mzml_corresponded_densities()}}{
 compare peak densities
 \subsection{Usage}{
@@ -142,8 +142,8 @@ compare peak densities
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-new"></a>}}
-\if{latex}{\out{\hypertarget{method-new}{}}}
+\if{html}{\out{<a id="method-SCZip-new"></a>}}
+\if{latex}{\out{\hypertarget{method-SCZip-new}{}}}
 \subsection{Method \code{new()}}{
 Create a new SCZip object.
 \subsection{Usage}{
@@ -176,8 +176,8 @@ Create a new SCZip object.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-show_temp_dir"></a>}}
-\if{latex}{\out{\hypertarget{method-show_temp_dir}{}}}
+\if{html}{\out{<a id="method-SCZip-show_temp_dir"></a>}}
+\if{latex}{\out{\hypertarget{method-SCZip-show_temp_dir}{}}}
 \subsection{Method \code{show_temp_dir()}}{
 Show the temp directory where everything is being worked with
 \subsection{Usage}{
@@ -186,8 +186,8 @@ Show the temp directory where everything is being worked with
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-write_zip"></a>}}
-\if{latex}{\out{\hypertarget{method-write_zip}{}}}
+\if{html}{\out{<a id="method-SCZip-write_zip"></a>}}
+\if{latex}{\out{\hypertarget{method-SCZip-write_zip}{}}}
 \subsection{Method \code{write_zip()}}{
 Write the zip file
 \subsection{Usage}{
@@ -203,8 +203,8 @@ Write the zip file
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-cleanup"></a>}}
-\if{latex}{\out{\hypertarget{method-cleanup}{}}}
+\if{html}{\out{<a id="method-SCZip-cleanup"></a>}}
+\if{latex}{\out{\hypertarget{method-SCZip-cleanup}{}}}
 \subsection{Method \code{cleanup()}}{
 delete the temp directory
 \subsection{Usage}{
@@ -213,8 +213,8 @@ delete the temp directory
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-finalize"></a>}}
-\if{latex}{\out{\hypertarget{method-finalize}{}}}
+\if{html}{\out{<a id="method-SCZip-finalize"></a>}}
+\if{latex}{\out{\hypertarget{method-SCZip-finalize}{}}}
 \subsection{Method \code{finalize()}}{
 delete when things are done
 \subsection{Usage}{
@@ -223,8 +223,8 @@ delete when things are done
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-add_peak_list"></a>}}
-\if{latex}{\out{\hypertarget{method-add_peak_list}{}}}
+\if{html}{\out{<a id="method-SCZip-add_peak_list"></a>}}
+\if{latex}{\out{\hypertarget{method-SCZip-add_peak_list}{}}}
 \subsection{Method \code{add_peak_list()}}{
 Add peak list data to the temp directory
 \subsection{Usage}{
@@ -240,8 +240,8 @@ Add peak list data to the temp directory
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-clone}{}}}
+\if{html}{\out{<a id="method-SCZip-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-SCZip-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{

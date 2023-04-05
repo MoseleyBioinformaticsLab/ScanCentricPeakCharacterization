@@ -21,6 +21,8 @@ Peak characterization associates data with the \code{SCZip},
   library(ggplot2)
   library(patchwork)
   sc_char$load_file()
+  sc_char$generate_filter_scan_function()
+  sc_char$generate_choose_frequency_model_function()
   sc_char$prepare_mzml_data()
   sc_char$check_frequency_model()
 
@@ -37,10 +39,6 @@ Peak characterization associates data with the \code{SCZip},
 \item{\code{found_peaks}}{peaks found by a function}
 
 \item{\code{id}}{a holder for the ID of the sample}
-
-\item{\code{filter_remove_outlier_scans}}{function to be used for filtering scans, see \link{filter_remove_outlier_scans_default} as an example}
-
-\item{\code{choose_single_frequency_model}}{function to be used to choose a single model for frequency conversion, see \link{choose_single_frequency_model_default} as an example}
 
 \item{\code{frequency_fit_description}}{the model for conversion to frequency}
 
@@ -65,31 +63,33 @@ Peak characterization associates data with the \code{SCZip},
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-load_file}{\code{SCCharacterizePeaks$load_file()}}
-\item \href{#method-prepare_mzml_data}{\code{SCCharacterizePeaks$prepare_mzml_data()}}
-\item \href{#method-set_frequency_fit_description}{\code{SCCharacterizePeaks$set_frequency_fit_description()}}
-\item \href{#method-set_mz_fit_description}{\code{SCCharacterizePeaks$set_mz_fit_description()}}
-\item \href{#method-set_filter_remove_outlier_scans}{\code{SCCharacterizePeaks$set_filter_remove_outlier_scans()}}
-\item \href{#method-set_choose_single_frequency_model}{\code{SCCharacterizePeaks$set_choose_single_frequency_model()}}
-\item \href{#method-predict_frequency}{\code{SCCharacterizePeaks$predict_frequency()}}
-\item \href{#method-check_frequency_model}{\code{SCCharacterizePeaks$check_frequency_model()}}
-\item \href{#method-get_frequency_data}{\code{SCCharacterizePeaks$get_frequency_data()}}
-\item \href{#method-scan_info}{\code{SCCharacterizePeaks$scan_info()}}
-\item \href{#method-find_peaks}{\code{SCCharacterizePeaks$find_peaks()}}
-\item \href{#method-summarize}{\code{SCCharacterizePeaks$summarize()}}
-\item \href{#method-save_peaks}{\code{SCCharacterizePeaks$save_peaks()}}
-\item \href{#method-write_zip}{\code{SCCharacterizePeaks$write_zip()}}
-\item \href{#method-run_all}{\code{SCCharacterizePeaks$run_all()}}
-\item \href{#method-prep_data}{\code{SCCharacterizePeaks$prep_data()}}
-\item \href{#method-add_regions}{\code{SCCharacterizePeaks$add_regions()}}
-\item \href{#method-run_splitting}{\code{SCCharacterizePeaks$run_splitting()}}
-\item \href{#method-new}{\code{SCCharacterizePeaks$new()}}
-\item \href{#method-clone}{\code{SCCharacterizePeaks$clone()}}
+\item \href{#method-SCCharacterizePeaks-load_file}{\code{SCCharacterizePeaks$load_file()}}
+\item \href{#method-SCCharacterizePeaks-filter_scans}{\code{SCCharacterizePeaks$filter_scans()}}
+\item \href{#method-SCCharacterizePeaks-choose_frequency_model}{\code{SCCharacterizePeaks$choose_frequency_model()}}
+\item \href{#method-SCCharacterizePeaks-prepare_mzml_data}{\code{SCCharacterizePeaks$prepare_mzml_data()}}
+\item \href{#method-SCCharacterizePeaks-set_frequency_fit_description}{\code{SCCharacterizePeaks$set_frequency_fit_description()}}
+\item \href{#method-SCCharacterizePeaks-set_mz_fit_description}{\code{SCCharacterizePeaks$set_mz_fit_description()}}
+\item \href{#method-SCCharacterizePeaks-generate_filter_scan_function}{\code{SCCharacterizePeaks$generate_filter_scan_function()}}
+\item \href{#method-SCCharacterizePeaks-generate_choose_frequency_model_function}{\code{SCCharacterizePeaks$generate_choose_frequency_model_function()}}
+\item \href{#method-SCCharacterizePeaks-predict_frequency}{\code{SCCharacterizePeaks$predict_frequency()}}
+\item \href{#method-SCCharacterizePeaks-check_frequency_model}{\code{SCCharacterizePeaks$check_frequency_model()}}
+\item \href{#method-SCCharacterizePeaks-get_frequency_data}{\code{SCCharacterizePeaks$get_frequency_data()}}
+\item \href{#method-SCCharacterizePeaks-scan_info}{\code{SCCharacterizePeaks$scan_info()}}
+\item \href{#method-SCCharacterizePeaks-find_peaks}{\code{SCCharacterizePeaks$find_peaks()}}
+\item \href{#method-SCCharacterizePeaks-summarize}{\code{SCCharacterizePeaks$summarize()}}
+\item \href{#method-SCCharacterizePeaks-save_peaks}{\code{SCCharacterizePeaks$save_peaks()}}
+\item \href{#method-SCCharacterizePeaks-write_zip}{\code{SCCharacterizePeaks$write_zip()}}
+\item \href{#method-SCCharacterizePeaks-run_all}{\code{SCCharacterizePeaks$run_all()}}
+\item \href{#method-SCCharacterizePeaks-prep_data}{\code{SCCharacterizePeaks$prep_data()}}
+\item \href{#method-SCCharacterizePeaks-add_regions}{\code{SCCharacterizePeaks$add_regions()}}
+\item \href{#method-SCCharacterizePeaks-run_splitting}{\code{SCCharacterizePeaks$run_splitting()}}
+\item \href{#method-SCCharacterizePeaks-new}{\code{SCCharacterizePeaks$new()}}
+\item \href{#method-SCCharacterizePeaks-clone}{\code{SCCharacterizePeaks$clone()}}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-load_file"></a>}}
-\if{latex}{\out{\hypertarget{method-load_file}{}}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-load_file"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-load_file}{}}}
 \subsection{Method \code{load_file()}}{
 Loads the mzml data into the \code{SCZip}
 \subsection{Usage}{
@@ -98,8 +98,28 @@ Loads the mzml data into the \code{SCZip}
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-prepare_mzml_data"></a>}}
-\if{latex}{\out{\hypertarget{method-prepare_mzml_data}{}}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-filter_scans"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-filter_scans}{}}}
+\subsection{Method \code{filter_scans()}}{
+Filter the scans in data.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$filter_scans()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-choose_frequency_model"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-choose_frequency_model}{}}}
+\subsection{Method \code{choose_frequency_model()}}{
+Choose the single frequency model.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$choose_frequency_model()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-prepare_mzml_data"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-prepare_mzml_data}{}}}
 \subsection{Method \code{prepare_mzml_data()}}{
 Prepare the mzml data.
 \subsection{Usage}{
@@ -108,8 +128,8 @@ Prepare the mzml data.
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-set_frequency_fit_description"></a>}}
-\if{latex}{\out{\hypertarget{method-set_frequency_fit_description}{}}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-set_frequency_fit_description"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-set_frequency_fit_description}{}}}
 \subsection{Method \code{set_frequency_fit_description()}}{
 Set the frequency fit description
 \subsection{Usage}{
@@ -125,8 +145,8 @@ Set the frequency fit description
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-set_mz_fit_description"></a>}}
-\if{latex}{\out{\hypertarget{method-set_mz_fit_description}{}}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-set_mz_fit_description"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-set_mz_fit_description}{}}}
 \subsection{Method \code{set_mz_fit_description()}}{
 Set the mz fit description
 \subsection{Usage}{
@@ -142,46 +162,50 @@ Set the mz fit description
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-set_filter_remove_outlier_scans"></a>}}
-\if{latex}{\out{\hypertarget{method-set_filter_remove_outlier_scans}{}}}
-\subsection{Method \code{set_filter_remove_outlier_scans()}}{
+\if{html}{\out{<a id="method-SCCharacterizePeaks-generate_filter_scan_function"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-generate_filter_scan_function}{}}}
+\subsection{Method \code{generate_filter_scan_function()}}{
 Sets the scan filtering and check for outlier function.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$set_filter_remove_outlier_scans(
-  filter_remove_outlier_scans
+\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$generate_filter_scan_function(
+  rtime = NA,
+  y.freq = NA,
+  f_function = NULL
 )}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{filter_remove_outlier_scans}}{the function to remove outlier scans}
+\item{\code{rtime}}{retention time limits of scans to keep}
+
+\item{\code{y.freq}}{y-frequency coefficient limits of scans to keep (NA)}
+
+\item{\code{f_function}}{a full function to set as the filtering function}
 }
 \if{html}{\out{</div>}}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-set_choose_single_frequency_model"></a>}}
-\if{latex}{\out{\hypertarget{method-set_choose_single_frequency_model}{}}}
-\subsection{Method \code{set_choose_single_frequency_model()}}{
+\if{html}{\out{<a id="method-SCCharacterizePeaks-generate_choose_frequency_model_function"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-generate_choose_frequency_model_function}{}}}
+\subsection{Method \code{generate_choose_frequency_model_function()}}{
 Sets the function for choosing a single frequency model
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$set_choose_single_frequency_model(
-  choose_single_frequency_model
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$generate_choose_frequency_model_function(f_function = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{choose_single_frequency_model}}{the function for choosing a single model}
+\item{\code{f_function}}{the function for choosing a single model}
 }
 \if{html}{\out{</div>}}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-predict_frequency"></a>}}
-\if{latex}{\out{\hypertarget{method-predict_frequency}{}}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-predict_frequency"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-predict_frequency}{}}}
 \subsection{Method \code{predict_frequency()}}{
 Run frequency prediction
 \subsection{Usage}{
@@ -190,8 +214,8 @@ Run frequency prediction
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-check_frequency_model"></a>}}
-\if{latex}{\out{\hypertarget{method-check_frequency_model}{}}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-check_frequency_model"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-check_frequency_model}{}}}
 \subsection{Method \code{check_frequency_model()}}{
 Check the frequency model
 \subsection{Usage}{
@@ -200,8 +224,8 @@ Check the frequency model
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-get_frequency_data"></a>}}
-\if{latex}{\out{\hypertarget{method-get_frequency_data}{}}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-get_frequency_data"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-get_frequency_data}{}}}
 \subsection{Method \code{get_frequency_data()}}{
 Get the frequency data from the \code{SCMzml} bits
 \subsection{Usage}{
@@ -210,8 +234,8 @@ Get the frequency data from the \code{SCMzml} bits
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-scan_info"></a>}}
-\if{latex}{\out{\hypertarget{method-scan_info}{}}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-scan_info"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-scan_info}{}}}
 \subsection{Method \code{scan_info()}}{
 Get the \code{SCMzml$scan_info} out
 \subsection{Usage}{
@@ -220,8 +244,8 @@ Get the \code{SCMzml$scan_info} out
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-find_peaks"></a>}}
-\if{latex}{\out{\hypertarget{method-find_peaks}{}}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-find_peaks"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-find_peaks}{}}}
 \subsection{Method \code{find_peaks()}}{
 Do the peak characterization without saving
 \subsection{Usage}{
@@ -230,8 +254,8 @@ Do the peak characterization without saving
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-summarize"></a>}}
-\if{latex}{\out{\hypertarget{method-summarize}{}}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-summarize"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-summarize}{}}}
 \subsection{Method \code{summarize()}}{
 Generates the JSON output summary.
 \subsection{Usage}{
@@ -240,8 +264,8 @@ Generates the JSON output summary.
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-save_peaks"></a>}}
-\if{latex}{\out{\hypertarget{method-save_peaks}{}}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-save_peaks"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-save_peaks}{}}}
 \subsection{Method \code{save_peaks()}}{
 Saves the peaks and JSON to the temp file
 \subsection{Usage}{
@@ -250,8 +274,8 @@ Saves the peaks and JSON to the temp file
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-write_zip"></a>}}
-\if{latex}{\out{\hypertarget{method-write_zip}{}}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-write_zip"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-write_zip}{}}}
 \subsection{Method \code{write_zip()}}{
 Write the zip file
 \subsection{Usage}{
@@ -260,8 +284,8 @@ Write the zip file
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-run_all"></a>}}
-\if{latex}{\out{\hypertarget{method-run_all}{}}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-run_all"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-run_all}{}}}
 \subsection{Method \code{run_all()}}{
 Runs all of the pieces for peak characterization in order
 \subsection{Usage}{
@@ -270,8 +294,8 @@ Runs all of the pieces for peak characterization in order
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-prep_data"></a>}}
-\if{latex}{\out{\hypertarget{method-prep_data}{}}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-prep_data"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-prep_data}{}}}
 \subsection{Method \code{prep_data()}}{
 Loads and preps the data for characterization
 \subsection{Usage}{
@@ -280,8 +304,8 @@ Loads and preps the data for characterization
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-add_regions"></a>}}
-\if{latex}{\out{\hypertarget{method-add_regions}{}}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-add_regions"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-add_regions}{}}}
 \subsection{Method \code{add_regions()}}{
 Adds initial regions for finding real peak containing regions
 \subsection{Usage}{
@@ -290,8 +314,8 @@ Adds initial regions for finding real peak containing regions
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-run_splitting"></a>}}
-\if{latex}{\out{\hypertarget{method-run_splitting}{}}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-run_splitting"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-run_splitting}{}}}
 \subsection{Method \code{run_splitting()}}{
 Does initial region splitting and peak finding in scans
 \subsection{Usage}{
@@ -300,8 +324,8 @@ Does initial region splitting and peak finding in scans
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-new"></a>}}
-\if{latex}{\out{\hypertarget{method-new}{}}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-new"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-new}{}}}
 \subsection{Method \code{new()}}{
 Creates a new \code{SCCharacterizePeaks} class
 \subsection{Usage}{
@@ -312,8 +336,8 @@ Creates a new \code{SCCharacterizePeaks} class
   temp_loc = tempfile("scpcms"),
   frequency_fit_description = NULL,
   mz_fit_description = NULL,
-  filter_remove_outlier_scans = generate_scan_outlier_filter(rtime = NA, y.freq = NA),
-  choose_single_frequency_model = choose_single_frequency_model_default,
+  filter_remove_outlier_scans = NULL,
+  choose_single_frequency_model = NULL,
   sc_peak_region_finder = NULL,
   calculate_peak_area = FALSE
 )}\if{html}{\out{</div>}}
@@ -346,8 +370,8 @@ Creates a new \code{SCCharacterizePeaks} class
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-clone}{}}}
+\if{html}{\out{<a id="method-SCCharacterizePeaks-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-SCCharacterizePeaks-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{

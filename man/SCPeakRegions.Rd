@@ -70,15 +70,15 @@ need to be in}
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-set_min_scan}{\code{SCPeakRegions$set_min_scan()}}
-\item \href{#method-add_data}{\code{SCPeakRegions$add_data()}}
-\item \href{#method-new}{\code{SCPeakRegions$new()}}
-\item \href{#method-clone}{\code{SCPeakRegions$clone()}}
+\item \href{#method-SCPeakRegions-set_min_scan}{\code{SCPeakRegions$set_min_scan()}}
+\item \href{#method-SCPeakRegions-add_data}{\code{SCPeakRegions$add_data()}}
+\item \href{#method-SCPeakRegions-new}{\code{SCPeakRegions$new()}}
+\item \href{#method-SCPeakRegions-clone}{\code{SCPeakRegions$clone()}}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-set_min_scan"></a>}}
-\if{latex}{\out{\hypertarget{method-set_min_scan}{}}}
+\if{html}{\out{<a id="method-SCPeakRegions-set_min_scan"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegions-set_min_scan}{}}}
 \subsection{Method \code{set_min_scan()}}{
 sets the minimum number of scans to use
 \subsection{Usage}{
@@ -87,8 +87,8 @@ sets the minimum number of scans to use
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-add_data"></a>}}
-\if{latex}{\out{\hypertarget{method-add_data}{}}}
+\if{html}{\out{<a id="method-SCPeakRegions-add_data"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegions-add_data}{}}}
 \subsection{Method \code{add_data()}}{
 Adds the data from an SCMzml object to the SCPeakRegion.
 \subsection{Usage}{
@@ -104,8 +104,8 @@ Adds the data from an SCMzml object to the SCPeakRegion.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-new"></a>}}
-\if{latex}{\out{\hypertarget{method-new}{}}}
+\if{html}{\out{<a id="method-SCPeakRegions-new"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegions-new}{}}}
 \subsection{Method \code{new()}}{
 Creates a new SCPeakRegions object
 \subsection{Usage}{
@@ -132,8 +132,8 @@ Creates a new SCPeakRegions object
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-clone}{}}}
+\if{html}{\out{<a id="method-SCPeakRegions-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegions-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{

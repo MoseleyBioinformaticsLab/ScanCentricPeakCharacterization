@@ -54,29 +54,29 @@ in the regions.
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-add_regions}{\code{SCPeakRegionFinder$add_regions()}}
-\item \href{#method-reduce_sliding_regions}{\code{SCPeakRegionFinder$reduce_sliding_regions()}}
-\item \href{#method-split_peak_regions}{\code{SCPeakRegionFinder$split_peak_regions()}}
-\item \href{#method-remove_double_peaks_in_scans}{\code{SCPeakRegionFinder$remove_double_peaks_in_scans()}}
-\item \href{#method-normalize_data}{\code{SCPeakRegionFinder$normalize_data()}}
-\item \href{#method-find_peaks_in_regions}{\code{SCPeakRegionFinder$find_peaks_in_regions()}}
-\item \href{#method-model_mzsd}{\code{SCPeakRegionFinder$model_mzsd()}}
-\item \href{#method-model_heightsd}{\code{SCPeakRegionFinder$model_heightsd()}}
-\item \href{#method-indicate_high_frequency_sd}{\code{SCPeakRegionFinder$indicate_high_frequency_sd()}}
-\item \href{#method-add_data}{\code{SCPeakRegionFinder$add_data()}}
-\item \href{#method-summarize_peaks}{\code{SCPeakRegionFinder$summarize_peaks()}}
-\item \href{#method-add_offset}{\code{SCPeakRegionFinder$add_offset()}}
-\item \href{#method-sort_ascending_mz}{\code{SCPeakRegionFinder$sort_ascending_mz()}}
-\item \href{#method-characterize_peaks}{\code{SCPeakRegionFinder$characterize_peaks()}}
-\item \href{#method-summarize}{\code{SCPeakRegionFinder$summarize()}}
-\item \href{#method-peak_meta}{\code{SCPeakRegionFinder$peak_meta()}}
-\item \href{#method-new}{\code{SCPeakRegionFinder$new()}}
-\item \href{#method-clone}{\code{SCPeakRegionFinder$clone()}}
+\item \href{#method-SCPeakRegionFinder-add_regions}{\code{SCPeakRegionFinder$add_regions()}}
+\item \href{#method-SCPeakRegionFinder-reduce_sliding_regions}{\code{SCPeakRegionFinder$reduce_sliding_regions()}}
+\item \href{#method-SCPeakRegionFinder-split_peak_regions}{\code{SCPeakRegionFinder$split_peak_regions()}}
+\item \href{#method-SCPeakRegionFinder-remove_double_peaks_in_scans}{\code{SCPeakRegionFinder$remove_double_peaks_in_scans()}}
+\item \href{#method-SCPeakRegionFinder-normalize_data}{\code{SCPeakRegionFinder$normalize_data()}}
+\item \href{#method-SCPeakRegionFinder-find_peaks_in_regions}{\code{SCPeakRegionFinder$find_peaks_in_regions()}}
+\item \href{#method-SCPeakRegionFinder-model_mzsd}{\code{SCPeakRegionFinder$model_mzsd()}}
+\item \href{#method-SCPeakRegionFinder-model_heightsd}{\code{SCPeakRegionFinder$model_heightsd()}}
+\item \href{#method-SCPeakRegionFinder-indicate_high_frequency_sd}{\code{SCPeakRegionFinder$indicate_high_frequency_sd()}}
+\item \href{#method-SCPeakRegionFinder-add_data}{\code{SCPeakRegionFinder$add_data()}}
+\item \href{#method-SCPeakRegionFinder-summarize_peaks}{\code{SCPeakRegionFinder$summarize_peaks()}}
+\item \href{#method-SCPeakRegionFinder-add_offset}{\code{SCPeakRegionFinder$add_offset()}}
+\item \href{#method-SCPeakRegionFinder-sort_ascending_mz}{\code{SCPeakRegionFinder$sort_ascending_mz()}}
+\item \href{#method-SCPeakRegionFinder-characterize_peaks}{\code{SCPeakRegionFinder$characterize_peaks()}}
+\item \href{#method-SCPeakRegionFinder-summarize}{\code{SCPeakRegionFinder$summarize()}}
+\item \href{#method-SCPeakRegionFinder-peak_meta}{\code{SCPeakRegionFinder$peak_meta()}}
+\item \href{#method-SCPeakRegionFinder-new}{\code{SCPeakRegionFinder$new()}}
+\item \href{#method-SCPeakRegionFinder-clone}{\code{SCPeakRegionFinder$clone()}}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-add_regions"></a>}}
-\if{latex}{\out{\hypertarget{method-add_regions}{}}}
+\if{html}{\out{<a id="method-SCPeakRegionFinder-add_regions"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegionFinder-add_regions}{}}}
 \subsection{Method \code{add_regions()}}{
 Add the sliding and tiled regions
 \subsection{Usage}{
@@ -85,8 +85,8 @@ Add the sliding and tiled regions
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-reduce_sliding_regions"></a>}}
-\if{latex}{\out{\hypertarget{method-reduce_sliding_regions}{}}}
+\if{html}{\out{<a id="method-SCPeakRegionFinder-reduce_sliding_regions"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegionFinder-reduce_sliding_regions}{}}}
 \subsection{Method \code{reduce_sliding_regions()}}{
 Find the regions most likely to contain real signal
 \subsection{Usage}{
@@ -95,8 +95,8 @@ Find the regions most likely to contain real signal
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-split_peak_regions"></a>}}
-\if{latex}{\out{\hypertarget{method-split_peak_regions}{}}}
+\if{html}{\out{<a id="method-SCPeakRegionFinder-split_peak_regions"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegionFinder-split_peak_regions}{}}}
 \subsection{Method \code{split_peak_regions()}}{
 Split up signal regions by peaks found
 \subsection{Usage}{
@@ -112,8 +112,8 @@ Split up signal regions by peaks found
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-remove_double_peaks_in_scans"></a>}}
-\if{latex}{\out{\hypertarget{method-remove_double_peaks_in_scans}{}}}
+\if{html}{\out{<a id="method-SCPeakRegionFinder-remove_double_peaks_in_scans"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegionFinder-remove_double_peaks_in_scans}{}}}
 \subsection{Method \code{remove_double_peaks_in_scans()}}{
 Check for the presence of two peaks with the same scan number in each
 region and remove them. Any regions with zero peaks left, remove the region.
@@ -123,8 +123,8 @@ region and remove them. Any regions with zero peaks left, remove the region.
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-normalize_data"></a>}}
-\if{latex}{\out{\hypertarget{method-normalize_data}{}}}
+\if{html}{\out{<a id="method-SCPeakRegionFinder-normalize_data"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegionFinder-normalize_data}{}}}
 \subsection{Method \code{normalize_data()}}{
 Normalize the intensity data
 \subsection{Usage}{
@@ -140,8 +140,8 @@ Normalize the intensity data
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-find_peaks_in_regions"></a>}}
-\if{latex}{\out{\hypertarget{method-find_peaks_in_regions}{}}}
+\if{html}{\out{<a id="method-SCPeakRegionFinder-find_peaks_in_regions"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegionFinder-find_peaks_in_regions}{}}}
 \subsection{Method \code{find_peaks_in_regions()}}{
 Find the peaks in the regions.
 \subsection{Usage}{
@@ -150,8 +150,8 @@ Find the peaks in the regions.
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-model_mzsd"></a>}}
-\if{latex}{\out{\hypertarget{method-model_mzsd}{}}}
+\if{html}{\out{<a id="method-SCPeakRegionFinder-model_mzsd"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegionFinder-model_mzsd}{}}}
 \subsection{Method \code{model_mzsd()}}{
 Model the m/z standard deviation.
 \subsection{Usage}{
@@ -160,8 +160,8 @@ Model the m/z standard deviation.
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-model_heightsd"></a>}}
-\if{latex}{\out{\hypertarget{method-model_heightsd}{}}}
+\if{html}{\out{<a id="method-SCPeakRegionFinder-model_heightsd"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegionFinder-model_heightsd}{}}}
 \subsection{Method \code{model_heightsd()}}{
 Model the intensity height standard deviation.
 \subsection{Usage}{
@@ -170,8 +170,8 @@ Model the intensity height standard deviation.
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-indicate_high_frequency_sd"></a>}}
-\if{latex}{\out{\hypertarget{method-indicate_high_frequency_sd}{}}}
+\if{html}{\out{<a id="method-SCPeakRegionFinder-indicate_high_frequency_sd"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegionFinder-indicate_high_frequency_sd}{}}}
 \subsection{Method \code{indicate_high_frequency_sd()}}{
 Look for peaks with higher than expected frequency standard deviation.
 \subsection{Usage}{
@@ -180,8 +180,8 @@ Look for peaks with higher than expected frequency standard deviation.
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-add_data"></a>}}
-\if{latex}{\out{\hypertarget{method-add_data}{}}}
+\if{html}{\out{<a id="method-SCPeakRegionFinder-add_data"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegionFinder-add_data}{}}}
 \subsection{Method \code{add_data()}}{
 Add the data from an SCMzml object to the underlying SCPeakRegions object.
 \subsection{Usage}{
@@ -197,8 +197,8 @@ Add the data from an SCMzml object to the underlying SCPeakRegions object.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-summarize_peaks"></a>}}
-\if{latex}{\out{\hypertarget{method-summarize_peaks}{}}}
+\if{html}{\out{<a id="method-SCPeakRegionFinder-summarize_peaks"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegionFinder-summarize_peaks}{}}}
 \subsection{Method \code{summarize_peaks()}}{
 Summarize the peaks to go into JSON form.
 \subsection{Usage}{
@@ -207,8 +207,8 @@ Summarize the peaks to go into JSON form.
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-add_offset"></a>}}
-\if{latex}{\out{\hypertarget{method-add_offset}{}}}
+\if{html}{\out{<a id="method-SCPeakRegionFinder-add_offset"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegionFinder-add_offset}{}}}
 \subsection{Method \code{add_offset()}}{
 Add an offset based on width in frequency space to m/z to describe how wide the peak is.
 \subsection{Usage}{
@@ -217,8 +217,8 @@ Add an offset based on width in frequency space to m/z to describe how wide the 
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-sort_ascending_mz"></a>}}
-\if{latex}{\out{\hypertarget{method-sort_ascending_mz}{}}}
+\if{html}{\out{<a id="method-SCPeakRegionFinder-sort_ascending_mz"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegionFinder-sort_ascending_mz}{}}}
 \subsection{Method \code{sort_ascending_mz()}}{
 Sort the data in m/z order, as the default is frequency order
 \subsection{Usage}{
@@ -227,8 +227,8 @@ Sort the data in m/z order, as the default is frequency order
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-characterize_peaks"></a>}}
-\if{latex}{\out{\hypertarget{method-characterize_peaks}{}}}
+\if{html}{\out{<a id="method-SCPeakRegionFinder-characterize_peaks"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegionFinder-characterize_peaks}{}}}
 \subsection{Method \code{characterize_peaks()}}{
 Run the overall peak characterization from start to finish.
 \subsection{Usage}{
@@ -237,8 +237,8 @@ Run the overall peak characterization from start to finish.
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-summarize"></a>}}
-\if{latex}{\out{\hypertarget{method-summarize}{}}}
+\if{html}{\out{<a id="method-SCPeakRegionFinder-summarize"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegionFinder-summarize}{}}}
 \subsection{Method \code{summarize()}}{
 Summarize everything for output to the zip file after completion.
 \subsection{Usage}{
@@ -256,8 +256,8 @@ Summarize everything for output to the zip file after completion.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-peak_meta"></a>}}
-\if{latex}{\out{\hypertarget{method-peak_meta}{}}}
+\if{html}{\out{<a id="method-SCPeakRegionFinder-peak_meta"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegionFinder-peak_meta}{}}}
 \subsection{Method \code{peak_meta()}}{
 Generate the meta data that goes into the accompanying JSON file.
 \subsection{Usage}{
@@ -266,8 +266,8 @@ Generate the meta data that goes into the accompanying JSON file.
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-new"></a>}}
-\if{latex}{\out{\hypertarget{method-new}{}}}
+\if{html}{\out{<a id="method-SCPeakRegionFinder-new"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegionFinder-new}{}}}
 \subsection{Method \code{new()}}{
 Make a new SCPeakRegionFinder object.
 \subsection{Usage}{
@@ -327,8 +327,8 @@ Make a new SCPeakRegionFinder object.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-clone}{}}}
+\if{html}{\out{<a id="method-SCPeakRegionFinder-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-SCPeakRegionFinder-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{
