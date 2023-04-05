@@ -1,0 +1,39 @@
+---
+title: "Full Peak Characterization"
+author: "Robert M Flight"
+output: rmarkdown::html_vignette
+package: ScanCentricPeakCharacterization
+bibliography: scpc.bib
+vignette: >
+  %\VignetteIndexEntry{Full Peak Characterization}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(ScanCentricPeakCharacterization)
+```
+
+So you want to do some peak characterization, using `ScanCentricPeakCharacterization`, hereafter shortened to SCPC.
+If you haven't already, you might want to read the publication describing the motivation behind it [@flightScanCentricFrequencyBasedMethod2022].
+
+First things to know:
+
+* Is your data in one of the open formats that `mzR` and `MSnbase` support (mzML, mzXML, mzData)?
+* Do you have multiple, non-chromatographic scans or acquisitions of data where the same M/Z range is covered?
+* Is your data acquired in profile mode?
+* Is your data from an ICR or orbitrap type of instrument (Fusion, Fusion Lumos, SolariX, etc)?
+
+If the answers to the above are all true, then you should be OK going forward.
+If any of them are not true, or your aren't sure, then feel free to contact the package author, Robert Flight <rflight79 at gmail.com>, or [file an issue](https://github.com/MoseleyBioinformaticsLab/ScanCentricPeakCharacterization/) on the GitHub repo of this package.
+
+## Logging
+
+## References
