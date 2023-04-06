@@ -6,3 +6,5 @@ inst/output
 other_reports/
 .httr-oauth
 example_data/
+/doc/
+/Meta/

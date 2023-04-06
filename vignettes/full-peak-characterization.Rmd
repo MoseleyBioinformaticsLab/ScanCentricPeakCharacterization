@@ -21,6 +21,8 @@ knitr::opts_chunk$set(
 library(ScanCentricPeakCharacterization)
 ```
 
+## Introduction
+
 So you want to do some peak characterization, using `ScanCentricPeakCharacterization`, hereafter shortened to SCPC.
 If you haven't already, you might want to read the publication describing the motivation behind it [@flightScanCentricFrequencyBasedMethod2022].
 
@@ -34,6 +36,47 @@ First things to know:
 If the answers to the above are all true, then you should be OK going forward.
 If any of them are not true, or your aren't sure, then feel free to contact the package author, Robert Flight <rflight79 at gmail.com>, or [file an issue](https://github.com/MoseleyBioinformaticsLab/ScanCentricPeakCharacterization/) on the GitHub repo of this package.
 
-## Logging
+## Things to Know
+
+### R6 Based
+
+This package is organized around `R6` objects, as we have large data that we don't want to worry about making copies of.
+
+### Multiprocessing
+
+SCPC is an intensive process.
+It first detects peaks in every scan, figures out the matched peaks across scans, and then does the full characterization of each peak across the scans.
+So ideally, you want to enable parallel processing when using this package, if available.
+In this package, this is enabled via `furrr` and `future_map`.
+
+```{r}
+#| label: enable-multicore
+#| eval: false
+# if in RStudio
+# options(parallelly.fork.enable = TRUE)
+library(furrr)
+plan(multicore)
+# this tells SCPC use `furrr::future_map` instead of `purrr::map`
+set_internal_map(furrr::future_map)
+```
+
+### Logging
+
+SCPC also enables logging to help keep you apprised of what is happening as far as progress and memory usage.
+The latter is very useful when you have very large sets of data, and you want to make sure that it fits in available memory, or you need to use fewer processes to avoid using all of the RAM on your machine (see [Multiprocessing](#multiprocessing)).
+
+It does require that the `logger` package is installed.
+You can turn on logging using `enable_logging`.
+
+```{r}
+#| label: enable-logging
+#| eval: false
+enable_logging()
+```
+
+## Setup 
+
+OK, let's assume you've got your data, and you are ready to go.
+For the following examples, we are going to work with a lipidomics sample acquired on a Thermo-Fisher Tribrid-Fusion, 
 
 ## References

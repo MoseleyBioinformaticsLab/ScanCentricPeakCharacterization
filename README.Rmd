@@ -163,7 +163,7 @@ We can see what is reported at the scan level:
 ```{r}
 #| label: show-scans
 head(sc_mzml$scan_info) |>
-  gt::gt()
+  knitr::kable()
 ```
 
 And in the data.frame created from the mzML data (here is a single scan):
@@ -171,7 +171,7 @@ And in the data.frame created from the mzML data (here is a single scan):
 ```{r}
 #| label: show-data
 head(sc_mzml$mzml_df_data[[1]]) |>
-  gt::gt()
+  knitr::kable()
 ```
 
 #### Frequency and M/Z Models
@@ -207,7 +207,7 @@ Here is the scan information after prediction, it now has model terms related to
 ```{r}
 sc_mzml$scan_info |>
   head() |>
-  gt::gt()
+  knitr::kable()
 ```
 
 And the mz data.frame now has frequency related data as well:
@@ -215,7 +215,7 @@ And the mz data.frame now has frequency related data as well:
 ```{r}
 sc_mzml$mzml_df_data[[1]] |>
   head() |>
-  gt::gt()
+  knitr::kable()
 ```
 
 We can see a bunch more information added to the scan level summary data and the M/Z data.frame after we predict frequency in each scan.
@@ -293,7 +293,7 @@ Now we can see which scans are being excluded with this filter.
 #| label: filter-scans-table
 sc_mzml$scan_info |>
   head() |>
-  gt::gt()
+  knitr::kable()
 ```
 
 ```{r}
