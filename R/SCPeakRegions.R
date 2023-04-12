@@ -738,16 +738,23 @@ get_reduced_peaks = function(in_range, min_points = 4,
       weights = peak_data$intensity / max(peak_data$intensity)
       out_peak = purrr::map(which, function(in_which){
         tmp_peak = get_fitted_peak_info(peak_data, use_loc = in_which, w = weights, calculate_peak_area = calculate_peak_area)
-        names(tmp_peak) = paste0(names(tmp_peak), ".", in_which)
-        tmp_peak
+        if (is.na(tmp_peak$Height)) {
+          return(NULL)
+        } else {
+          names(tmp_peak) = paste0(names(tmp_peak), ".", in_which)
+          return(tmp_peak)
+        }
       })
       out_peak = dplyr::bind_cols(out_peak)
+      if (nrow(out_peak) == 0) {
+        return(NULL)
+      }
       #out_peak = get_fitted_peak_info(peak_data, w = weights)
       #out_peak = get_peak_info(range_data[peak_loc, ], peak_method = peak_method, min_points = min_points)
       out_peak$points = I(list(IRanges::start(in_range)[peak_loc]))
       out_peak$scan = range_point_data[peak_loc[1], "scan"]
       out_peak$scan_index = range_point_data[peak_loc[1], "scan_index"]
-      out_peak
+      return(out_peak)
     })
     peaks = dplyr::bind_rows(peaks)
   } else {
@@ -909,7 +916,7 @@ split_regions = function(signal_regions, frequency_point_regions, tiled_regions,
   log_message("Finding peaks in each scan ...")
   frequency_reduced = internal_map$map_function(frequency_in_signal, subset_signal_reduce, min_points, frequency_point_regions$metadata, calculate_peak_area)
 
-  log_message("Finding regions with peaks ...")
+  # log_message("Finding regions with peaks ...")
   tile_counts = IRanges::countOverlaps(tiled_regions, frequency_reduced[[1]])
   n_scan = seq(2, length(frequency_reduced))
   for (iscan in n_scan) {
