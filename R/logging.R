@@ -20,12 +20,12 @@ log_memory = function(){
     active_to_total = memory_numbers["Active"] / memory_numbers["MemTotal"]
     swapfree_to_swap = memory_numbers["SwapFree"] / memory_numbers["SwapTotal"]
     if (is.nan(swapfree_to_swap)) {
-      swapfree_to_swap = 1
+      swapfree_to_swap = 0
     }
 
     swapfree_to_swap = (memory_numbers["SwapTotal"] - memory_numbers["SwapFree"]) / memory_numbers["SwapTotal"]
     if (is.nan(swapfree_to_swap)) {
-      swapfree_to_swap = 1
+      swapfree_to_swap = 0
     }
 
 
