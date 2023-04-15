@@ -154,7 +154,9 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
 
     #' @description
     #' Do the peak characterization without saving
-    find_peaks = function(){
+    #'
+    #' @param stop_after_initial_detection should it stop after the initial peak finding
+    find_peaks = function(stop_after_initial_detection = FALSE){
       log_message("Characterizing peaks ...")
       if (inherits(self$sc_peak_region_finder, "R6")) {
 
@@ -167,7 +169,7 @@ SCCharacterizePeaks = R6::R6Class("SCCharacterizePeaks",
         } else {
           self$sc_zip$sc_peak_region_finder$sample_id = basename_no_file_ext(self$in_file)
         }
-        self$sc_zip$sc_peak_region_finder$characterize_peaks()
+        self$sc_zip$sc_peak_region_finder$characterize_peaks(stop_after_initial_detection = stop_after_initial_detection)
         self$sc_zip$sc_peak_region_finder$mzml_data = NULL
       } else if ("function" %in% class(self$sc_peak_region_finder)) {
         self$found_peaks = self$sc_peak_region_finder(self$sc_zip$sc_mzml, ...)

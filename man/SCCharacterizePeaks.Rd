@@ -249,9 +249,16 @@ Get the \code{SCMzml$scan_info} out
 \subsection{Method \code{find_peaks()}}{
 Do the peak characterization without saving
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$find_peaks()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$find_peaks(stop_after_initial_detection = FALSE)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{stop_after_initial_detection}}{should it stop after the initial peak finding}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-SCCharacterizePeaks-summarize"></a>}}
@@ -289,9 +296,21 @@ Write the zip file
 \subsection{Method \code{run_all()}}{
 Runs all of the pieces for peak characterization in order
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$run_all()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SCCharacterizePeaks$run_all(
+  filter_scan_function = NULL,
+  choose_frequency_model_function = NULL
+)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{filter_scan_function}}{the scan filtering function}
+
+\item{\code{choose_frequency_model_function}}{the function for choosing a frequency model}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-SCCharacterizePeaks-prep_data"></a>}}

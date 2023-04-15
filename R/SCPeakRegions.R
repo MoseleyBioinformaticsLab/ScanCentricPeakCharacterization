@@ -355,7 +355,9 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
     #' @description
     #' Split up signal regions by peaks found
     #' @param use_regions an index of the regions we want to split up
-    split_peak_regions = function(use_regions = NULL){
+    #' @param stop_after_initial_detection should it do full characterization or stop
+    split_peak_regions = function(use_regions = NULL,
+                                  stop_after_initial_detection = FALSE){
       log_message("Splitting signal regions by peaks ...")
       if (is.null(use_regions)) {
         use_regions = seq_len(length(self$peak_regions$peak_regions))
@@ -366,7 +368,8 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
                                                          min_scan = self$peak_regions$min_scan,
                                                          min_points = self$min_points,
                                                          n_zero = self$n_zero_tiles,
-                                                         calculate_peak_area = self$calculate_peak_area)
+                                                         calculate_peak_area = self$calculate_peak_area,
+                                                         stop_after_initial_detection = stop_after_initial_detection)
 
       self$peak_regions$peak_index = seq_len(length(self$peak_regions$peak_region_list))
     },
@@ -495,10 +498,14 @@ SCPeakRegionFinder = R6::R6Class("SCPeakRegionFinder",
 
     #' @description
     #' Run the overall peak characterization from start to finish.
-    characterize_peaks = function(){
+    #' @param stop_after_initial_detection do we stop the whole process after finding initial peaks in each scan?
+    characterize_peaks = function(stop_after_initial_detection = FALSE){
       self$add_regions()
       self$reduce_sliding_regions()
-      self$split_peak_regions()
+      self$split_peak_regions(stop_after_initial_detection = stop_after_initial_detection)
+      if (stop_after_initial_detection) {
+        return(self)
+      }
       self$remove_double_peaks_in_scans()
       self$normalize_data()
       self$find_peaks_in_regions()
@@ -902,7 +909,8 @@ subset_signal_reduce = function(in_points, min_points, metadata, calculate_peak_
 # with peaks from at least min_scan scans (normally 10% of total scans).
 # Finally, with that set, we go through and extract the original point and frequency data.
 split_regions = function(signal_regions, frequency_point_regions, tiled_regions, min_scan, min_points = 4, n_zero = 1,
-                         calculate_peak_area = FALSE) {
+                         calculate_peak_area = FALSE,
+                         stop_after_initial_detection = FALSE) {
   # alternative idea to current implementation:
   #   take each scan, and then do the subsetting in parallel
   #   the object that needs to be cloned is "in_points", which is points from "frequency"
@@ -915,6 +923,10 @@ split_regions = function(signal_regions, frequency_point_regions, tiled_regions,
   frequency_in_signal = internal_map$map_function(frequency_list_points, function(.x){IRanges::subsetByOverlaps(.x, signal_regions)})
   log_message("Finding peaks in each scan ...")
   frequency_reduced = internal_map$map_function(frequency_in_signal, subset_signal_reduce, min_points, frequency_point_regions$metadata, calculate_peak_area)
+
+  if (stop_after_initial_detection) {
+    return(frequency_reduced)
+  }
 
   # log_message("Finding regions with peaks ...")
   tile_counts = IRanges::countOverlaps(tiled_regions, frequency_reduced[[1]])

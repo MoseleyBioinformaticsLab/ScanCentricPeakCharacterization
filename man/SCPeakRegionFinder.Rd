@@ -100,13 +100,18 @@ Find the regions most likely to contain real signal
 \subsection{Method \code{split_peak_regions()}}{
 Split up signal regions by peaks found
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SCPeakRegionFinder$split_peak_regions(use_regions = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SCPeakRegionFinder$split_peak_regions(
+  use_regions = NULL,
+  stop_after_initial_detection = FALSE
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{use_regions}}{an index of the regions we want to split up}
+
+\item{\code{stop_after_initial_detection}}{should it do full characterization or stop}
 }
 \if{html}{\out{</div>}}
 }
@@ -232,9 +237,16 @@ Sort the data in m/z order, as the default is frequency order
 \subsection{Method \code{characterize_peaks()}}{
 Run the overall peak characterization from start to finish.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SCPeakRegionFinder$characterize_peaks()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SCPeakRegionFinder$characterize_peaks(stop_after_initial_detection = FALSE)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{stop_after_initial_detection}}{do we stop the whole process after finding initial peaks in each scan?}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-SCPeakRegionFinder-summarize"></a>}}
