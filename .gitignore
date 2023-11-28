@@ -8,3 +8,5 @@ other_reports/
 example_data/
 /doc/
 /Meta/
+/renv/
+renv.lock
