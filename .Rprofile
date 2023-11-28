@@ -1,1 +1,3 @@
-source("renv/activate.R")
+if (Sys.getenv("IGNORE_RENV", "") == "") {
+  source("renv/activate.R")
+}
